@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "apps.reviews",
     "apps.notifications",
     "apps.messaging",
+    "apps.complaints",
 ]
 
 MIDDLEWARE = [
@@ -105,6 +106,7 @@ REST_FRAMEWORK = {
         "otp_verify": "10/min",
         "otp_ip": "20/hour",
         "request_create": "10/hour",
+        "complaint_create": "5/day",
     },
 }
 
