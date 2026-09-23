@@ -23,6 +23,10 @@ from .services import create_complaint, transition_complaint
 class ComplaintListCreateView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ComplaintSerializer
+    throttle_scope = "complaint_create"
+
+    def get_throttles(self):
+        return [ScopedRateThrottle()] if self.request.method == "POST" else []
 
     def get_queryset(self):
         return (
@@ -37,11 +41,6 @@ class ComplaintListCreateView(ListAPIView):
 
         serializer = ComplaintCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
-        throttle = ScopedRateThrottle()
-        throttle.scope = "complaint_create"
-        if not throttle.allow_request(request, self):
-            self.throttled(request, throttle.wait())
 
         complaint = create_complaint(
             request.user,
