@@ -2,15 +2,15 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 3 — utilisateur personnalisé créé**. La première migration a été appliquée sur PostgreSQL : `accounts.User` utilise le téléphone pour la connexion et un UUID comme clé primaire.
+> Statut : **étape 4 — authentification validée en développement local**. L'API Django, le frontend Next.js et les migrations du compte utilisateur et des codes de vérification sont présents. L'envoi de SMS réel sera intégré à l'étape 15.
 
 ## Principes
 
-- Les clients n'accèdent qu'à leurs demandes ; les professionnels n'accèdent qu'aux offres qui leur sont adressées et aux interventions qui leur sont attribuées. Ces règles sont appliquées dans l'API et testées contre les accès par identifiant (IDOR).
-- Une demande urgente peut être proposée à cinq professionnels compatibles au maximum. Une transaction PostgreSQL garantit qu'un seul l'accepte.
-- Les pièces d'identité et les coordonnées privées restent protégées. Avant attribution, l'offre transmise au professionnel contient seulement les renseignements nécessaires pour décider.
-- L'interface mobile reste utilisable avec une connexion instable. Une demande conservée hors connexion est clairement marquée **non envoyée** jusqu'à confirmation du serveur.
-- Les prestataires doivent être vérifiés pour recevoir des demandes. Les tarifs, catégories et quartiers sont gérés côté serveur.
+- Les clients n'accéderont qu'à leurs demandes ; les professionnels n'accéderont qu'aux offres qui leur sont adressées et aux interventions qui leur sont attribuées. Ces règles seront appliquées dans l'API et testées contre les accès par identifiant (IDOR).
+- Une demande urgente pourra être proposée à cinq professionnels compatibles au maximum. Une transaction PostgreSQL garantira qu'un seul l'accepte.
+- Les pièces d'identité et les coordonnées privées devront rester protégées. Avant attribution, l'offre transmise au professionnel contiendra seulement les renseignements nécessaires pour décider.
+- L'interface mobile devra rester utilisable avec une connexion instable. Une demande conservée hors connexion sera clairement marquée **non envoyée** jusqu'à confirmation du serveur.
+- Les prestataires devront être vérifiés pour recevoir des demandes. Les tarifs, catégories et quartiers seront gérés côté serveur.
 
 ## Architecture retenue
 
@@ -28,33 +28,28 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 ## État du projet
 
 - [x] Étape 0 : cadrage, architecture, arborescence, README et `.gitignore`.
-- [x] Étape 1 : Git, Python, Node.js, npm, PostgreSQL et environnement virtuel vérifiés sous Windows.
-- [x] Étape 2 : socle Django/DRF et Next.js, connexion PostgreSQL, endpoint de santé et build vérifiés.
-- [x] Étape 3 : Custom User et première migration PostgreSQL validés.
-- [ ] Étape 4 : inscription, connexion et sécurité de l'authentification.
-- [ ] Étapes suivantes : développement incrémental selon la feuille de route.
+- [x] Étape 1 : environnement de développement Windows et vérification des outils.
+- [x] Étape 2 : création du backend Django/DRF et du frontend Next.js.
+- [x] Étape 3 : utilisateur personnalisé, rôles et premières migrations.
+- [x] Étape 4 : inscription client, sessions, profil et code de vérification du téléphone en développement local.
+- [ ] Étape 5 : lieux administrables pour Bamako.
 
 ## Démarrage sur Windows
 
-Sur le poste de développement, Git 2.55, Python 3.14.6, Node.js 24.19, npm 11.17 et PostgreSQL 18.4 ont été vérifiés. Le service PostgreSQL tourne et répond sur `localhost:5432`. L'environnement Python local `.venv` fonctionne et est ignoré par Git. Pour installer le dépôt sur un autre poste :
+Après avoir cloné le dépôt, consulter [l'installation du backend et du frontend](docs/etape-2.md), [le modèle utilisateur](docs/etape-3.md) et [l'authentification](docs/etape-4-auth.md). Sur un poste déjà configuré, depuis la racine du dépôt :
 
 ```powershell
-git clone https://github.com/hamapixel/bko-services.git
-cd bko-services
-py -m venv .venv
-& ".\.venv\Scripts\python.exe" --version
-pg_isready -h localhost -p 5432
+& ".\.venv\Scripts\python.exe" backend\manage.py check
+& ".\.venv\Scripts\python.exe" backend\manage.py test apps.accounts --settings=config.test_settings
 git status
 ```
 
-L'activation PowerShell de `.venv` n'est pas nécessaire : les prochaines commandes peuvent appeler directement `".\.venv\Scripts\python.exe"`. Redis sera installé lorsque les tâches asynchrones seront mises en place. La procédure de démarrage et les commandes de vérification figurent dans [docs/etape-2.md](docs/etape-2.md). La première migration `accounts.0001_initial` et les migrations Django de base ont été appliquées après la création du `Custom User`. Voir [docs/etape-3.md](docs/etape-3.md).
-
-Ne placez jamais de mots de passe, de clés API, de fichiers `.env` ou de pièces d'identité dans Git. Les migrations applicatives seront versionnées lorsqu'elles seront créées.
+Ne placez jamais de mots de passe, de clés API, de fichiers `.env` ou de pièces d'identité dans Git. Les migrations applicatives sont versionnées dans le dépôt.
 
 ## Organisation du travail
 
-Chaque étape suit le cycle : explication → commandes → fichiers complets → vérification → correction → `git status` → commit → push. Les règles de sécurité et les tests sont ajoutés avec les fonctions correspondantes. `main` porte le code stable ; `develop` et les branches `feature/*` seront créées au moment utile.
+Chaque étape suit le cycle : explication → commandes → fichiers complets → vérification → correction → `git status` → commit → push. Les règles de sécurité et les tests sont ajoutés avec les fonctions correspondantes. `main` porte le code stable ; les modifications sont préparées sur des branches `feature/*`.
 
 ## À venir
 
-Installation locale, API documentée avec OpenAPI, tests backend/frontend, PWA, sauvegardes, restauration, CI et déploiement. Les exigences avant production figurent dans [docs/architecture.md](docs/architecture.md).
+Lieux, métiers, demandes, API documentée avec OpenAPI, PWA, sauvegardes, restauration, CI et déploiement. Les exigences avant production figurent dans [docs/architecture.md](docs/architecture.md).
