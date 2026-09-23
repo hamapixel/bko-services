@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 15 — SMS/OTP professionnel implémenté sur la branche de fonctionnalité, validation locale en cours**. L'OTP conserve ses protections existantes, ajoute un journal SMS sans code en clair, une limite IP partagée et un adaptateur Twilio de production.
+> Statut : **étape 15 — SMS/OTP professionnel validé localement**. L'OTP conserve ses protections existantes, ajoute un journal SMS sans code en clair, une limite IP partagée et un adaptateur Twilio de production. La migration `messaging.0001_initial` est appliquée.
 
 ## Principes
 
@@ -42,7 +42,7 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 12 : avis clients après intervention confirmée.
 - [x] Étape 13 : centre de notifications internes.
 - [x] Étape 14 : Web Push et service worker minimal.
-- [ ] Étape 15 : SMS/OTP professionnel — validation locale en cours.
+- [x] Étape 15 : SMS/OTP professionnel.
 
 ## Démarrage sur Windows
 
