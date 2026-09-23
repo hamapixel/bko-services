@@ -43,7 +43,8 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 13 : centre de notifications internes.
 - [x] Étape 14 : Web Push et service worker minimal.
 - [x] Étape 15 : SMS/OTP professionnel.
-- [x] Étape 16 : plaintes / signalements.\n- [ ] Étape 17 : plans et abonnements prestataires — validation locale en cours.
+- [x] Étape 16 : plaintes / signalements.
+- [ ] Étape 17 : plans et abonnements prestataires — validation locale en cours.
 
 ## Démarrage sur Windows
 
