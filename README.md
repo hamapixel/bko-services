@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 11 — permissions IDOR et workflow validés localement**. Les accès client/prestataire sont filtrés par propriétaire, les transitions sont imposées dans l'ordre et les 38 tests isolés passent.
+> Statut : **étape 12 — avis clients implémentés sur la branche de fonctionnalité, validation locale en cours**. Un client peut laisser un seul avis après `CLIENT_CONFIRMED`, uniquement pour le prestataire réellement attribué.
 
 ## Principes
 
@@ -45,7 +45,7 @@ Après avoir cloné le dépôt, consulter [l'installation du backend et du front
 
 ```powershell
 & ".\.venv\Scripts\python.exe" backend\manage.py check
-& ".\.venv\Scripts\python.exe" backend\manage.py test apps.accounts apps.locations apps.catalog apps.providers apps.requests --settings=config.test_settings
+& ".\.venv\Scripts\python.exe" backend\manage.py test apps.accounts apps.locations apps.catalog apps.providers apps.requests apps.reviews --settings=config.test_settings
 git status
 ```
 
@@ -57,4 +57,4 @@ Chaque étape suit le cycle : explication → commandes → fichiers complets �
 
 ## À venir
 
-Avis, notifications, push, SMS/OTP, plaintes, abonnements, paiements, PWA, espaces responsive, tests, CI, Docker et déploiement. Les exigences avant production figurent dans [docs/architecture.md](docs/architecture.md).
+Centre de notifications, push, SMS/OTP, plaintes, abonnements, paiements, PWA, espaces responsive, tests, CI, Docker et déploiement. Les exigences avant production figurent dans [docs/architecture.md](docs/architecture.md).
