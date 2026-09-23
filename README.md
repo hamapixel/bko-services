@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 12 — avis clients validés localement**. Un client peut laisser un seul avis après `CLIENT_CONFIRMED`, uniquement pour le prestataire réellement attribué. La migration `reviews.0001_initial` est appliquée et la suite complète passe.
+> Statut : **étape 13 — centre de notifications internes implémenté sur la branche de fonctionnalité, validation locale en cours**. Les notifications sont privées, historisées en base et liées aux événements métier importants. Aucun Web Push ni SMS n'est encore envoyé.
 
 ## Principes
 
@@ -40,14 +40,15 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 10 : acceptation atomique d'une offre et attribution unique.
 - [x] Étape 11 : permissions IDOR et workflow d'intervention.
 - [x] Étape 12 : avis clients après intervention confirmée.
+- [ ] Étape 13 : centre de notifications internes — validation locale en cours.
 
 ## Démarrage sur Windows
 
-Après avoir cloné le dépôt, consulter [l'installation du backend et du frontend](docs/etape-2.md), [le modèle utilisateur](docs/etape-3.md), [l'authentification](docs/etape-4-auth.md), [les lieux](docs/etape-5-lieux.md), [le catalogue](docs/etape-6-catalogue.md), [les prestataires](docs/etape-7-prestataires.md), [les demandes](docs/etape-8-demandes.md), [le matching](docs/etape-9-matching.md) et [l'acceptation atomique](docs/etape-10-acceptation.md), puis [le workflow et les protections IDOR](docs/etape-11-workflow-idor.md) et [les avis clients](docs/etape-12-avis.md). Sur un poste déjà configuré, depuis la racine du dépôt :
+Après avoir cloné le dépôt, consulter [l'installation du backend et du frontend](docs/etape-2.md), [le modèle utilisateur](docs/etape-3.md), [l'authentification](docs/etape-4-auth.md), [les lieux](docs/etape-5-lieux.md), [le catalogue](docs/etape-6-catalogue.md), [les prestataires](docs/etape-7-prestataires.md), [les demandes](docs/etape-8-demandes.md), [le matching](docs/etape-9-matching.md) et [l'acceptation atomique](docs/etape-10-acceptation.md), puis [le workflow et les protections IDOR](docs/etape-11-workflow-idor.md) et [les avis clients](docs/etape-12-avis.md), puis [le centre de notifications](docs/etape-13-notifications.md). Sur un poste déjà configuré, depuis la racine du dépôt :
 
 ```powershell
 & ".\.venv\Scripts\python.exe" backend\manage.py check
-& ".\.venv\Scripts\python.exe" backend\manage.py test apps.accounts apps.locations apps.catalog apps.providers apps.requests apps.reviews --settings=config.test_settings
+& ".\.venv\Scripts\python.exe" backend\manage.py test apps.accounts apps.locations apps.catalog apps.providers apps.requests apps.reviews apps.notifications --settings=config.test_settings
 git status
 ```
 
@@ -59,4 +60,4 @@ Chaque étape suit le cycle : explication → commandes → fichiers complets �
 
 ## À venir
 
-Centre de notifications, push, SMS/OTP, plaintes, abonnements, paiements, PWA, espaces responsive, tests, CI, Docker et déploiement. Les exigences avant production figurent dans [docs/architecture.md](docs/architecture.md).
+Web Push, SMS/OTP, plaintes, abonnements, paiements, PWA, espaces responsive, tests, CI, Docker et déploiement. Les exigences avant production figurent dans [docs/architecture.md](docs/architecture.md).
