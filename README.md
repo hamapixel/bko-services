@@ -41,7 +41,8 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 11 : permissions IDOR et workflow d'intervention.
 - [x] Étape 12 : avis clients après intervention confirmée.
 - [x] Étape 13 : centre de notifications internes.
-- [x] Étape 14 : Web Push et service worker minimal.\n- [ ] Étape 15 : SMS/OTP professionnel — validation locale en cours.
+- [x] Étape 14 : Web Push et service worker minimal.
+- [ ] Étape 15 : SMS/OTP professionnel — validation locale en cours.
 
 ## Démarrage sur Windows
 
