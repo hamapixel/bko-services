@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --blue: #102e55;
+  --orange: #f27932;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: #f4f7fb;
+  color: var(--blue);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.home {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: radial-gradient(circle at 85% 12%, #e0eafa, transparent 35%), #f4f7fb;
+}
+
+.home-card {
+  width: min(100%, 680px);
+  padding: clamp(28px, 6vw, 64px);
+  border: 1px solid #e4ebf5;
+  border-radius: 24px;
+  background: white;
+  box-shadow: 0 20px 60px #17315112;
+}
+
+.brand { display: flex; align-items: center; gap: 12px; font-weight: 800; font-size: 20px; }
+.brand-mark { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; color: white; background: var(--orange); }
+.eyebrow { margin: 48px 0 14px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #b35116; }
+h1 { margin: 0; max-width: 540px; font-size: clamp(32px, 7vw, 56px); line-height: 1.1; letter-spacing: -.04em; }
+.intro { margin: 24px 0 0; max-width: 540px; font-size: 17px; line-height: 1.65; color: #44556d; }
+.build-note { margin: 42px 0 0; font-size: 13px; color: #65758a; }
