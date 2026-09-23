@@ -1,6 +1,9 @@
+import base64
+from io import StringIO
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from pywebpush import WebPushException
@@ -46,6 +49,44 @@ class WebPushTests(TestCase):
         response = APIClient().get("/api/v1/notifications/push/config/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"enabled": False, "publicKey": ""})
+
+    @override_settings(
+        WEB_PUSH_VAPID_PUBLIC_KEY="",
+        WEB_PUSH_VAPID_PRIVATE_KEY="",
+        WEB_PUSH_VAPID_SUBJECT="",
+    )
+    def test_notification_does_not_schedule_push_when_vapid_is_disabled(self):
+        with patch("apps.notifications.services.send_push_for_notification") as mocked:
+            with self.captureOnCommitCallbacks(execute=True):
+                create_notification(
+                    recipient_id=self.user.pk,
+                    kind=Notification.Kind.REQUEST_ACCEPTED,
+                    title="Prestataire attribué",
+                    message="Un prestataire a accepté.",
+                    service_request=None,
+                )
+        mocked.assert_not_called()
+
+    def test_generate_vapid_keys_command_outputs_usable_public_key(self):
+        output = StringIO()
+        call_command("generate_vapid_keys", stdout=output)
+        values = {}
+        for line in output.getvalue().splitlines():
+            if "=" in line:
+                key, value = line.split("=", 1)
+                values[key] = value
+
+        public_key = values["WEB_PUSH_VAPID_PUBLIC_KEY"]
+        private_key = values["WEB_PUSH_VAPID_PRIVATE_KEY"]
+        padding = "=" * ((4 - len(public_key) % 4) % 4)
+        public_bytes = base64.urlsafe_b64decode(public_key + padding)
+
+        self.assertEqual(len(public_bytes), 65)
+        self.assertTrue(private_key)
+        self.assertEqual(
+            values["WEB_PUSH_VAPID_SUBJECT"],
+            "mailto:votre-email@example.com",
+        )
 
     @override_settings(
         WEB_PUSH_VAPID_PUBLIC_KEY="public-key",
