@@ -1,0 +1,55 @@
+# Secrets and local configuration (keep .env.example tracked)
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+*firebase*credentials*.json
+*service-account*.json
+
+# Python / Django
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+staticfiles/
+media/
+*.sqlite3
+*.sqlite3-journal
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+.npm/
+.pnpm-store/
+
+# Local data / backups
+*.dump
+*.backup
+*.sql.gz
+backups/
+uploads/
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs and scratch files
+*.log
+tmp/
+temp/
