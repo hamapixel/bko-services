@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 16 — plaintes / signalements validés localement**. Les plaintes sont privées, liées aux interventions attribuées, protégées contre l'IDOR et suspendent le workflow via l'état `DISPUTED` jusqu'à décision administrative. La migration `complaints.0001_initial` est appliquée.
+> Statut : **étape 17 — plans et abonnements prestataires implémentés sur la branche de fonctionnalité, validation locale en cours**. Le matching et l'acceptation exigent maintenant un abonnement effectif avec les droits correspondant aux demandes normales ou urgentes. Le paiement réel reste réservé à l'étape 18.
 
 ## Principes
 
@@ -43,15 +43,15 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 13 : centre de notifications internes.
 - [x] Étape 14 : Web Push et service worker minimal.
 - [x] Étape 15 : SMS/OTP professionnel.
-- [x] Étape 16 : plaintes / signalements.
+- [x] Étape 16 : plaintes / signalements.\n- [ ] Étape 17 : plans et abonnements prestataires — validation locale en cours.
 
 ## Démarrage sur Windows
 
-Après avoir cloné le dépôt, consulter [l'installation du backend et du frontend](docs/etape-2.md), [le modèle utilisateur](docs/etape-3.md), [l'authentification](docs/etape-4-auth.md), [les lieux](docs/etape-5-lieux.md), [le catalogue](docs/etape-6-catalogue.md), [les prestataires](docs/etape-7-prestataires.md), [les demandes](docs/etape-8-demandes.md), [le matching](docs/etape-9-matching.md) et [l'acceptation atomique](docs/etape-10-acceptation.md), puis [le workflow et les protections IDOR](docs/etape-11-workflow-idor.md) et [les avis clients](docs/etape-12-avis.md), puis [le centre de notifications](docs/etape-13-notifications.md) et [le Web Push](docs/etape-14-web-push.md), puis [le SMS/OTP professionnel](docs/etape-15-sms-otp.md) et [les plaintes / signalements](docs/etape-16-plaintes.md). Sur un poste déjà configuré, depuis la racine du dépôt :
+Après avoir cloné le dépôt, consulter [l'installation du backend et du frontend](docs/etape-2.md), [le modèle utilisateur](docs/etape-3.md), [l'authentification](docs/etape-4-auth.md), [les lieux](docs/etape-5-lieux.md), [le catalogue](docs/etape-6-catalogue.md), [les prestataires](docs/etape-7-prestataires.md), [les demandes](docs/etape-8-demandes.md), [le matching](docs/etape-9-matching.md) et [l'acceptation atomique](docs/etape-10-acceptation.md), puis [le workflow et les protections IDOR](docs/etape-11-workflow-idor.md) et [les avis clients](docs/etape-12-avis.md), puis [le centre de notifications](docs/etape-13-notifications.md) et [le Web Push](docs/etape-14-web-push.md), puis [le SMS/OTP professionnel](docs/etape-15-sms-otp.md) et [les plaintes / signalements](docs/etape-16-plaintes.md), puis [les plans et abonnements](docs/etape-17-abonnements.md). Sur un poste déjà configuré, depuis la racine du dépôt :
 
 ```powershell
 & ".\.venv\Scripts\python.exe" backend\manage.py check
-& ".\.venv\Scripts\python.exe" backend\manage.py test apps.accounts apps.locations apps.catalog apps.providers apps.requests apps.reviews apps.notifications apps.messaging apps.complaints --settings=config.test_settings
+& ".\.venv\Scripts\python.exe" backend\manage.py test apps.accounts apps.locations apps.catalog apps.providers apps.requests apps.reviews apps.notifications apps.messaging apps.complaints apps.subscriptions --settings=config.test_settings
 git status
 ```
 
@@ -63,4 +63,4 @@ Chaque étape suit le cycle : explication → commandes → fichiers complets �
 
 ## À venir
 
-Abonnements, paiements, PWA, espaces responsive, tests, CI, Docker et déploiement. Les exigences avant production figurent dans [docs/architecture.md](docs/architecture.md).
+Paiements, PWA, espaces responsive, tests, CI, Docker et déploiement. Les exigences avant production figurent dans [docs/architecture.md](docs/architecture.md).
