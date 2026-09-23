@@ -143,3 +143,17 @@ Les tests automatisés simulent Twilio et n'envoient aucun SMS payant.
 Un test réel ne doit être effectué qu'après création/configuration du compte fournisseur et ajout des vraies valeurs dans `.env`. Sur un compte Twilio d'essai, le numéro destinataire peut devoir être vérifié au préalable.
 
 Ne partagez jamais `TWILIO_AUTH_TOKEN`.
+
+
+## Validation locale du 23 septembre 2026
+
+Validation effectuée avec succès :
+
+- tests de l'application `messaging` : **6 tests OK** ;
+- suite complète backend : **69 tests OK** ;
+- **1 test PostgreSQL ignoré sous SQLite**, comme prévu ;
+- migration `messaging.0001_initial` appliquée localement ;
+- `showmigrations messaging` affiche `[X] 0001_initial` ;
+- branche locale propre après validation.
+
+Aucun SMS réel n'a été envoyé pendant les tests automatisés. Les tests Twilio utilisent des simulations et n'engagent aucun coût fournisseur.
