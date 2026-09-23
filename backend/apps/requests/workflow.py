@@ -2,6 +2,9 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from rest_framework.exceptions import NotFound, ValidationError
 
+from apps.notifications.models import Notification
+from apps.notifications.services import create_notification
+
 from .models import RequestStatusHistory, ServiceRequest
 
 
@@ -14,6 +17,29 @@ PROVIDER_TRANSITIONS = {
 
 CLIENT_TRANSITIONS = {
     ServiceRequest.Status.PROVIDER_COMPLETED: ServiceRequest.Status.CLIENT_CONFIRMED,
+}
+
+CLIENT_NOTIFICATION_BY_STATUS = {
+    ServiceRequest.Status.EN_ROUTE: (
+        Notification.Kind.PROVIDER_EN_ROUTE,
+        "Prestataire en route",
+        "Le prestataire est en route pour votre intervention.",
+    ),
+    ServiceRequest.Status.ARRIVED: (
+        Notification.Kind.PROVIDER_ARRIVED,
+        "Prestataire arrivé",
+        "Le prestataire a indiqué être arrivé sur le lieu de l'intervention.",
+    ),
+    ServiceRequest.Status.IN_PROGRESS: (
+        Notification.Kind.WORK_STARTED,
+        "Intervention commencée",
+        "Le prestataire a commencé l'intervention.",
+    ),
+    ServiceRequest.Status.PROVIDER_COMPLETED: (
+        Notification.Kind.PROVIDER_COMPLETED,
+        "Intervention terminée",
+        "Le prestataire a marqué l'intervention comme terminée. Confirmez la fin si tout est correct.",
+    ),
 }
 
 
@@ -77,6 +103,15 @@ def transition_provider_intervention(request_id, user, target_status):
         previous_status=previous_status,
         new_status=target_status,
     )
+
+    kind, title, message = CLIENT_NOTIFICATION_BY_STATUS[target_status]
+    create_notification(
+        recipient_id=service_request.client_id,
+        kind=kind,
+        title=title,
+        message=message,
+        service_request=service_request,
+    )
     return service_request
 
 
@@ -100,5 +135,12 @@ def confirm_client_completion(request_id, user):
         actor=actor,
         previous_status=previous_status,
         new_status=ServiceRequest.Status.CLIENT_CONFIRMED,
+    )
+    create_notification(
+        recipient_id=service_request.assigned_provider.user_id,
+        kind=Notification.Kind.CLIENT_CONFIRMED,
+        title="Intervention confirmée",
+        message="Le client a confirmé la fin de l'intervention.",
+        service_request=service_request,
     )
     return service_request
