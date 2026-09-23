@@ -92,7 +92,7 @@ class TwilioSmsProvider:
             provider_code = ""
             try:
                 provider_code = str(json.loads(exc.read().decode("utf-8")).get("code", ""))
-            except (ValueError, AttributeError):
+            except (ValueError, AttributeError, UnicodeDecodeError):
                 pass
             suffix = provider_code or str(exc.code)
             raise SmsDeliveryError(f"twilio_http_{suffix}") from exc
@@ -100,6 +100,9 @@ class TwilioSmsProvider:
             raise SmsDeliveryError("twilio_network") from exc
         except (ValueError, UnicodeDecodeError) as exc:
             raise SmsDeliveryError("twilio_invalid_response") from exc
+
+        if not isinstance(body, dict):
+            raise SmsDeliveryError("twilio_invalid_response")
 
         message_id = str(body.get("sid", ""))
         provider_status = str(body.get("status", ""))
