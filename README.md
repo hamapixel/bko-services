@@ -40,7 +40,8 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 10 : acceptation atomique d'une offre et attribution unique.
 - [x] Étape 11 : permissions IDOR et workflow d'intervention.
 - [x] Étape 12 : avis clients après intervention confirmée.
-- [x] Étape 13 : centre de notifications internes.\n- [ ] Étape 14 : Web Push et service worker minimal — validation locale en cours.
+- [x] Étape 13 : centre de notifications internes.
+- [ ] Étape 14 : Web Push et service worker minimal — validation locale en cours.
 
 ## Démarrage sur Windows
 
