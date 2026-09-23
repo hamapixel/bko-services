@@ -7,30 +7,75 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import Throttled, ValidationError
 
+from apps.messaging.providers import DeliveryUnavailable, SmsDeliveryError, get_sms_provider
+from apps.messaging.services import (
+    create_sms_delivery_log,
+    enforce_shared_otp_ip_limit,
+    mark_sms_accepted,
+    mark_sms_failed,
+)
+
 from .models import OtpCode
-from .otp_delivery import get_sms_provider
 
 
-@transaction.atomic
 def request_verification_code(user, host: str, remote_addr: str) -> None:
-    locked_user = get_user_model().objects.select_for_update().get(pk=user.pk)
-    if locked_user.phone_verified_at is not None:
-        raise ValidationError({"detail": "Ce numéro est déjà vérifié."})
-
-    now = timezone.now()
-    recent = OtpCode.objects.filter(user=locked_user, created_at__gte=now - timedelta(hours=24))
-    if recent.count() >= 5:
-        raise Throttled(detail="Limite quotidienne de codes atteinte.")
-
-    latest = recent.order_by("-created_at").first()
-    if latest and latest.created_at + timedelta(seconds=60) > now:
-        raise Throttled(wait=60, detail="Attendez avant de demander un autre code.")
-
     provider = get_sms_provider(host, remote_addr)
-    code = f"{secrets.randbelow(1_000_000):06d}"
-    OtpCode.objects.filter(user=locked_user, consumed_at__isnull=True).update(consumed_at=now)
-    OtpCode.objects.create(user=locked_user, code_hash=make_password(code), expires_at=now + timedelta(minutes=5))
-    provider.send_sms(locked_user.phone, f"Votre code BKO Services : {code}. Il expire dans 5 minutes.")
+    now = timezone.now()
+
+    with transaction.atomic():
+        locked_user = get_user_model().objects.select_for_update().get(pk=user.pk)
+        if locked_user.phone_verified_at is not None:
+            raise ValidationError({"detail": "Ce numéro est déjà vérifié."})
+
+        request_ip_hash = enforce_shared_otp_ip_limit(remote_addr)
+
+        recent = OtpCode.objects.filter(
+            user=locked_user,
+            created_at__gte=now - timedelta(hours=24),
+        )
+        if recent.count() >= 5:
+            raise Throttled(detail="Limite quotidienne de codes atteinte.")
+
+        latest = recent.order_by("-created_at").first()
+        if latest and latest.created_at + timedelta(seconds=60) > now:
+            raise Throttled(
+                wait=60,
+                detail="Attendez avant de demander un autre code.",
+            )
+
+        code = f"{secrets.randbelow(1_000_000):06d}"
+        OtpCode.objects.filter(
+            user=locked_user,
+            consumed_at__isnull=True,
+        ).update(consumed_at=now)
+        otp = OtpCode.objects.create(
+            user=locked_user,
+            code_hash=make_password(code),
+            expires_at=now + timedelta(minutes=5),
+        )
+        delivery_log = create_sms_delivery_log(
+            user=locked_user,
+            recipient=locked_user.phone,
+            provider=provider.provider_name,
+            request_ip_hash=request_ip_hash,
+        )
+
+    try:
+        result = provider.send_sms(
+            locked_user.phone,
+            f"Votre code BKO Services : {code}. Il expire dans 5 minutes.",
+        )
+    except SmsDeliveryError as exc:
+        failure_time = timezone.now()
+        with transaction.atomic():
+            OtpCode.objects.filter(
+                pk=otp.pk,
+                consumed_at__isnull=True,
+            ).update(consumed_at=failure_time)
+            mark_sms_failed(delivery_log.pk, exc.code)
+        raise DeliveryUnavailable("Le fournisseur SMS n'a pas accepté le message.") from exc
+
+    mark_sms_accepted(delivery_log.pk, result)
 
 
 @transaction.atomic
