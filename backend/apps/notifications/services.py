@@ -14,10 +14,12 @@ logger = logging.getLogger(__name__)
 
 
 def web_push_configured():
+    subject = settings.WEB_PUSH_VAPID_SUBJECT
+    valid_subject = subject.startswith("mailto:") or subject.startswith("https://")
     return bool(
         settings.WEB_PUSH_VAPID_PUBLIC_KEY
         and settings.WEB_PUSH_VAPID_PRIVATE_KEY
-        and settings.WEB_PUSH_VAPID_SUBJECT
+        and valid_subject
     )
 
 
