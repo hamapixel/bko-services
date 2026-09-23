@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 4 — authentification validée en développement local**. L'API Django, le frontend Next.js et les migrations du compte utilisateur et des codes de vérification sont présents. L'envoi de SMS réel sera intégré à l'étape 15.
+> Statut : **étape 5 — lieux administrables validés sur PostgreSQL local**. L'API Django, le frontend Next.js et les migrations du compte utilisateur et des codes de vérification sont présents. L'envoi de SMS réel sera intégré à l'étape 15.
 
 ## Principes
 
@@ -32,15 +32,16 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 2 : création du backend Django/DRF et du frontend Next.js.
 - [x] Étape 3 : utilisateur personnalisé, rôles et premières migrations.
 - [x] Étape 4 : inscription client, sessions, profil et code de vérification du téléphone en développement local.
-- [ ] Étape 5 : lieux administrables pour Bamako.
+- [x] Étape 5 : ville, communes et quartiers administrables ; Bamako initialisé.
+- [ ] Étape 6 : métiers et catégories de services administrables.
 
 ## Démarrage sur Windows
 
-Après avoir cloné le dépôt, consulter [l'installation du backend et du frontend](docs/etape-2.md), [le modèle utilisateur](docs/etape-3.md) et [l'authentification](docs/etape-4-auth.md). Sur un poste déjà configuré, depuis la racine du dépôt :
+Après avoir cloné le dépôt, consulter [l'installation du backend et du frontend](docs/etape-2.md), [le modèle utilisateur](docs/etape-3.md) et [l'authentification](docs/etape-4-auth.md) et [les lieux](docs/etape-5-lieux.md). Sur un poste déjà configuré, depuis la racine du dépôt :
 
 ```powershell
 & ".\.venv\Scripts\python.exe" backend\manage.py check
-& ".\.venv\Scripts\python.exe" backend\manage.py test apps.accounts --settings=config.test_settings
+& ".\.venv\Scripts\python.exe" backend\manage.py test apps.accounts apps.locations --settings=config.test_settings
 git status
 ```
 
@@ -52,4 +53,4 @@ Chaque étape suit le cycle : explication → commandes → fichiers complets �
 
 ## À venir
 
-Lieux, métiers, demandes, API documentée avec OpenAPI, PWA, sauvegardes, restauration, CI et déploiement. Les exigences avant production figurent dans [docs/architecture.md](docs/architecture.md).
+Métiers, demandes, API documentée avec OpenAPI, PWA, sauvegardes, restauration, CI et déploiement. Les exigences avant production figurent dans [docs/architecture.md](docs/architecture.md).
