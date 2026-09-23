@@ -1,6 +1,7 @@
 from django.urls import path
 
 from apps.requests.offer_views import ProviderOfferAcceptView, ProviderOfferDetailView, ProviderOfferListView
+from apps.reviews.views import PublicProviderReviewListView
 from apps.requests.workflow_views import (
     ProviderInterventionDetailView,
     ProviderInterventionListView,
@@ -11,6 +12,7 @@ from .views import ApplicationView, AvailabilityView, PublicProviderListView
 
 urlpatterns = [
     path("", PublicProviderListView.as_view(), name="public-providers"),
+    path("<uuid:provider_id>/reviews/", PublicProviderReviewListView.as_view(), name="public-provider-reviews"),
     path("application/", ApplicationView.as_view(), name="provider-application"),
     path("availability/", AvailabilityView.as_view(), name="provider-availability"),
     path("offers/", ProviderOfferListView.as_view(), name="provider-offers"),
