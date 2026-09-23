@@ -44,3 +44,17 @@ git status
 ```
 
 Aucune migration n'est attendue à cette étape : les statuts nécessaires existent déjà depuis la création du modèle de demande.
+
+
+## Validation locale du 23 septembre 2026
+
+Validation effectuée avec succès :
+
+- `manage.py check` : aucun problème détecté ;
+- `makemigrations --check --dry-run` : aucune migration supplémentaire attendue ;
+- suite isolée complète : **38 tests OK** ;
+- **1 test PostgreSQL ignoré sous SQLite**, comme prévu ;
+- tests IDOR client/prestataire validés ;
+- workflow séquentiel jusqu'à `CLIENT_CONFIRMED` validé ;
+- correction vérifiée : aucune information de prestataire n'est exposée avant attribution ;
+- branche locale propre après validation.
