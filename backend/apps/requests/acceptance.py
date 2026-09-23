@@ -3,6 +3,8 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
+from apps.notifications.models import Notification
+from apps.notifications.services import create_notification
 from apps.providers.models import ProviderProfile
 
 from .models import RequestStatusHistory, ServiceOffer, ServiceRequest
@@ -92,6 +94,15 @@ def accept_offer(offer_id, user):
     offer.status = ServiceOffer.Status.ACCEPTED
     offer.save(update_fields=["status", "updated_at"])
 
+    cancelled_provider_user_ids = list(
+        ServiceOffer.objects.filter(
+            service_request=service_request,
+            status=ServiceOffer.Status.PENDING,
+        )
+        .exclude(pk=offer.pk)
+        .values_list("provider__user_id", flat=True)
+    )
+
     ServiceOffer.objects.filter(
         service_request=service_request,
         status=ServiceOffer.Status.PENDING,
@@ -106,5 +117,21 @@ def accept_offer(offer_id, user):
         previous_status=ServiceRequest.Status.OFFERED,
         new_status=ServiceRequest.Status.ACCEPTED,
     )
+
+    create_notification(
+        recipient_id=service_request.client_id,
+        kind=Notification.Kind.REQUEST_ACCEPTED,
+        title="Prestataire attribué",
+        message="Un prestataire a accepté votre demande. Vous pouvez maintenant suivre l'intervention.",
+        service_request=service_request,
+    )
+    for provider_user_id in cancelled_provider_user_ids:
+        create_notification(
+            recipient_id=provider_user_id,
+            kind=Notification.Kind.OFFER_CANCELLED,
+            title="Demande déjà attribuée",
+            message="Cette demande a été acceptée par un autre prestataire et n'est plus disponible.",
+            service_request=service_request,
+        )
 
     return offer, service_request
