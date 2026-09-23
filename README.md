@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 14 — Web Push implémenté sur la branche de fonctionnalité, validation locale en cours**. Les abonnements navigateur sont privés, l'envoi est déclenché après commit et les abonnements expirés sont désactivés automatiquement. Le SMS reste hors périmètre.
+> Statut : **étape 14 — Web Push validé localement**. Les abonnements navigateur sont privés, l'envoi est déclenché après commit, les endpoints expirés sont désactivés automatiquement et la migration `notifications.0002_pushsubscription` est appliquée. Le SMS reste hors périmètre.
 
 ## Principes
 
@@ -41,7 +41,7 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 11 : permissions IDOR et workflow d'intervention.
 - [x] Étape 12 : avis clients après intervention confirmée.
 - [x] Étape 13 : centre de notifications internes.
-- [ ] Étape 14 : Web Push et service worker minimal — validation locale en cours.
+- [x] Étape 14 : Web Push et service worker minimal.
 
 ## Démarrage sur Windows
 
