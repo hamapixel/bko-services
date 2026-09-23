@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 13 — centre de notifications internes implémenté sur la branche de fonctionnalité, validation locale en cours**. Les notifications sont privées, historisées en base et liées aux événements métier importants. Aucun Web Push ni SMS n'est encore envoyé.
+> Statut : **étape 13 — centre de notifications internes validé localement**. Les notifications privées sont historisées en base, liées aux événements métier et la migration `notifications.0001_initial` est appliquée. Aucun Web Push ni SMS n'est encore envoyé.
 
 ## Principes
 
@@ -40,7 +40,7 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 10 : acceptation atomique d'une offre et attribution unique.
 - [x] Étape 11 : permissions IDOR et workflow d'intervention.
 - [x] Étape 12 : avis clients après intervention confirmée.
-- [ ] Étape 13 : centre de notifications internes — validation locale en cours.
+- [x] Étape 13 : centre de notifications internes.
 
 ## Démarrage sur Windows
 
