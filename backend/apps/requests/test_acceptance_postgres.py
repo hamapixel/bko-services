@@ -1,5 +1,6 @@
 import threading
 from datetime import timedelta
+from datetime import timedelta
 from queue import Queue
 from unittest import skipUnless
 
@@ -12,6 +13,7 @@ from rest_framework.exceptions import ValidationError
 from apps.catalog.models import Category, Trade
 from apps.locations.models import City, Commune, Neighborhood
 from apps.providers.models import ProviderProfile
+from apps.subscriptions.models import ProviderSubscription, SubscriptionPlan
 from apps.subscriptions.models import ProviderSubscription, SubscriptionPlan
 
 from .acceptance import accept_offer
@@ -40,6 +42,14 @@ class AcceptanceConcurrencyPostgresTests(TransactionTestCase):
         self.trade = Trade.objects.create(
             category=Category.objects.create(name="Urgence"),
             name="Plomberie urgence",
+        )
+        self.plan = SubscriptionPlan.objects.create(
+            code="concurrency-test",
+            name="Concurrency Test",
+            price_xof=0,
+            duration_days=30,
+            can_receive_requests=True,
+            can_receive_urgent_requests=True,
         )
         self.plan = SubscriptionPlan.objects.create(
             code="concurrency-test",
