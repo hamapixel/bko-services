@@ -4,6 +4,7 @@ from django.db import transaction
 from apps.notifications.models import Notification
 from apps.notifications.services import create_notification
 from apps.providers.models import ProviderProfile
+from apps.subscriptions.services import eligible_provider_ids_queryset
 
 from .models import RequestStatusHistory, ServiceOffer, ServiceRequest
 
@@ -44,8 +45,11 @@ def dispatch_request(request_id, actor):
             new_status=ServiceRequest.Status.SEARCHING,
         )
 
-    limit = 5 if service_request.priority == ServiceRequest.Priority.URGENT else 1
+    is_urgent = service_request.priority == ServiceRequest.Priority.URGENT
+    limit = 5 if is_urgent else 1
+    entitled_provider_ids = eligible_provider_ids_queryset(urgent=is_urgent)
     candidates = ProviderProfile.objects.select_related("user").filter(
+        pk__in=entitled_provider_ids,
         status=ProviderProfile.Status.VERIFIED,
         is_available=True,
         user__is_active=True,
