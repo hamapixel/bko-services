@@ -40,6 +40,7 @@ class ServiceRequest(models.Model):
 
     class Meta:
         ordering = ["-created_at", "-id"]
+        permissions = [("dispatch_request", "Peut lancer la recherche de prestataires")]
 
     def __str__(self):
         return f"{self.title} ({self.pk})"
@@ -65,3 +66,28 @@ class RequestStatusHistory(models.Model):
 
     def __str__(self):
         return f"{self.service_request_id}: {self.previous_status} → {self.new_status}"
+
+
+class ServiceOffer(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "En attente"
+        ACCEPTED = "ACCEPTED", "Acceptée"
+        DECLINED = "DECLINED", "Refusée"
+        EXPIRED = "EXPIRED", "Expirée"
+        CANCELLED = "CANCELLED", "Annulée"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    service_request = models.ForeignKey(ServiceRequest, on_delete=models.PROTECT, related_name="offers")
+    provider = models.ForeignKey("providers.ProviderProfile", on_delete=models.PROTECT, related_name="offers")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        constraints = [
+            models.UniqueConstraint(fields=["service_request", "provider"], name="requests_unique_offer_provider")
+        ]
+
+    def __str__(self):
+        return f"{self.service_request_id} → {self.provider_id}"

@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 8 — demandes clients validées sur PostgreSQL local**. Une demande peut être enregistrée et relue par son client avec un historique initial. La recherche et l'attribution d'un prestataire seront ajoutées aux étapes suivantes ; l'envoi SMS réel arrivera à l'étape 15.
+> Statut : **étape 9 — offres implémentées et migration appliquée localement**. Les tests isolés couvrent le matching et les accès aux offres ; un test de concurrence sur PostgreSQL accompagnera l'acceptation à l'étape 10. Aucune notification ni acceptation n'est encore activée.
 
 ## Principes
 
@@ -36,11 +36,12 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 6 : métiers et catégories de services administrables.
 - [x] Étape 7 : candidatures, vérification manuelle et profils de prestataires.
 - [x] Étape 8 : création privée des demandes et premier état historisé.
-- [ ] Étape 9 : recherche des prestataires compatibles et création des offres.
+- [x] Étape 9 : recherche des prestataires compatibles et création des offres privées.
+- [ ] Étape 10 : acceptation atomique d'une offre et attribution unique.
 
 ## Démarrage sur Windows
 
-Après avoir cloné le dépôt, consulter [l'installation du backend et du frontend](docs/etape-2.md), [le modèle utilisateur](docs/etape-3.md) et [l'authentification](docs/etape-4-auth.md), [les lieux](docs/etape-5-lieux.md), [le catalogue](docs/etape-6-catalogue.md), [les prestataires](docs/etape-7-prestataires.md) et [les demandes](docs/etape-8-demandes.md). Sur un poste déjà configuré, depuis la racine du dépôt :
+Après avoir cloné le dépôt, consulter [l'installation du backend et du frontend](docs/etape-2.md), [le modèle utilisateur](docs/etape-3.md) et [l'authentification](docs/etape-4-auth.md), [les lieux](docs/etape-5-lieux.md), [le catalogue](docs/etape-6-catalogue.md), [les prestataires](docs/etape-7-prestataires.md), [les demandes](docs/etape-8-demandes.md) et [le matching](docs/etape-9-matching.md). Sur un poste déjà configuré, depuis la racine du dépôt :
 
 ```powershell
 & ".\.venv\Scripts\python.exe" backend\manage.py check
@@ -56,4 +57,4 @@ Chaque étape suit le cycle : explication → commandes → fichiers complets �
 
 ## À venir
 
-Matching, API documentée avec OpenAPI, PWA, sauvegardes, restauration, CI et déploiement. Les exigences avant production figurent dans [docs/architecture.md](docs/architecture.md).
+Attribution, API documentée avec OpenAPI, PWA, sauvegardes, restauration, CI et déploiement. Les exigences avant production figurent dans [docs/architecture.md](docs/architecture.md).
