@@ -1,6 +1,6 @@
 # Étape 4 — Authentification et vérification du téléphone
 
-Cette branche prépare l'API de session et l'OTP. L'envoi réel de SMS sera intégré à l'étape SMS de la feuille de route. Aucun compte non vérifié ne doit recevoir les privilèges d'un prestataire vérifié ; les demandes et le matching ne sont pas encore disponibles.
+Cette étape a préparé l'API de session et l'OTP. L'envoi SMS professionnel est désormais traité à l'étape 15 ; voir [docs/etape-15-sms-otp.md](etape-15-sms-otp.md). Aucun compte non vérifié ne doit recevoir les privilèges d'un prestataire vérifié ; les demandes et le matching ne sont pas encore disponibles.
 
 ## Endpoints présents
 
@@ -40,4 +40,4 @@ Après la réussite des tests, appliquer uniquement la nouvelle migration à la 
 & ".\.venv\Scripts\python.exe" backend\manage.py showmigrations accounts
 ```
 
-Résultat attendu : `[X] 0001_initial` et `[X] 0002_otpcode`. Le code devra ensuite être relié à un fournisseur SMS réel et à un rate limiting partagé avant l'ouverture publique du service.
+Résultat attendu : `[X] 0001_initial` et `[X] 0002_otpcode`. Le transport SMS réel, son journal et la limitation IP partagée sont ajoutés à l'étape 15.
