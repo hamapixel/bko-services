@@ -37,7 +37,9 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 7 : candidatures, vérification manuelle et profils de prestataires.
 - [x] Étape 8 : création privée des demandes et premier état historisé.
 - [x] Étape 9 : recherche des prestataires compatibles et création des offres privées.
-- [x] Étape 10 : acceptation atomique d'une offre et attribution unique.\n- [x] Étape 11 : permissions IDOR et workflow d'intervention.\n- [ ] Étape 12 : avis clients après intervention confirmée — validation locale en cours.
+- [x] Étape 10 : acceptation atomique d'une offre et attribution unique.
+- [x] Étape 11 : permissions IDOR et workflow d'intervention.
+- [ ] Étape 12 : avis clients après intervention confirmée — validation locale en cours.
 
 ## Démarrage sur Windows
 
