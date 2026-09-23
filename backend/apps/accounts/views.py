@@ -6,13 +6,29 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from django.views.decorators.http import require_GET
 from rest_framework import status
+from rest_framework.exceptions import APIException
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.throttling import ScopedRateThrottle, SimpleRateThrottle
 from rest_framework.views import APIView
 
-from .serializers import LoginSerializer, ProfileSerializer, PublicUserSerializer, RegisterSerializer
+from .otp_delivery import DeliveryUnavailable
+from .otp_service import request_verification_code, verify_phone_code
+from .serializers import LoginSerializer, ProfileSerializer, PublicUserSerializer, RegisterSerializer, VerifyPhoneSerializer
+
+
+class SmsUnavailable(APIException):
+    status_code = 503
+    default_detail = "La vérification par SMS n'est pas disponible dans cet environnement."
+
+
+class OtpIpThrottle(SimpleRateThrottle):
+    scope = "otp_ip"
+
+    def get_cache_key(self, request, view):
+        # Use the direct peer address, not a user-supplied forwarded header.
+        return self.cache_format % {"scope": self.scope, "ident": request.META.get("REMOTE_ADDR", "unknown")}
 
 
 @require_GET
@@ -78,3 +94,32 @@ class ProfileView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(PublicUserSerializer(request.user).data)
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class RequestPhoneCodeView(APIView):
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle, OtpIpThrottle]
+    throttle_scope = "otp_request"
+
+    def post(self, request):
+        try:
+            request_verification_code(request.user, request.get_host(), request.META.get("REMOTE_ADDR", ""))
+        except DeliveryUnavailable as exc:
+            raise SmsUnavailable() from exc
+        return Response({"detail": "Code envoyé si le transport SMS est disponible."})
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class VerifyPhoneView(APIView):
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle, OtpIpThrottle]
+    throttle_scope = "otp_verify"
+
+    def post(self, request):
+        serializer = VerifyPhoneSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if not verify_phone_code(request.user, serializer.validated_data["code"]):
+            raise ValidationError({"code": "Code incorrect."})
+        request.user.refresh_from_db(fields=["phone_verified_at"])
+        return Response({"phone_verified_at": request.user.phone_verified_at})

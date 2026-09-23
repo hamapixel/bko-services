@@ -1,6 +1,15 @@
+import re
+from datetime import timedelta
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.contrib.auth.hashers import check_password, make_password
+from django.test import TestCase, override_settings
+from django.utils import timezone
 from rest_framework.test import APIClient
+
+from .models import OtpCode
+from .otp_delivery import ConsoleSmsProvider
 
 
 class SessionAuthTests(TestCase):
@@ -49,3 +58,57 @@ class SessionAuthTests(TestCase):
         self.assertEqual(self.post("/api/v1/auth/logout/", {}, csrf=False).status_code, 403)
         self.assertEqual(self.post("/api/v1/auth/logout/", {}).status_code, 204)
         self.assertNotEqual(self.client.get("/api/v1/auth/me/").status_code, 200)
+
+
+class PhoneOtpTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(phone="+22312345678", password="Complex-password-2026!")
+        self.client = APIClient(enforce_csrf_checks=True, HTTP_HOST="localhost")
+        self.client.force_login(self.user)
+        self.token = self.client.get("/api/v1/auth/csrf/").json()["csrfToken"]
+
+    def post(self, path, data=None, *, csrf=True):
+        headers = {"HTTP_X_CSRFTOKEN": self.token} if csrf else {}
+        return self.client.post(path, data or {}, format="json", **headers)
+
+    @override_settings(DEBUG=True)
+    def test_otp_is_hashed_limited_and_single_use(self):
+        path = "/api/v1/auth/phone/request-code/"
+        self.assertEqual(self.post(path, csrf=False).status_code, 403)
+        with patch.object(ConsoleSmsProvider, "send_sms") as send_sms:
+            response = self.post(path)
+            self.assertEqual(response.status_code, 200)
+            message = send_sms.call_args.args[1]
+        code = re.search(r"\b\d{6}\b", message).group()
+        otp = OtpCode.objects.get()
+        self.assertNotIn(code, str(response.json()))
+        self.assertNotEqual(otp.code_hash, code)
+        self.assertTrue(check_password(code, otp.code_hash))
+        self.assertEqual(self.post(path).status_code, 429)
+
+        verify = "/api/v1/auth/phone/verify/"
+        self.assertEqual(self.post(verify, {"code": "000000" if code != "000000" else "111111"}).status_code, 400)
+        otp.refresh_from_db()
+        self.assertEqual(otp.attempts, 1)
+        self.assertEqual(self.post(verify, {"code": code}).status_code, 200)
+        self.user.refresh_from_db()
+        self.assertIsNotNone(self.user.phone_verified_at)
+        self.assertEqual(self.post(verify, {"code": code}).status_code, 400)
+
+    @override_settings(DEBUG=False)
+    def test_production_refuses_otp_without_sms_provider(self):
+        self.assertEqual(self.post("/api/v1/auth/phone/request-code/").status_code, 503)
+        self.assertEqual(OtpCode.objects.count(), 0)
+
+    def test_five_wrong_codes_lock_the_otp(self):
+        otp = OtpCode.objects.create(
+            user=self.user, code_hash=make_password("123456"), expires_at=timezone.now() + timedelta(minutes=5)
+        )
+        path = "/api/v1/auth/phone/verify/"
+        for _ in range(5):
+            self.assertEqual(self.post(path, {"code": "999999"}).status_code, 400)
+        otp.refresh_from_db()
+        self.assertEqual(otp.attempts, 5)
+        self.assertEqual(self.post(path, {"code": "123456"}).status_code, 429)
+        self.user.refresh_from_db()
+        self.assertIsNone(self.user.phone_verified_at)

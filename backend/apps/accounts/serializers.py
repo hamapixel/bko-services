@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError
+from django.core.validators import RegexValidator
 from rest_framework import serializers
 
 
@@ -57,3 +58,11 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("first_name", "last_name", "email")
+
+
+class VerifyPhoneSerializer(serializers.Serializer):
+    code = serializers.CharField(
+        min_length=6,
+        max_length=6,
+        validators=[RegexValidator(regex=r"^\d{6}$", message="Le code doit contenir six chiffres.")],
+    )
