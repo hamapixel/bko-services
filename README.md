@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 13 — centre de notifications internes validé localement**. Les notifications privées sont historisées en base, liées aux événements métier et la migration `notifications.0001_initial` est appliquée. Aucun Web Push ni SMS n'est encore envoyé.
+> Statut : **étape 14 — Web Push validé localement**. Les abonnements navigateur sont privés, l'envoi est déclenché après commit, les endpoints expirés sont désactivés automatiquement et la migration `notifications.0002_pushsubscription` est appliquée. Le SMS reste hors périmètre.
 
 ## Principes
 
@@ -41,10 +41,11 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 11 : permissions IDOR et workflow d'intervention.
 - [x] Étape 12 : avis clients après intervention confirmée.
 - [x] Étape 13 : centre de notifications internes.
+- [x] Étape 14 : Web Push et service worker minimal.
 
 ## Démarrage sur Windows
 
-Après avoir cloné le dépôt, consulter [l'installation du backend et du frontend](docs/etape-2.md), [le modèle utilisateur](docs/etape-3.md), [l'authentification](docs/etape-4-auth.md), [les lieux](docs/etape-5-lieux.md), [le catalogue](docs/etape-6-catalogue.md), [les prestataires](docs/etape-7-prestataires.md), [les demandes](docs/etape-8-demandes.md), [le matching](docs/etape-9-matching.md) et [l'acceptation atomique](docs/etape-10-acceptation.md), puis [le workflow et les protections IDOR](docs/etape-11-workflow-idor.md) et [les avis clients](docs/etape-12-avis.md), puis [le centre de notifications](docs/etape-13-notifications.md). Sur un poste déjà configuré, depuis la racine du dépôt :
+Après avoir cloné le dépôt, consulter [l'installation du backend et du frontend](docs/etape-2.md), [le modèle utilisateur](docs/etape-3.md), [l'authentification](docs/etape-4-auth.md), [les lieux](docs/etape-5-lieux.md), [le catalogue](docs/etape-6-catalogue.md), [les prestataires](docs/etape-7-prestataires.md), [les demandes](docs/etape-8-demandes.md), [le matching](docs/etape-9-matching.md) et [l'acceptation atomique](docs/etape-10-acceptation.md), puis [le workflow et les protections IDOR](docs/etape-11-workflow-idor.md) et [les avis clients](docs/etape-12-avis.md), puis [le centre de notifications](docs/etape-13-notifications.md) et [le Web Push](docs/etape-14-web-push.md). Sur un poste déjà configuré, depuis la racine du dépôt :
 
 ```powershell
 & ".\.venv\Scripts\python.exe" backend\manage.py check
@@ -60,4 +61,4 @@ Chaque étape suit le cycle : explication → commandes → fichiers complets �
 
 ## À venir
 
-Web Push, SMS/OTP, plaintes, abonnements, paiements, PWA, espaces responsive, tests, CI, Docker et déploiement. Les exigences avant production figurent dans [docs/architecture.md](docs/architecture.md).
+SMS/OTP, plaintes, abonnements, paiements, PWA, espaces responsive, tests, CI, Docker et déploiement. Les exigences avant production figurent dans [docs/architecture.md](docs/architecture.md).

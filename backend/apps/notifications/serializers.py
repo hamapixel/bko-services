@@ -23,3 +23,25 @@ class NotificationSerializer(serializers.ModelSerializer):
 
     def get_is_read(self, obj):
         return obj.read_at is not None
+
+
+class PushKeysSerializer(serializers.Serializer):
+    p256dh = serializers.CharField(max_length=255)
+    auth = serializers.CharField(max_length=255)
+
+
+class PushSubscriptionInputSerializer(serializers.Serializer):
+    endpoint = serializers.URLField(max_length=1000)
+    keys = PushKeysSerializer()
+
+
+class PushUnsubscribeSerializer(serializers.Serializer):
+    endpoint = serializers.URLField(max_length=1000)
+
+
+class PushSubscriptionSerializer(serializers.Serializer):
+    id = serializers.UUIDField(read_only=True)
+    endpoint = serializers.URLField(read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)

@@ -54,3 +54,32 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.recipient_id} — {self.kind}"
+
+
+class PushSubscription(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="push_subscriptions",
+    )
+    endpoint = models.URLField(max_length=1000, unique=True)
+    p256dh = models.CharField(max_length=255)
+    auth = models.CharField(max_length=255)
+    is_active = models.BooleanField(default=True)
+    failure_count = models.PositiveSmallIntegerField(default=0)
+    last_success_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at", "-id"]
+        indexes = [
+            models.Index(
+                fields=["user", "is_active"],
+                name="push_user_active_idx",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} — {self.endpoint[:80]}"

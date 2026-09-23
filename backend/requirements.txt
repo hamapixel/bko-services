@@ -2,3 +2,4 @@ Django>=5.2.8,<5.3
 djangorestframework>=3.17.2,<3.19
 psycopg[binary]>=3.3,<4
 python-dotenv>=1.2,<2
+pywebpush>=2.5,<2.6
