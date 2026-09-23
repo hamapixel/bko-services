@@ -34,18 +34,17 @@ class PushSubscriptionAdmin(admin.ModelAdmin):
     list_display = ("user", "is_active", "failure_count", "last_success_at", "updated_at")
     list_filter = ("is_active", "updated_at")
     search_fields = ("user__phone", "endpoint")
-    readonly_fields = (
+    fields = (
         "id",
         "user",
         "endpoint",
-        "p256dh",
-        "auth",
         "is_active",
         "failure_count",
         "last_success_at",
         "created_at",
         "updated_at",
     )
+    readonly_fields = fields
 
     def has_add_permission(self, request):
         return False
