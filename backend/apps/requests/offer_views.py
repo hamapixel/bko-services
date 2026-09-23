@@ -1,7 +1,10 @@
-from rest_framework import serializers
+from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from .acceptance import accept_offer
 from .models import ServiceOffer, ServiceRequest
 
 
@@ -49,3 +52,20 @@ class ProviderOfferDetailView(RetrieveAPIView):
 
     def get_queryset(self):
         return own_pending_offers(self.request.user)
+
+
+class ProviderOfferAcceptView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        offer, service_request = accept_offer(pk, request.user)
+        return Response(
+            {
+                "id": str(offer.pk),
+                "request_id": str(service_request.pk),
+                "status": offer.status,
+                "request_status": service_request.status,
+                "assigned_provider_id": str(service_request.assigned_provider_id),
+            },
+            status=status.HTTP_200_OK,
+        )
