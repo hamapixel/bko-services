@@ -5,6 +5,11 @@ from .services import effective_subscription_status
 
 
 class SubscriptionPlanSerializer(serializers.ModelSerializer):
+    def validate_duration_days(self, value):
+        if value < 1:
+            raise serializers.ValidationError("La durée doit être d'au moins un jour.")
+        return value
+
     class Meta:
         model = SubscriptionPlan
         fields = (
