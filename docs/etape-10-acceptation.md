@@ -42,3 +42,18 @@ Le test isolé SQLite valide les règles métier et la contrainte. Le test de co
 ```
 
 Après validation, appliquer la migration locale puis vérifier son état.
+
+
+## Validation locale du 23 septembre 2026
+
+Validation effectuée avec succès :
+
+- `manage.py check` : aucun problème détecté ;
+- suite isolée : **33 tests OK**, avec le test PostgreSQL ignoré sous SQLite comme prévu ;
+- test réel de concurrence PostgreSQL : **1 test OK** ;
+- migration `requests.0003_servicerequest_assigned_provider_and_more` appliquée ;
+- `showmigrations requests` affiche `[X]` pour `0001`, `0002` et `0003` ;
+- le droit temporaire `CREATEDB` utilisé pour créer la base de test a été retiré après validation ;
+- branche de travail propre avant préparation de la Pull Request.
+
+Le comportement attendu sous concurrence est donc confirmé : deux prestataires peuvent tenter d'accepter simultanément, mais une seule offre devient `ACCEPTED` et une seule attribution est enregistrée.
