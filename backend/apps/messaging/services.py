@@ -52,9 +52,11 @@ def create_sms_delivery_log(*, user, recipient, provider, request_ip_hash):
 @transaction.atomic
 def mark_sms_accepted(log_id, result):
     log = SmsDeliveryLog.objects.select_for_update().get(pk=log_id)
+    message_id = getattr(result, "message_id", "")
+    provider_status = getattr(result, "provider_status", "")
     log.status = SmsDeliveryLog.Status.ACCEPTED
-    log.provider_message_id = getattr(result, "message_id", "") or ""
-    log.provider_status = getattr(result, "provider_status", "") or ""
+    log.provider_message_id = message_id if isinstance(message_id, str) else ""
+    log.provider_status = provider_status if isinstance(provider_status, str) else ""
     log.error_code = ""
     log.accepted_at = timezone.now()
     log.save(
