@@ -30,6 +30,13 @@ class ServiceRequest(models.Model):
     client = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="service_requests")
     trade = models.ForeignKey(Trade, on_delete=models.PROTECT, related_name="service_requests")
     neighborhood = models.ForeignKey(Neighborhood, on_delete=models.PROTECT, related_name="service_requests")
+    assigned_provider = models.ForeignKey(
+        "providers.ProviderProfile",
+        on_delete=models.PROTECT,
+        related_name="assigned_requests",
+        blank=True,
+        null=True,
+    )
     title = models.CharField(max_length=150)
     description = models.CharField(max_length=2000)
     address_detail = models.CharField(max_length=250)
@@ -86,7 +93,12 @@ class ServiceOffer(models.Model):
     class Meta:
         ordering = ["created_at", "id"]
         constraints = [
-            models.UniqueConstraint(fields=["service_request", "provider"], name="requests_unique_offer_provider")
+            models.UniqueConstraint(fields=["service_request", "provider"], name="requests_unique_offer_provider"),
+            models.UniqueConstraint(
+                fields=["service_request"],
+                condition=Q(status="ACCEPTED"),
+                name="requests_one_accepted_offer",
+            ),
         ]
 
     def __str__(self):
