@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 1 — environnement Windows vérifié**. Le dépôt ne contient pas encore d'application exécutable. Aucun modèle Django, projet Next.js ou migration n'a été créé.
+> Statut : **étape 2 — socle Django et Next.js validé**. Django se connecte à PostgreSQL et répond sur `/health/`. Next.js passe le build. Aucun modèle métier ni migration n'a été créé.
 
 ## Principes
 
@@ -29,7 +29,7 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 
 - [x] Étape 0 : cadrage, architecture, arborescence, README et `.gitignore`.
 - [x] Étape 1 : Git, Python, Node.js, npm, PostgreSQL et environnement virtuel vérifiés sous Windows.
-- [ ] Étape 2 : création du backend et du frontend.
+- [x] Étape 2 : socle Django/DRF et Next.js, connexion PostgreSQL, endpoint de santé et build vérifiés.
 - [ ] Étapes suivantes : développement incrémental selon la feuille de route.
 
 ## Démarrage sur Windows
@@ -45,7 +45,7 @@ pg_isready -h localhost -p 5432
 git status
 ```
 
-L'activation PowerShell de `.venv` n'est pas nécessaire : les prochaines commandes peuvent appeler directement `".\.venv\Scripts\python.exe"`. Redis sera installé lorsque les tâches asynchrones seront mises en place. L'étape 2 créera les premiers fichiers du backend et du frontend.
+L'activation PowerShell de `.venv` n'est pas nécessaire : les prochaines commandes peuvent appeler directement `".\.venv\Scripts\python.exe"`. Redis sera installé lorsque les tâches asynchrones seront mises en place. La procédure de démarrage et les commandes de vérification figurent dans [docs/etape-2.md](docs/etape-2.md). Ne pas lancer `migrate` avant la création du `Custom User` à l'étape 3.
 
 Ne placez jamais de mots de passe, de clés API, de fichiers `.env` ou de pièces d'identité dans Git. Les migrations applicatives seront versionnées lorsqu'elles seront créées.
 
