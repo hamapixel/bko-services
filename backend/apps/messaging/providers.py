@@ -1,5 +1,6 @@
 import base64
 import json
+import re
 from dataclasses import dataclass
 from typing import Protocol
 from urllib.error import HTTPError, URLError
@@ -49,8 +50,15 @@ class TwilioSmsProvider:
         self.messaging_service_sid = settings.TWILIO_MESSAGING_SERVICE_SID
         self.from_number = settings.TWILIO_FROM_NUMBER
 
-        if not self.account_sid or not self.auth_token:
-            raise DeliveryUnavailable("Identifiants Twilio incomplets.")
+        if not re.fullmatch(r"AC[0-9a-fA-F]{32}", self.account_sid or ""):
+            raise DeliveryUnavailable("TWILIO_ACCOUNT_SID invalide.")
+        if not self.auth_token:
+            raise DeliveryUnavailable("TWILIO_AUTH_TOKEN manquant.")
+        if self.messaging_service_sid and not re.fullmatch(
+            r"MG[0-9a-fA-F]{32}",
+            self.messaging_service_sid,
+        ):
+            raise DeliveryUnavailable("TWILIO_MESSAGING_SERVICE_SID invalide.")
         if not self.messaging_service_sid and not self.from_number:
             raise DeliveryUnavailable("Aucun expéditeur Twilio n'est configuré.")
 
