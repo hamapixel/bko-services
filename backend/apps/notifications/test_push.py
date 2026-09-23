@@ -51,6 +51,16 @@ class WebPushTests(TestCase):
         self.assertEqual(response.json(), {"enabled": False, "publicKey": ""})
 
     @override_settings(
+        WEB_PUSH_VAPID_PUBLIC_KEY="public-key",
+        WEB_PUSH_VAPID_PRIVATE_KEY="private-key",
+        WEB_PUSH_VAPID_SUBJECT="invalid-subject",
+    )
+    def test_public_config_rejects_invalid_vapid_subject(self):
+        response = APIClient().get("/api/v1/notifications/push/config/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"enabled": False, "publicKey": ""})
+
+    @override_settings(
         WEB_PUSH_VAPID_PUBLIC_KEY="",
         WEB_PUSH_VAPID_PRIVATE_KEY="",
         WEB_PUSH_VAPID_SUBJECT="",
