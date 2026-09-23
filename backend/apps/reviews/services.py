@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
+from apps.notifications.models import Notification
+from apps.notifications.services import create_notification
 from apps.requests.models import ServiceRequest
 
 from .models import Review
@@ -38,10 +40,18 @@ def create_review(request_id, user, *, rating, comment=""):
     if Review.objects.filter(service_request=service_request).exists():
         raise ValidationError({"detail": "Un avis existe déjà pour cette intervention."})
 
-    return Review.objects.create(
+    review = Review.objects.create(
         service_request=service_request,
         client=locked_user,
         provider=service_request.assigned_provider,
         rating=rating,
         comment=comment,
     )
+    create_notification(
+        recipient_id=service_request.assigned_provider.user_id,
+        kind=Notification.Kind.REVIEW_RECEIVED,
+        title="Nouvel avis reçu",
+        message=f"Un client vous a attribué une note de {rating}/5.",
+        service_request=service_request,
+    )
+    return review
