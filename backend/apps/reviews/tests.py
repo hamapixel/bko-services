@@ -93,6 +93,23 @@ class ReviewTests(TestCase):
         self.assertEqual(duplicate.status_code, 400)
         self.assertEqual(Review.objects.count(), 1)
 
+    def test_client_cannot_choose_another_provider(self):
+        api = APIClient()
+        api.force_login(self.client_user)
+
+        response = api.post(
+            f"/api/v1/requests/{self.service_request.pk}/review/",
+            {
+                "rating": 5,
+                "comment": "Tentative de champ interdit",
+                "provider_id": str(self.provider.pk),
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(Review.objects.count(), 0)
+
     def test_review_requires_client_confirmed_status(self):
         self.service_request.status = ServiceRequest.Status.PROVIDER_COMPLETED
         self.service_request.save(update_fields=["status"])
