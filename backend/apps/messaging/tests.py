@@ -139,7 +139,7 @@ class SmsTransportTests(TestCase):
                 {},
                 format="json",
                 REMOTE_ADDR="198.51.100.10",
-                HTTP_HOST="example.com",
+                HTTP_HOST="localhost",
             )
 
         self.assertEqual(response.status_code, 503)
