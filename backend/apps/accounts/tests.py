@@ -71,7 +71,7 @@ class PhoneOtpTests(TestCase):
         headers = {"HTTP_X_CSRFTOKEN": self.token} if csrf else {}
         return self.client.post(path, data or {}, format="json", **headers)
 
-    @override_settings(DEBUG=True)
+    @override_settings(DEBUG=True, SMS_PROVIDER="")
     def test_otp_is_hashed_limited_and_single_use(self):
         path = "/api/v1/auth/phone/request-code/"
         self.assertEqual(self.post(path, csrf=False).status_code, 403)
@@ -95,7 +95,7 @@ class PhoneOtpTests(TestCase):
         self.assertIsNotNone(self.user.phone_verified_at)
         self.assertEqual(self.post(verify, {"code": code}).status_code, 400)
 
-    @override_settings(DEBUG=False)
+    @override_settings(DEBUG=False, SMS_PROVIDER="")
     def test_production_refuses_otp_without_sms_provider(self):
         self.assertEqual(self.post("/api/v1/auth/phone/request-code/").status_code, 503)
         self.assertEqual(OtpCode.objects.count(), 0)
