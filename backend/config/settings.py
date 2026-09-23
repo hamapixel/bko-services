@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "apps.requests",
     "apps.reviews",
     "apps.notifications",
+    "apps.messaging",
 ]
 
 MIDDLEWARE = [
@@ -117,3 +118,11 @@ CSRF_COOKIE_SECURE = not DEBUG
 WEB_PUSH_VAPID_PUBLIC_KEY = os.getenv("WEB_PUSH_VAPID_PUBLIC_KEY", "")
 WEB_PUSH_VAPID_PRIVATE_KEY = os.getenv("WEB_PUSH_VAPID_PRIVATE_KEY", "")
 WEB_PUSH_VAPID_SUBJECT = os.getenv("WEB_PUSH_VAPID_SUBJECT", "")
+
+SMS_PROVIDER = os.getenv("SMS_PROVIDER", "")
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
+TWILIO_MESSAGING_SERVICE_SID = os.getenv("TWILIO_MESSAGING_SERVICE_SID", "")
+TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER", "")
+SMS_HTTP_TIMEOUT_SECONDS = int(os.getenv("SMS_HTTP_TIMEOUT_SECONDS", "5"))
+SMS_OTP_IP_LIMIT_PER_HOUR = int(os.getenv("SMS_OTP_IP_LIMIT_PER_HOUR", "20"))
