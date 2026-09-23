@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 0 — cadrage**. Le dépôt ne contient pas encore d'application exécutable. Aucun modèle Django, projet Next.js ou migration n'a été créé.
+> Statut : **étape 1 — environnement Windows vérifié**. Le dépôt ne contient pas encore d'application exécutable. Aucun modèle Django, projet Next.js ou migration n'a été créé.
 
 ## Principes
 
@@ -28,19 +28,24 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 ## État du projet
 
 - [x] Étape 0 : cadrage, architecture, arborescence, README et `.gitignore`.
-- [ ] Étape 1 : environnement de développement Windows et vérification des outils.
+- [x] Étape 1 : Git, Python, Node.js, npm, PostgreSQL et environnement virtuel vérifiés sous Windows.
 - [ ] Étape 2 : création du backend et du frontend.
 - [ ] Étapes suivantes : développement incrémental selon la feuille de route.
 
 ## Démarrage sur Windows
 
-Les commandes d'installation arriveront à l'étape 1 après vérification de Git, Python, Node.js et PostgreSQL. Pour récupérer ce cadrage dès maintenant :
+Sur le poste de développement, Git 2.55, Python 3.14.6, Node.js 24.19, npm 11.17 et PostgreSQL 18.4 ont été vérifiés. Le service PostgreSQL tourne et répond sur `localhost:5432`. L'environnement Python local `.venv` fonctionne et est ignoré par Git. Pour installer le dépôt sur un autre poste :
 
 ```powershell
 git clone https://github.com/hamapixel/bko-services.git
 cd bko-services
+py -m venv .venv
+& ".\.venv\Scripts\python.exe" --version
+pg_isready -h localhost -p 5432
 git status
 ```
+
+L'activation PowerShell de `.venv` n'est pas nécessaire : les prochaines commandes peuvent appeler directement `".\.venv\Scripts\python.exe"`. Redis sera installé lorsque les tâches asynchrones seront mises en place. L'étape 2 créera les premiers fichiers du backend et du frontend.
 
 Ne placez jamais de mots de passe, de clés API, de fichiers `.env` ou de pièces d'identité dans Git. Les migrations applicatives seront versionnées lorsqu'elles seront créées.
 
