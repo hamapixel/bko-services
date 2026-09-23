@@ -82,3 +82,15 @@ Après validation des tests :
 & ".\.venv\Scripts\python.exe" backend\manage.py showmigrations notifications
 git status
 ```
+
+
+## Validation locale du 23 septembre 2026
+
+Validation effectuée avec succès :
+
+- tests du centre de notifications : **6 tests OK** ;
+- suite complète : **52 tests OK** ;
+- **1 test PostgreSQL ignoré sous SQLite**, comme prévu ;
+- migration `notifications.0001_initial` appliquée localement ;
+- `showmigrations notifications` affiche `[X] 0001_initial` ;
+- branche locale propre après validation.
