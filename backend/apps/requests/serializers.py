@@ -45,6 +45,14 @@ class OwnRequestSerializer(serializers.ModelSerializer):
     def get_assigned_provider_phone(self, obj):
         return obj.assigned_provider.user.phone if obj.assigned_provider_id else None
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not instance.assigned_provider_id:
+            data.pop("assigned_provider_id", None)
+            data.pop("assigned_provider_display_name", None)
+            data.pop("assigned_provider_phone", None)
+        return data
+
 
 class ProviderInterventionSerializer(serializers.ModelSerializer):
     status_history = StatusHistorySerializer(many=True, read_only=True)
