@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 11 — permissions IDOR et workflow implémentés sur la branche de fonctionnalité, validation locale en cours**. Les accès client/prestataire sont filtrés par propriétaire et le workflow d'intervention impose les transitions dans l'ordre. Aucun avis ni notification n'est encore ajouté.
+> Statut : **étape 11 — permissions IDOR et workflow validés localement**. Les accès client/prestataire sont filtrés par propriétaire, les transitions sont imposées dans l'ordre et les 38 tests isolés passent.
 
 ## Principes
 
@@ -37,7 +37,7 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 7 : candidatures, vérification manuelle et profils de prestataires.
 - [x] Étape 8 : création privée des demandes et premier état historisé.
 - [x] Étape 9 : recherche des prestataires compatibles et création des offres privées.
-- [x] Étape 10 : acceptation atomique d'une offre et attribution unique.\n- [ ] Étape 11 : permissions IDOR et workflow d'intervention — validation locale en cours.
+- [x] Étape 10 : acceptation atomique d'une offre et attribution unique.\n- [x] Étape 11 : permissions IDOR et workflow d'intervention.
 
 ## Démarrage sur Windows
 
