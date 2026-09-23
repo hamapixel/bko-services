@@ -1,6 +1,8 @@
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 
+from apps.notifications.models import Notification
+from apps.notifications.services import create_notification
 from apps.providers.models import ProviderProfile
 
 from .models import RequestStatusHistory, ServiceOffer, ServiceRequest
@@ -43,7 +45,7 @@ def dispatch_request(request_id, actor):
         )
 
     limit = 5 if service_request.priority == ServiceRequest.Priority.URGENT else 1
-    candidates = ProviderProfile.objects.filter(
+    candidates = ProviderProfile.objects.select_related("user").filter(
         status=ProviderProfile.Status.VERIFIED,
         is_available=True,
         user__is_active=True,
@@ -56,6 +58,13 @@ def dispatch_request(request_id, actor):
     selected = list(candidates)
     for profile in selected:
         ServiceOffer.objects.create(service_request=service_request, provider=profile)
+        create_notification(
+            recipient_id=profile.user_id,
+            kind=Notification.Kind.OFFER_RECEIVED,
+            title="Nouvelle demande disponible",
+            message="Une demande compatible avec votre métier et votre zone vous a été proposée.",
+            service_request=service_request,
+        )
 
     if selected:
         service_request.status = ServiceRequest.Status.OFFERED
