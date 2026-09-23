@@ -1,7 +1,7 @@
-from django.conf import settings
 import secrets
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password, make_password
 from django.db import transaction
@@ -38,7 +38,12 @@ def request_verification_code(user, host: str, remote_addr: str) -> None:
             raise Throttled(detail="Limite quotidienne de codes atteinte.")
 
         latest = recent.order_by("-created_at").first()
-        if latest and latest.created_at + timedelta(seconds=settings.OTP_MIN_REQUEST_INTERVAL_SECONDS) > now:
+        if (
+            latest
+            and latest.created_at
+            + timedelta(seconds=settings.OTP_MIN_REQUEST_INTERVAL_SECONDS)
+            > now
+        ):
             raise Throttled(
                 wait=settings.OTP_MIN_REQUEST_INTERVAL_SECONDS,
                 detail="Attendez avant de demander un autre code.",
