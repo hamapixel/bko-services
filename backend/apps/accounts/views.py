@@ -30,7 +30,7 @@ class RegisterView(APIView):
     throttle_scope = "auth_register"
 
     def post(self, request):
-        if set(request.data) - set(RegisterSerializer().fields):
+        if not isinstance(request.data, dict) or set(request.data) - set(RegisterSerializer().fields):
             raise ValidationError({"detail": "Champ non autorisé."})
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -72,7 +72,7 @@ class ProfileView(APIView):
         return Response(PublicUserSerializer(request.user).data)
 
     def patch(self, request):
-        if set(request.data) - set(ProfileSerializer().fields):
+        if not isinstance(request.data, dict) or set(request.data) - set(ProfileSerializer().fields):
             raise ValidationError({"detail": "Champ non autorisé."})
         serializer = ProfileSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)

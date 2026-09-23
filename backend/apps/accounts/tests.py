@@ -16,6 +16,7 @@ class SessionAuthTests(TestCase):
     def test_registration_ignores_client_supplied_role_by_rejecting_request(self):
         payload = {"phone": "+22312345678", "password": "Complex-password-2026!", "role": "SUPERADMIN"}
         self.assertEqual(self.post("/api/v1/auth/register/", payload, csrf=False).status_code, 403)
+        self.assertEqual(self.post("/api/v1/auth/register/", [{"role": "SUPERADMIN"}]).status_code, 400)
         response = self.post("/api/v1/auth/register/", payload)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(get_user_model().objects.count(), 0)
