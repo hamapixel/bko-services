@@ -1,3 +1,4 @@
+from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
@@ -6,6 +7,7 @@ from rest_framework.test import APIClient
 from apps.catalog.models import Category, Trade
 from apps.locations.models import City, Commune, Neighborhood
 from apps.providers.models import ProviderProfile
+from apps.subscriptions.models import ProviderSubscription, SubscriptionPlan
 
 from .acceptance import accept_offer
 from .matching import dispatch_request
@@ -36,6 +38,14 @@ class WorkflowAndIdorTests(TestCase):
         self.trade = Trade.objects.create(
             category=Category.objects.create(name="Intervention"),
             name="Climatisation",
+        )
+        self.plan = SubscriptionPlan.objects.create(
+            code="workflow-test",
+            name="Workflow Test",
+            price_xof=0,
+            duration_days=30,
+            can_receive_requests=True,
+            can_receive_urgent_requests=True,
         )
 
         self.provider = self.create_provider("+22340000010", "Prestataire attribué")
@@ -76,6 +86,13 @@ class WorkflowAndIdorTests(TestCase):
         )
         profile.trades.add(self.trade)
         profile.service_areas.add(self.area)
+        now = timezone.now()
+        ProviderSubscription.objects.create(
+            provider=profile,
+            plan=self.plan,
+            starts_at=now - timedelta(minutes=1),
+            ends_at=now + timedelta(days=30),
+        )
         return profile
 
     def test_provider_sees_only_assigned_intervention_and_private_details(self):
