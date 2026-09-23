@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 2 — socle Django et Next.js validé**. Django se connecte à PostgreSQL et répond sur `/health/`. Next.js passe le build. Aucun modèle métier ni migration n'a été créé.
+> Statut : **étape 3 — utilisateur personnalisé créé**. La première migration a été appliquée sur PostgreSQL : `accounts.User` utilise le téléphone pour la connexion et un UUID comme clé primaire.
 
 ## Principes
 
@@ -30,6 +30,8 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 0 : cadrage, architecture, arborescence, README et `.gitignore`.
 - [x] Étape 1 : Git, Python, Node.js, npm, PostgreSQL et environnement virtuel vérifiés sous Windows.
 - [x] Étape 2 : socle Django/DRF et Next.js, connexion PostgreSQL, endpoint de santé et build vérifiés.
+- [x] Étape 3 : Custom User et première migration PostgreSQL validés.
+- [ ] Étape 4 : inscription, connexion et sécurité de l'authentification.
 - [ ] Étapes suivantes : développement incrémental selon la feuille de route.
 
 ## Démarrage sur Windows
@@ -45,7 +47,7 @@ pg_isready -h localhost -p 5432
 git status
 ```
 
-L'activation PowerShell de `.venv` n'est pas nécessaire : les prochaines commandes peuvent appeler directement `".\.venv\Scripts\python.exe"`. Redis sera installé lorsque les tâches asynchrones seront mises en place. La procédure de démarrage et les commandes de vérification figurent dans [docs/etape-2.md](docs/etape-2.md). Ne pas lancer `migrate` avant la création du `Custom User` à l'étape 3.
+L'activation PowerShell de `.venv` n'est pas nécessaire : les prochaines commandes peuvent appeler directement `".\.venv\Scripts\python.exe"`. Redis sera installé lorsque les tâches asynchrones seront mises en place. La procédure de démarrage et les commandes de vérification figurent dans [docs/etape-2.md](docs/etape-2.md). La première migration `accounts.0001_initial` et les migrations Django de base ont été appliquées après la création du `Custom User`. Voir [docs/etape-3.md](docs/etape-3.md).
 
 Ne placez jamais de mots de passe, de clés API, de fichiers `.env` ou de pièces d'identité dans Git. Les migrations applicatives seront versionnées lorsqu'elles seront créées.
 
