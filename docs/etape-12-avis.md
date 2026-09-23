@@ -58,3 +58,18 @@ git status
 ```
 
 La migration attendue est `reviews.0001_initial`.
+
+
+## Validation locale du 23 septembre 2026
+
+Validation effectuée avec succès :
+
+- `manage.py check` : aucun problème détecté ;
+- `makemigrations --check --dry-run` : aucun changement non versionné ;
+- `migrate --plan` : `reviews.0001_initial` détectée comme prévu ;
+- tests de l'application avis : **8 tests OK** ;
+- suite complète : **46 tests OK** ;
+- **1 test PostgreSQL ignoré sous SQLite**, comme prévu ;
+- migration `reviews.0001_initial` appliquée localement ;
+- `showmigrations reviews` affiche `[X] 0001_initial` ;
+- branche locale propre après validation.
