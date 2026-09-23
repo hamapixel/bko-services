@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 16 — plaintes / signalements implémentés sur la branche de fonctionnalité, validation locale en cours**. Les plaintes sont privées, liées aux interventions attribuées, protégées contre l'IDOR et suspendent le workflow via l'état `DISPUTED` jusqu'à décision administrative.
+> Statut : **étape 16 — plaintes / signalements validés localement**. Les plaintes sont privées, liées aux interventions attribuées, protégées contre l'IDOR et suspendent le workflow via l'état `DISPUTED` jusqu'à décision administrative. La migration `complaints.0001_initial` est appliquée.
 
 ## Principes
 
@@ -43,7 +43,7 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 13 : centre de notifications internes.
 - [x] Étape 14 : Web Push et service worker minimal.
 - [x] Étape 15 : SMS/OTP professionnel.
-- [ ] Étape 16 : plaintes / signalements — validation locale en cours.
+- [x] Étape 16 : plaintes / signalements.
 
 ## Démarrage sur Windows
 
