@@ -149,3 +149,15 @@ Après validation :
 & ".\.venv\Scripts\python.exe" backend\manage.py showmigrations complaints
 git status
 ```
+
+
+## Validation locale du 23 septembre 2026
+
+Validation effectuée avec succès :
+
+- tests de l'application `complaints` : **9 tests OK** ;
+- suite complète backend : **78 tests OK** ;
+- **1 test PostgreSQL ignoré sous SQLite**, comme prévu ;
+- migration `complaints.0001_initial` appliquée localement ;
+- `showmigrations complaints` affiche `[X] 0001_initial` ;
+- branche locale propre après validation.
