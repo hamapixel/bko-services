@@ -16,7 +16,11 @@ function urlBase64ToUint8Array(value: string) {
   const padding = "=".repeat((4 - (value.length % 4)) % 4);
   const normalized = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
   const raw = window.atob(normalized);
-  return Uint8Array.from(raw, (character) => character.charCodeAt(0));
+  const output = new Uint8Array(raw.length);
+  for (let index = 0; index < raw.length; index += 1) {
+    output[index] = raw.charCodeAt(index);
+  }
+  return output;
 }
 
 async function fetchPushConfig(apiBaseUrl?: string): Promise<PushConfig> {
@@ -40,7 +44,8 @@ export function webPushSupported() {
     typeof window !== "undefined" &&
     "serviceWorker" in navigator &&
     "PushManager" in window &&
-    "Notification" in window
+    "Notification" in window &&
+    window.isSecureContext
   );
 }
 
