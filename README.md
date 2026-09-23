@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 12 — avis clients implémentés sur la branche de fonctionnalité, validation locale en cours**. Un client peut laisser un seul avis après `CLIENT_CONFIRMED`, uniquement pour le prestataire réellement attribué.
+> Statut : **étape 12 — avis clients validés localement**. Un client peut laisser un seul avis après `CLIENT_CONFIRMED`, uniquement pour le prestataire réellement attribué. La migration `reviews.0001_initial` est appliquée et la suite complète passe.
 
 ## Principes
 
@@ -39,7 +39,7 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 9 : recherche des prestataires compatibles et création des offres privées.
 - [x] Étape 10 : acceptation atomique d'une offre et attribution unique.
 - [x] Étape 11 : permissions IDOR et workflow d'intervention.
-- [ ] Étape 12 : avis clients après intervention confirmée — validation locale en cours.
+- [x] Étape 12 : avis clients après intervention confirmée.
 
 ## Démarrage sur Windows
 
