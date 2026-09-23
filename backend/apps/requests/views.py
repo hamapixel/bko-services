@@ -22,7 +22,11 @@ class ClientRequestListView(ListAPIView):
         return [ScopedRateThrottle()] if self.request.method == "POST" else []
 
     def get_queryset(self):
-        return ServiceRequest.objects.filter(client=self.request.user).prefetch_related("status_history")
+        return (
+            ServiceRequest.objects.filter(client=self.request.user)
+            .select_related("assigned_provider__user")
+            .prefetch_related("status_history")
+        )
 
     def post(self, request):
         if not isinstance(request.data, dict) or set(request.data) - set(CreateRequestSerializer().fields):
@@ -39,4 +43,8 @@ class ClientRequestDetailView(RetrieveAPIView):
     lookup_field = "pk"
 
     def get_queryset(self):
-        return ServiceRequest.objects.filter(client=self.request.user).prefetch_related("status_history")
+        return (
+            ServiceRequest.objects.filter(client=self.request.user)
+            .select_related("assigned_provider__user")
+            .prefetch_related("status_history")
+        )
