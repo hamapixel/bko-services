@@ -15,6 +15,10 @@ class ClientReviewCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
+        if not isinstance(request.data, dict) or set(request.data) - set(CreateReviewSerializer().fields):
+            from rest_framework.exceptions import ValidationError
+
+            raise ValidationError({"detail": "Champ non autorisé."})
         serializer = CreateReviewSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         review = create_review(
