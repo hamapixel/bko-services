@@ -1,3 +1,5 @@
+from django.conf import settings
+
 from rest_framework import status
 from rest_framework.generics import ListAPIView
 from rest_framework.exceptions import ValidationError
@@ -68,8 +70,6 @@ class PushConfigView(APIView):
 
     def get(self, request):
         enabled = web_push_configured()
-        from django.conf import settings
-
         return Response(
             {
                 "enabled": enabled,
