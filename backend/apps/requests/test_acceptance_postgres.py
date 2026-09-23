@@ -1,4 +1,5 @@
 import threading
+from datetime import timedelta
 from queue import Queue
 from unittest import skipUnless
 
@@ -11,6 +12,7 @@ from rest_framework.exceptions import ValidationError
 from apps.catalog.models import Category, Trade
 from apps.locations.models import City, Commune, Neighborhood
 from apps.providers.models import ProviderProfile
+from apps.subscriptions.models import ProviderSubscription, SubscriptionPlan
 
 from .acceptance import accept_offer
 from .matching import dispatch_request
@@ -39,6 +41,14 @@ class AcceptanceConcurrencyPostgresTests(TransactionTestCase):
             category=Category.objects.create(name="Urgence"),
             name="Plomberie urgence",
         )
+        self.plan = SubscriptionPlan.objects.create(
+            code="concurrency-test",
+            name="Concurrency Test",
+            price_xof=0,
+            duration_days=30,
+            can_receive_requests=True,
+            can_receive_urgent_requests=True,
+        )
 
     def create_provider(self, phone):
         user = get_user_model().objects.create_user(
@@ -57,6 +67,13 @@ class AcceptanceConcurrencyPostgresTests(TransactionTestCase):
         )
         profile.trades.add(self.trade)
         profile.service_areas.add(self.area)
+        now = timezone.now()
+        ProviderSubscription.objects.create(
+            provider=profile,
+            plan=self.plan,
+            starts_at=now - timedelta(minutes=1),
+            ends_at=now + timedelta(days=30),
+        )
         return profile
 
     def test_only_one_provider_wins_when_two_accept_together(self):
