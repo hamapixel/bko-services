@@ -10,5 +10,6 @@ urlpatterns = [
     path("api/v1/catalog/", include("apps.catalog.urls")),
     path("api/v1/providers/", include("apps.providers.urls")),
     path("api/v1/requests/", include("apps.requests.urls")),
+    path("api/v1/notifications/", include("apps.notifications.urls")),
     path("", include("apps.core.urls")),
 ]
