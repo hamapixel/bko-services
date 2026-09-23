@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 10 — acceptation atomique validée localement, y compris sous concurrence PostgreSQL**. L'acceptation verrouille la demande, réévalue l'éligibilité du prestataire, attribue un seul gagnant et annule les offres concurrentes. La migration `0003` est appliquée localement et les tests sont validés avant fusion.
+> Statut : **étape 11 — permissions IDOR et workflow implémentés sur la branche de fonctionnalité, validation locale en cours**. Les accès client/prestataire sont filtrés par propriétaire et le workflow d'intervention impose les transitions dans l'ordre. Aucun avis ni notification n'est encore ajouté.
 
 ## Principes
 
