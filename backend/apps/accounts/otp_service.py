@@ -1,3 +1,4 @@
+from django.conf import settings
 import secrets
 from datetime import timedelta
 
@@ -33,13 +34,13 @@ def request_verification_code(user, host: str, remote_addr: str) -> None:
             user=locked_user,
             created_at__gte=now - timedelta(hours=24),
         )
-        if recent.count() >= 5:
+        if recent.count() >= settings.OTP_PHONE_DAILY_LIMIT:
             raise Throttled(detail="Limite quotidienne de codes atteinte.")
 
         latest = recent.order_by("-created_at").first()
-        if latest and latest.created_at + timedelta(seconds=60) > now:
+        if latest and latest.created_at + timedelta(seconds=settings.OTP_MIN_REQUEST_INTERVAL_SECONDS) > now:
             raise Throttled(
-                wait=60,
+                wait=settings.OTP_MIN_REQUEST_INTERVAL_SECONDS,
                 detail="Attendez avant de demander un autre code.",
             )
 
@@ -51,7 +52,7 @@ def request_verification_code(user, host: str, remote_addr: str) -> None:
         otp = OtpCode.objects.create(
             user=locked_user,
             code_hash=make_password(code),
-            expires_at=now + timedelta(minutes=5),
+            expires_at=now + timedelta(seconds=settings.OTP_CODE_TTL_SECONDS),
         )
         delivery_log = create_sms_delivery_log(
             user=locked_user,
@@ -93,7 +94,7 @@ def verify_phone_code(user, code: str) -> bool:
     now = timezone.now()
     if otp is None or otp.expires_at <= now:
         raise ValidationError({"code": "Code absent ou expiré."})
-    if otp.attempts >= 5:
+    if otp.attempts >= settings.OTP_MAX_ATTEMPTS:
         raise Throttled(detail="Trop de tentatives pour ce code.")
 
     otp.attempts += 1
