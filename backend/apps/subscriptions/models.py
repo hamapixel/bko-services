@@ -1,6 +1,8 @@
 import uuid
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import models
 
 from apps.providers.models import ProviderProfile
@@ -12,7 +14,7 @@ class SubscriptionPlan(models.Model):
     name = models.CharField(max_length=120)
     description = models.CharField(max_length=1000, blank=True)
     price_xof = models.PositiveBigIntegerField(default=0)
-    duration_days = models.PositiveSmallIntegerField()
+    duration_days = models.PositiveSmallIntegerField(validators=[MinValueValidator(1)])
     can_receive_requests = models.BooleanField(default=True)
     can_receive_urgent_requests = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
@@ -25,6 +27,17 @@ class SubscriptionPlan(models.Model):
         permissions = [
             ("manage_subscriptions", "Peut gérer les plans et abonnements"),
         ]
+
+    def clean(self):
+        super().clean()
+        if self.can_receive_urgent_requests and not self.can_receive_requests:
+            raise ValidationError(
+                {
+                    "can_receive_urgent_requests": (
+                        "Un plan autorisant les urgences doit aussi autoriser les demandes."
+                    )
+                }
+            )
 
     def __str__(self):
         return self.name
