@@ -122,3 +122,19 @@ Après validation :
 & ".\.venv\Scripts\python.exe" backend\manage.py showmigrations notifications
 git status
 ```
+
+
+## Validation locale du 23 septembre 2026
+
+Validation effectuée avec succès :
+
+- suite complète backend : **63 tests OK** ;
+- **1 test PostgreSQL ignoré sous SQLite**, comme prévu ;
+- build Next.js 16.3.6 : **OK** ;
+- compilation TypeScript : **OK** ;
+- génération des pages statiques : **OK** ;
+- migration `notifications.0002_pushsubscription` appliquée localement ;
+- `showmigrations notifications` affiche `[X] 0001_initial` et `[X] 0002_pushsubscription` ;
+- branche locale propre après validation.
+
+Les vraies clés VAPID doivent rester uniquement dans le fichier `.env` local, qui est ignoré par Git. Si une clé privée VAPID est exposée hors de cet environnement privé, la paire doit être régénérée avant utilisation.
