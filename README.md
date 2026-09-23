@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 7 — candidatures de prestataires validées en développement local**. L'API Django, le frontend Next.js et les migrations des comptes, lieux, métiers et profils prestataires sont présents. L'envoi de SMS réel sera intégré à l'étape 15.
+> Statut : **étape 8 — demandes clients validées sur PostgreSQL local**. Une demande peut être enregistrée et relue par son client avec un historique initial. La recherche et l'attribution d'un prestataire seront ajoutées aux étapes suivantes ; l'envoi SMS réel arrivera à l'étape 15.
 
 ## Principes
 
@@ -35,15 +35,16 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 5 : ville, communes et quartiers administrables ; Bamako initialisé.
 - [x] Étape 6 : métiers et catégories de services administrables.
 - [x] Étape 7 : candidatures, vérification manuelle et profils de prestataires.
-- [ ] Étape 8 : création et suivi initial des demandes de service.
+- [x] Étape 8 : création privée des demandes et premier état historisé.
+- [ ] Étape 9 : recherche des prestataires compatibles et création des offres.
 
 ## Démarrage sur Windows
 
-Après avoir cloné le dépôt, consulter [l'installation du backend et du frontend](docs/etape-2.md), [le modèle utilisateur](docs/etape-3.md) et [l'authentification](docs/etape-4-auth.md), [les lieux](docs/etape-5-lieux.md), [le catalogue](docs/etape-6-catalogue.md) et [les prestataires](docs/etape-7-prestataires.md). Sur un poste déjà configuré, depuis la racine du dépôt :
+Après avoir cloné le dépôt, consulter [l'installation du backend et du frontend](docs/etape-2.md), [le modèle utilisateur](docs/etape-3.md) et [l'authentification](docs/etape-4-auth.md), [les lieux](docs/etape-5-lieux.md), [le catalogue](docs/etape-6-catalogue.md), [les prestataires](docs/etape-7-prestataires.md) et [les demandes](docs/etape-8-demandes.md). Sur un poste déjà configuré, depuis la racine du dépôt :
 
 ```powershell
 & ".\.venv\Scripts\python.exe" backend\manage.py check
-& ".\.venv\Scripts\python.exe" backend\manage.py test apps.accounts apps.locations apps.catalog apps.providers --settings=config.test_settings
+& ".\.venv\Scripts\python.exe" backend\manage.py test apps.accounts apps.locations apps.catalog apps.providers apps.requests --settings=config.test_settings
 git status
 ```
 
@@ -55,4 +56,4 @@ Chaque étape suit le cycle : explication → commandes → fichiers complets �
 
 ## À venir
 
-Demandes, API documentée avec OpenAPI, PWA, sauvegardes, restauration, CI et déploiement. Les exigences avant production figurent dans [docs/architecture.md](docs/architecture.md).
+Matching, API documentée avec OpenAPI, PWA, sauvegardes, restauration, CI et déploiement. Les exigences avant production figurent dans [docs/architecture.md](docs/architecture.md).
