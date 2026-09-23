@@ -1,4 +1,5 @@
 from datetime import timedelta
+from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
 from django.test import TestCase
@@ -8,6 +9,7 @@ from rest_framework.test import APIClient
 from apps.catalog.models import Category, Trade
 from apps.locations.models import City, Commune, Neighborhood
 from apps.providers.models import ProviderProfile
+from apps.subscriptions.models import ProviderSubscription, SubscriptionPlan
 from apps.subscriptions.models import ProviderSubscription, SubscriptionPlan
 
 from .matching import dispatch_request
@@ -34,6 +36,14 @@ class AcceptanceTests(TestCase):
             name="Électricité",
         )
         self.next_phone = 10
+        self.plan = SubscriptionPlan.objects.create(
+            code="acceptance-test",
+            name="Acceptance Test",
+            price_xof=0,
+            duration_days=30,
+            can_receive_requests=True,
+            can_receive_urgent_requests=True,
+        )
         self.plan = SubscriptionPlan.objects.create(
             code="acceptance-test",
             name="Acceptance Test",
