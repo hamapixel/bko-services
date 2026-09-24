@@ -10,7 +10,7 @@ Le prestataire peut désormais :
 2. accéder uniquement si son compte a le rôle `PROVIDER` et son dossier est `VERIFIED` ;
 3. voir son tableau de bord ;
 4. consulter ses offres en attente ;
-5. voir le métier, la zone, le titre et la description avant acceptation ;
+5. voir uniquement le métier, la zone générale et la priorité avant acceptation ;
 6. ne jamais voir l'adresse précise ni le téléphone client avant attribution ;
 7. accepter une offre via l'API atomique existante ;
 8. consulter uniquement ses interventions attribuées ;
@@ -70,17 +70,17 @@ Avant acceptation, une offre expose seulement :
 - métier ;
 - quartier ;
 - commune ;
-- titre ;
-- description ;
 - priorité ;
 - date de création.
 
-Elle n'expose pas :
+Elle n'expose pas les champs saisis librement par le client ni ses coordonnées privées :
 
+- `title` ;
+- `description` ;
 - `address_detail` ;
 - `client_phone`.
 
-Un test dédié vérifie explicitement que l'adresse privée et le téléphone du client ne figurent pas dans la réponse.
+Le titre et la description restent masqués avant attribution car ils peuvent contenir un numéro de téléphone, une adresse ou d'autres informations personnelles. Les tests vérifient explicitement qu'aucune de ces données ne figure dans la réponse d'offre.
 
 ## Acceptation atomique
 
@@ -274,7 +274,7 @@ Sur téléphone :
 
 Deux nouveaux tests sont ajoutés :
 
-1. une offre fournit les métadonnées utiles sans adresse ni téléphone ;
+1. une offre fournit uniquement les métadonnées sûres sans titre, description, adresse ni téléphone ;
 2. les filtres d'interventions acceptent uniquement les statuts valides.
 
 Les tests existants sont aussi enrichis pour vérifier :
