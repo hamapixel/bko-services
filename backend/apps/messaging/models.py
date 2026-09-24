@@ -7,6 +7,7 @@ from django.db import models
 class SmsDeliveryLog(models.Model):
     class Purpose(models.TextChoices):
         PHONE_VERIFICATION = "PHONE_VERIFICATION", "Vérification du téléphone"
+        PASSWORD_RESET = "PASSWORD_RESET", "Réinitialisation du mot de passe"
 
     class Provider(models.TextChoices):
         CONSOLE = "CONSOLE", "Console locale"
