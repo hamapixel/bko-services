@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 18 — noyau de paiement sécurisé implémenté sur la branche de fonctionnalité, validation locale en cours**. Les paiements sont idempotents, audités et ne peuvent activer un abonnement qu'après un webhook serveur signé et un contrôle exact du montant/devise.
+> Statut : **étape 18 — paiements sécurisés validés localement**. Les paiements sont idempotents, audités et n'activent un abonnement qu'après un webhook serveur signé avec contrôle exact du montant et de la devise. La migration `payments.0001_initial` est appliquée.
 
 ## Principes
 
@@ -45,7 +45,7 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 15 : SMS/OTP professionnel.
 - [x] Étape 16 : plaintes / signalements.
 - [x] Étape 17 : plans et abonnements prestataires.
-- [ ] Étape 18 : paiements sécurisés — validation locale en cours.
+- [x] Étape 18 : paiements sécurisés.
 
 ## Démarrage sur Windows
 
