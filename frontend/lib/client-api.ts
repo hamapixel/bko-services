@@ -15,6 +15,8 @@ export type PublicUser = {
   email: string;
   role: "CLIENT" | "PROVIDER" | "ADMIN" | "SUPERADMIN";
   phone_verified_at: string | null;
+  has_avatar: boolean;
+  avatar_url: string | null;
 };
 
 export type Category = {
@@ -155,6 +157,28 @@ export async function apiMutation<T>(
   }
   const csrfToken = await getCsrfToken();
   return sendJsonMutation<T>(path, method, { csrfToken, body });
+}
+
+export async function apiFormMutation<T>(
+  path: string,
+  method: "POST" | "PUT" | "PATCH",
+  formData: FormData,
+) {
+  if (!networkAvailable()) {
+    throw new OfflineActionError();
+  }
+
+  const csrfToken = await getCsrfToken();
+  const response = await fetch(path, {
+    method,
+    credentials: "include",
+    cache: "no-store",
+    headers: {
+      "X-CSRFToken": csrfToken,
+    },
+    body: formData,
+  });
+  return readJson<T>(response);
 }
 
 export const STATUS_LABELS: Record<RequestStatus, string> = {
