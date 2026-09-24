@@ -41,3 +41,9 @@ class CanViewServiceRequests(BasePermission):
                 or user.has_perm("requests.view_servicerequest")
             )
         )
+
+
+class CanReviewProviders(BasePermission):
+    def has_permission(self, request, view):
+        from apps.providers.review import can_review_providers
+        return can_review_providers(request.user)
