@@ -16,6 +16,7 @@ import {
 export default function ProviderDashboardPage() {
   const { profile } = useProviderSession();
   const [offers, setOffers] = useState<ProviderOffer[]>([]);
+  const [offerCount, setOfferCount] = useState(0);
   const [activeCount, setActiveCount] = useState(0);
   const [waitingClientCount, setWaitingClientCount] = useState(0);
   const [subscription, setSubscription] = useState<ProviderSubscription | null>(null);
@@ -40,6 +41,7 @@ export default function ProviderDashboardPage() {
       .then(([offerPage, activePage, waitingPage, subscriptionPayload]) => {
         if (!active) return;
         setOffers(offerPage.results);
+        setOfferCount(offerPage.count);
         setActiveCount(activePage.count);
         setWaitingClientCount(waitingPage.count);
         setSubscription(subscriptionPayload.subscription);
@@ -92,7 +94,7 @@ export default function ProviderDashboardPage() {
       <section className="metric-grid">
         <article className="metric-card">
           <span>Offres en attente</span>
-          <strong>{offers.length}</strong>
+          <strong>{offerCount}</strong>
           <small>Offres encore acceptables</small>
         </article>
         <article className="metric-card">
