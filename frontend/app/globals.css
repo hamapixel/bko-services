@@ -5487,3 +5487,16 @@ textarea:disabled {
     height: 36px;
   }
 }
+
+
+/* Private provider avatar in top bar */
+.provider-mini-avatar {
+  overflow: hidden;
+}
+
+.provider-mini-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
