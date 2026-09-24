@@ -15,7 +15,20 @@ from rest_framework.views import APIView
 
 from .otp_delivery import DeliveryUnavailable
 from .otp_service import request_verification_code, verify_phone_code
-from .serializers import LoginSerializer, ProfileSerializer, PublicUserSerializer, RegisterSerializer, VerifyPhoneSerializer
+from .password_reset_service import (
+    GENERIC_REQUEST_DETAIL,
+    confirm_password_reset,
+    request_password_reset,
+)
+from .serializers import (
+    LoginSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
+    ProfileSerializer,
+    PublicUserSerializer,
+    RegisterSerializer,
+    VerifyPhoneSerializer,
+)
 
 
 class SmsUnavailable(APIException):
@@ -123,3 +136,58 @@ class VerifyPhoneView(APIView):
             raise ValidationError({"code": "Code incorrect."})
         request.user.refresh_from_db(fields=["phone_verified_at"])
         return Response({"phone_verified_at": request.user.phone_verified_at})
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class PasswordResetRequestView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "password_reset_request"
+
+    def post(self, request):
+        if (
+            not isinstance(request.data, dict)
+            or set(request.data) - set(PasswordResetRequestSerializer().fields)
+        ):
+            raise ValidationError({"detail": "Champ non autorisé."})
+
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            request_password_reset(
+                serializer.validated_data["phone"],
+                request.get_host(),
+                request.META.get("REMOTE_ADDR", ""),
+            )
+        except DeliveryUnavailable as exc:
+            raise SmsUnavailable() from exc
+
+        return Response({"detail": GENERIC_REQUEST_DETAIL})
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class PasswordResetConfirmView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "password_reset_confirm"
+
+    def post(self, request):
+        if (
+            not isinstance(request.data, dict)
+            or set(request.data) - set(PasswordResetConfirmSerializer().fields)
+        ):
+            raise ValidationError({"detail": "Champ non autorisé."})
+
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        if not confirm_password_reset(
+            phone=data["phone"],
+            code=data["code"],
+            new_password=data["new_password"],
+        ):
+            raise ValidationError({"code": "Code invalide ou expiré."})
+
+        return Response({"detail": "Mot de passe réinitialisé."})
