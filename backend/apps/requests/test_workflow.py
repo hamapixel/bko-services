@@ -135,6 +135,31 @@ class WorkflowAndIdorTests(TestCase):
         stranger.force_login(self.other_client_user)
         self.assertEqual(stranger.get(f"/api/v1/requests/{self.service_request.pk}/").status_code, 404)
 
+    def test_client_request_list_filters_validate_status_and_priority(self):
+        owner = APIClient()
+        owner.force_login(self.client_user)
+
+        urgent = owner.get("/api/v1/requests/?priority=URGENT")
+        self.assertEqual(urgent.status_code, 200)
+        self.assertEqual(urgent.json()["count"], 1)
+
+        accepted = owner.get("/api/v1/requests/?status=ACCEPTED")
+        self.assertEqual(accepted.status_code, 200)
+        self.assertEqual(accepted.json()["count"], 1)
+
+        multiple = owner.get("/api/v1/requests/?status=ACCEPTED,EN_ROUTE")
+        self.assertEqual(multiple.status_code, 200)
+        self.assertEqual(multiple.json()["count"], 1)
+
+        self.assertEqual(
+            owner.get("/api/v1/requests/?status=HACKED").status_code,
+            400,
+        )
+        self.assertEqual(
+            owner.get("/api/v1/requests/?priority=CRITICAL").status_code,
+            400,
+        )
+
     def test_provider_must_follow_workflow_in_order(self):
         api = APIClient()
         api.force_login(self.provider.user)
