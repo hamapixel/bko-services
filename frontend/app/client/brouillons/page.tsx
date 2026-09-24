@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   deleteRequestDraft,
@@ -21,7 +21,33 @@ export default function ClientDraftsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const refresh = useCallback(async () => {
+  useEffect(() => {
+    let active = true;
+
+    listRequestDrafts()
+      .then((items) => {
+        if (!active) return;
+        setDrafts(items);
+        setError("");
+      })
+      .catch((caught) => {
+        if (!active) return;
+        setError(
+          caught instanceof Error
+            ? caught.message
+            : "Impossible de lire les brouillons.",
+        );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function refreshAfterMutation() {
     try {
       setDrafts(await listRequestDrafts());
       setError("");
@@ -31,21 +57,15 @@ export default function ClientDraftsPage() {
           ? caught.message
           : "Impossible de lire les brouillons.",
       );
-    } finally {
-      setLoading(false);
     }
-  }, []);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  }
 
   async function removeDraft(id: string) {
     if (!window.confirm("Supprimer ce brouillon de cet appareil ?")) {
       return;
     }
     await deleteRequestDraft(id);
-    await refresh();
+    await refreshAfterMutation();
   }
 
   return (
