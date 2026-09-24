@@ -14,6 +14,14 @@ type NavigatorWithStandalone = Navigator & {
   standalone?: boolean;
 };
 
+function isIosDevice() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+}
+
 function isInstalled() {
   if (typeof window === "undefined") {
     return false;
@@ -30,6 +38,7 @@ export default function PwaClient() {
   const [installPrompt, setInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
+  const [iosDevice, setIosDevice] = useState(false);
   const [updateReady, setUpdateReady] = useState(false);
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
   const reloadOnControllerChange = useRef(false);
@@ -37,6 +46,7 @@ export default function PwaClient() {
   useEffect(() => {
     setOnline(navigator.onLine);
     setInstalled(isInstalled());
+    setIosDevice(isIosDevice());
 
     const onOnline = () => setOnline(true);
     const onOffline = () => setOnline(false);
@@ -160,6 +170,12 @@ export default function PwaClient() {
         <button className="pwa-action" type="button" onClick={installApp}>
           Installer BKO Services
         </button>
+      )}
+
+      {online && !installed && !installPrompt && iosDevice && (
+        <p className="pwa-status-message">
+          iPhone/iPad : Partager → Sur l’écran d’accueil.
+        </p>
       )}
     </aside>
   );
