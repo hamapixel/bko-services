@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function OfflinePage() {
   return (
     <main className="offline-page">
@@ -13,9 +15,9 @@ export default function OfflinePage() {
           hors ligne. Une demande conservée sur cet appareil reste un
           <strong> brouillon non envoyé</strong> jusqu’à confirmation du serveur.
         </p>
-        <a className="primary-button" href="/">
+        <Link className="primary-button" href="/">
           Réessayer
-        </a>
+        </Link>
         <p className="build-note">
           Dès que le réseau revient, ouvrez votre brouillon et envoyez-le
           explicitement.
