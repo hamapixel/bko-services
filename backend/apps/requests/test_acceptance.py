@@ -102,11 +102,11 @@ class AcceptanceTests(TestCase):
         self.assertEqual(body["trade_name"], self.trade.name)
         self.assertEqual(body["neighborhood_name"], self.area.name)
         self.assertEqual(body["commune_name"], self.area.commune.name)
-        self.assertEqual(body["title"], service_request.title)
-        self.assertEqual(body["description"], service_request.description)
-        self.assertNotIn("address_detail", body)
-        self.assertNotIn("client_phone", body)
+        for private in ("title", "description", "address_detail", "client_phone"):
+            self.assertNotIn(private, body)
         self.assertNotIn(self.client_user.phone, str(body))
+        self.assertNotIn(service_request.title, str(body))
+        self.assertNotIn(service_request.description, str(body))
         self.assertNotIn(service_request.address_detail, str(body))
 
     def test_provider_accepts_own_offer_and_competitors_are_cancelled(self):
