@@ -126,3 +126,48 @@ class ServiceRequestTests(TestCase):
                 )
         self.assertEqual(ServiceRequest.objects.count(), 0)
         self.assertEqual(RequestStatusHistory.objects.count(), 0)
+
+
+    def test_responsive_admin_supervises_request_and_dispatches_matching(self):
+        self.verify_phone()
+        created = self.create()
+        self.assertEqual(created.status_code, 201)
+        request_id = created.json()["id"]
+
+        admin_user = get_user_model().objects.create_superuser(
+            phone="+22312349999",
+            password="Strong-admin-2026!",
+        )
+        admin = APIClient()
+        admin.force_login(admin_user)
+
+        listing = admin.get("/api/v1/admin/requests/?status=CREATED&priority=URGENT")
+        self.assertEqual(listing.status_code, 200)
+        self.assertEqual(listing.json()["count"], 1)
+        row = listing.json()["results"][0]
+        self.assertEqual(row["id"], request_id)
+        self.assertNotIn("address_detail", row)
+        self.assertNotIn("description", row)
+        self.assertNotIn("client_phone", row)
+
+        detail = admin.get(f"/api/v1/admin/requests/{request_id}/")
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual(detail.json()["client_phone"], self.client_user.phone)
+        self.assertEqual(detail.json()["address_detail"], self.payload["address_detail"])
+
+        dispatched = admin.post(
+            f"/api/v1/admin/requests/{request_id}/dispatch/",
+            {},
+            format="json",
+        )
+        self.assertEqual(dispatched.status_code, 200)
+        self.assertEqual(dispatched.json()["offers_created"], 0)
+        self.assertEqual(
+            dispatched.json()["request"]["status"],
+            ServiceRequest.Status.SEARCHING,
+        )
+
+        self.assertEqual(
+            admin.get("/api/v1/admin/requests/?status=INVALID").status_code,
+            400,
+        )
