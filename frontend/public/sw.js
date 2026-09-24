@@ -4,9 +4,9 @@ const OFFLINE_URL = "/offline";
 
 const PRECACHE_URLS = [
   OFFLINE_URL,
-  "/icons/icon-192.svg",
-  "/icons/icon-512.svg",
-  "/icons/maskable-512.svg",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+  "/icons/maskable-512.png",
   "/manifest.webmanifest",
 ];
 
@@ -114,8 +114,8 @@ self.addEventListener("push", (event) => {
 
   const options = {
     body: payload.body,
-    icon: "/icons/icon-192.svg",
-    badge: "/icons/icon-192.svg",
+    icon: "/icons/icon-192.png",
+    badge: "/icons/icon-192.png",
     tag: payload.notificationId ? `bko-${payload.notificationId}` : undefined,
     data: {
       url: payload.url || "/",
