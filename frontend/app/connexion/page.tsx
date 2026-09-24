@@ -26,6 +26,7 @@ export default function ConnexionPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -82,41 +83,46 @@ export default function ConnexionPage() {
   }
 
   return (
-    <main className="auth-page">
-      <section className="auth-panel auth-hero">
-        <div className="client-brand auth-brand">
-          <span className="brand-mark" aria-hidden="true">B</span>
+    <main className="login-shell login-shell-client">
+      <section className="login-visual">
+        <div className="login-brand">
+          <span className="login-brand-mark" aria-hidden="true">B</span>
           <span>
             <strong>BKO Services</strong>
             <small>Bamako</small>
           </span>
         </div>
-        <div>
-          <p className="eyebrow">Services de proximité</p>
-          <h1>Votre professionnel, sans complication.</h1>
-          <p className="intro">
-            Créez une demande, suivez l’arrivée du prestataire et confirmez la
-            fin de l’intervention depuis votre téléphone.
+
+        <div className="login-visual-copy">
+          <span className="login-badge">Services de proximité</span>
+          <h1>Le bon professionnel, simplement.</h1>
+          <p>
+            Trouvez un prestataire vérifié et suivez votre intervention depuis
+            votre téléphone.
           </p>
+          <div className="login-points" aria-label="Avantages BKO Services">
+            <span>Professionnels vérifiés</span>
+            <span>Suivi en temps réel</span>
+            <span>Simple et sécurisé</span>
+          </div>
         </div>
-        <div className="auth-benefits">
-          <span>✓ Professionnels vérifiés</span>
-          <span>✓ Suivi clair de l’intervention</span>
-          <span>✓ Brouillons disponibles hors connexion</span>
-        </div>
+
+        <p className="login-visual-foot">BKO Services · Bamako</p>
       </section>
 
-      <section className="auth-panel auth-form-panel">
-        <div className="auth-form-wrap">
-          <p className="auth-kicker">Espace client</p>
-          <h2>{mode === "login" ? "Bon retour 👋" : "Créer mon compte"}</h2>
-          <p className="auth-help">
-            {mode === "login"
-              ? "Connectez-vous avec votre numéro de téléphone."
-              : "Votre compte sera créé avec le rôle Client uniquement."}
-          </p>
+      <section className="login-card-zone">
+        <div className="login-card">
+          <div className="login-card-head">
+            <span className="login-kicker">Espace client</span>
+            <h2>{mode === "login" ? "Bon retour" : "Créer mon compte"}</h2>
+            <p>
+              {mode === "login"
+                ? "Connectez-vous pour accéder à vos demandes."
+                : "Créez votre compte en quelques secondes."}
+            </p>
+          </div>
 
-          <div className="auth-tabs" role="tablist">
+          <div className="login-tabs" role="tablist" aria-label="Authentification">
             <button
               className={mode === "login" ? "active" : ""}
               type="button"
@@ -139,23 +145,25 @@ export default function ConnexionPage() {
             </button>
           </div>
 
-          <form className="auth-form" onSubmit={submit}>
+          <form className="login-form" onSubmit={submit}>
             {mode === "register" && (
-              <div className="form-grid two">
-                <label className="field">
+              <div className="login-grid-two">
+                <label className="login-field">
                   <span>Prénom</span>
                   <input
                     autoComplete="given-name"
                     maxLength={150}
+                    placeholder="Votre prénom"
                     value={firstName}
                     onChange={(event) => setFirstName(event.target.value)}
                   />
                 </label>
-                <label className="field">
+                <label className="login-field">
                   <span>Nom</span>
                   <input
                     autoComplete="family-name"
                     maxLength={150}
+                    placeholder="Votre nom"
                     value={lastName}
                     onChange={(event) => setLastName(event.target.value)}
                   />
@@ -163,56 +171,79 @@ export default function ConnexionPage() {
               </div>
             )}
 
-            <label className="field">
+            <label className="login-field">
               <span>Numéro de téléphone</span>
-              <input
-                autoComplete="tel"
-                inputMode="tel"
-                required
-                maxLength={16}
-                placeholder="+22370000000"
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-              />
+              <div className="login-input-wrap">
+                <span className="login-input-icon" aria-hidden="true">+223</span>
+                <input
+                  className="login-input-with-prefix"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  required
+                  maxLength={16}
+                  placeholder="+223 70 00 00 00"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                />
+              </div>
             </label>
 
             {mode === "register" && (
-              <label className="field">
-                <span>E-mail (facultatif)</span>
+              <label className="login-field">
+                <span>E-mail <small>(facultatif)</small></span>
                 <input
                   autoComplete="email"
                   type="email"
+                  placeholder="nom@exemple.com"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                 />
               </label>
             )}
 
-            <label className="field">
+            <label className="login-field">
               <span>Mot de passe</span>
-              <input
-                autoComplete={mode === "login" ? "current-password" : "new-password"}
-                minLength={8}
-                required
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-              {mode === "register" && (
-                <small>Utilisez un mot de passe long et difficile à deviner.</small>
-              )}
+              <div className="login-input-wrap">
+                <input
+                  className="login-input-with-action"
+                  autoComplete={mode === "login" ? "current-password" : "new-password"}
+                  minLength={8}
+                  required
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+                <button
+                  className="login-input-action"
+                  type="button"
+                  onClick={() => setShowPassword((value) => !value)}
+                >
+                  {showPassword ? "Masquer" : "Afficher"}
+                </button>
+              </div>
             </label>
 
-            {error && <p className="form-error" role="alert">{error}</p>}
+            {mode === "register" && (
+              <p className="login-hint">
+                Minimum 8 caractères. Choisissez un mot de passe difficile à deviner.
+              </p>
+            )}
 
-            <button className="button-primary button-wide" disabled={busy} type="submit">
+            {error && <p className="login-error" role="alert">{error}</p>}
+
+            <button className="login-submit" disabled={busy} type="submit">
               {busy
                 ? "Traitement…"
                 : mode === "login"
                   ? "Se connecter"
-                  : "Créer le compte"}
+                  : "Créer mon compte"}
             </button>
           </form>
+
+          <p className="login-card-foot">
+            Connexion protégée par BKO Services.
+          </p>
         </div>
       </section>
     </main>
