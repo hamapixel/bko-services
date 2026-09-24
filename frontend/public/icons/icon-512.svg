@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="BKO Services">
+  <rect width="512" height="512" rx="112" fill="#102e55"/>
+  <circle cx="387" cy="125" r="67" fill="#f27932"/>
+  <path d="M128 112h128c80 0 125 40 125 101 0 37-19 67-51 83 43 16 67 48 67 91 0 72-53 113-141 113H128V112Zm123 155c43 0 64-17 64-48 0-29-21-45-64-45h-53v93h53Zm8 173c48 0 72-19 72-53 0-35-24-54-72-54h-61v107h61Z" fill="#fff"/>
+</svg>
