@@ -223,3 +223,45 @@ class ProviderTests(TestCase):
         self.assertEqual(profile.legal_name, "Nom juridique corrigé")
         self.assertFalse(profile.identity_checked)
         self.assertEqual(profile.review_note, "")
+
+
+    def test_responsive_admin_can_review_provider_but_unprivileged_staff_cannot(self):
+        profile = self.apply()
+
+        staff = get_user_model().objects.create_user(
+            phone="+22312345672",
+            password="Strong-password-2026!",
+            role="ADMIN",
+            is_staff=True,
+        )
+        denied = APIClient()
+        denied.force_login(staff)
+        self.assertEqual(
+            denied.get("/api/v1/admin/providers/?status=PENDING").status_code,
+            403,
+        )
+
+        admin = APIClient()
+        admin.force_login(self.admin_user)
+        listing = admin.get("/api/v1/admin/providers/?status=PENDING")
+        self.assertEqual(listing.status_code, 200)
+        self.assertEqual(listing.json()["count"], 1)
+        self.assertEqual(listing.json()["results"][0]["user_phone"], self.user.phone)
+
+        reviewed = admin.post(
+            f"/api/v1/admin/providers/{profile.pk}/review/",
+            {
+                "decision": ProviderReview.Decision.APPROVED,
+                "note": "Identité contrôlée pour validation responsive.",
+                "identity_checked": True,
+            },
+            format="json",
+        )
+        self.assertEqual(reviewed.status_code, 200)
+        self.assertEqual(reviewed.json()["status"], ProviderProfile.Status.VERIFIED)
+        self.assertEqual(reviewed.json()["reviews"][0]["decision"], ProviderReview.Decision.APPROVED)
+
+        profile.refresh_from_db()
+        self.user.refresh_from_db()
+        self.assertTrue(profile.identity_checked)
+        self.assertEqual(self.user.role, self.user.Role.PROVIDER)
