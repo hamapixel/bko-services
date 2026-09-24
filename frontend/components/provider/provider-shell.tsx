@@ -231,7 +231,7 @@ export default function ProviderShell({ children }: { children: ReactNode }) {
               <strong>{profile.is_available ? "Disponible" : "Indisponible"}</strong>
               <small>
                 {profile.is_available
-                  ? "Vous pouvez recevoir de nouvelles offres."
+                  ? "Un abonnement actif est aussi nécessaire pour recevoir des offres."
                   : "Aucune nouvelle offre ne vous sera proposée."}
               </small>
             </span>
