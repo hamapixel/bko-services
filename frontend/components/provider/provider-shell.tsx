@@ -24,6 +24,7 @@ type ProviderSessionValue = {
   user: PublicUser;
   profile: ProviderProfile;
   refreshProfile: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 };
 
 const ProviderSessionContext = createContext<ProviderSessionValue | null>(null);
@@ -76,6 +77,11 @@ export default function ProviderShell({ children }: { children: ReactNode }) {
     setProfile(next);
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    const next = await apiGet<PublicUser>("/api/v1/auth/me/");
+    setUser(next);
+  }, []);
+
   useEffect(() => {
     if (isLoginPage) {
       return;
@@ -124,9 +130,10 @@ export default function ProviderShell({ children }: { children: ReactNode }) {
             user,
             profile,
             refreshProfile,
+            refreshUser,
           }
         : null,
-    [profile, refreshProfile, user],
+    [profile, refreshProfile, refreshUser, user],
   );
 
   async function logout() {
@@ -245,7 +252,13 @@ export default function ProviderShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="provider-account-card">
-            <span className="provider-avatar">{initials(profile)}</span>
+            <span className="provider-avatar">
+              {user.has_avatar && user.avatar_url ? (
+                <img src={user.avatar_url} alt="" />
+              ) : (
+                initials(profile)
+              )}
+            </span>
             <span className="provider-account-copy">
               <strong>{profile.display_name}</strong>
               <small>{user.phone}</small>
