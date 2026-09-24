@@ -1,5 +1,4 @@
 from datetime import timedelta
-from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
@@ -8,7 +7,6 @@ from rest_framework.test import APIClient
 from apps.catalog.models import Category, Trade
 from apps.locations.models import City, Commune, Neighborhood
 from apps.providers.models import ProviderProfile
-from apps.subscriptions.models import ProviderSubscription, SubscriptionPlan
 from apps.subscriptions.models import ProviderSubscription, SubscriptionPlan
 
 from .acceptance import accept_offer
