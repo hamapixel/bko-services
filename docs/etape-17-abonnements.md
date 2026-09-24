@@ -183,3 +183,15 @@ git status
 ```
 
 Les tests de l'étape 17 n'effectuent aucun paiement et n'appellent aucun fournisseur externe.
+
+
+## Validation locale du 24 septembre 2026
+
+Validation effectuée avec succès :
+
+- tests de l'application `subscriptions` : **12 tests OK** ;
+- suite complète backend : **90 tests OK** ;
+- **1 test PostgreSQL ignoré sous SQLite**, comme prévu ;
+- migration `subscriptions.0001_initial` déjà appliquée localement ;
+- `showmigrations subscriptions` affiche `[X] 0001_initial` ;
+- branche locale propre après validation.
