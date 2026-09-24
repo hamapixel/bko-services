@@ -32,6 +32,7 @@ export default function AdminSubscriptionsPage() {
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [creatingTrial, setCreatingTrial] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -91,6 +92,40 @@ export default function AdminSubscriptionsPage() {
     () => plans.filter((plan) => plan.is_active),
     [plans],
   );
+  const trialPlan = plans.find((plan) => plan.code === "essai-7j");
+
+  async function createTrialPlan() {
+    setCreatingTrial(true);
+    setError("");
+    setMessage("");
+    try {
+      const plan = await apiMutation<AdminPlan>(
+        "/api/v1/subscriptions/admin/plans/",
+        "POST",
+        {
+          code: "essai-7j",
+          name: "Essai 7 jours",
+          description: "Offres normales et urgentes pendant 7 jours après activation par l’administration.",
+          price_xof: 0,
+          duration_days: 7,
+          can_receive_requests: true,
+          can_receive_urgent_requests: true,
+          is_active: true,
+          display_order: 0,
+        },
+      );
+      setPlans((current) => [...current, plan]);
+      await refreshData();
+      setPlanId(plan.id);
+      setMessage("Plan d’essai créé. Sélectionnez un prestataire ci-dessous pour l’activer.");
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "Création du plan d’essai impossible.",
+      );
+    } finally {
+      setCreatingTrial(false);
+    }
+  }
 
   async function activate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -195,6 +230,30 @@ export default function AdminSubscriptionsPage() {
 
       {!loading && (
         <>
+          <section className="detail-card admin-section-gap">
+            <p className="page-kicker">Essai gratuit</p>
+            <h2>Plan de démonstration</h2>
+            <p>
+              7 jours à 0 FCFA, pour les demandes normales et urgentes. Seul un
+              administrateur peut l’activer pour un prestataire vérifié. Aucun
+              paiement n’est enregistré pour cet essai.
+            </p>
+            {trialPlan ? (
+              <p className="muted-copy">
+                Le plan d’essai existe déjà{trialPlan.is_active ? "." : " mais il est inactif."}
+              </p>
+            ) : (
+              <button
+                className="button-secondary"
+                disabled={creatingTrial || busy}
+                type="button"
+                onClick={createTrialPlan}
+              >
+                {creatingTrial ? "Création…" : "Créer le plan d’essai"}
+              </button>
+            )}
+          </section>
+
           <section className="detail-card admin-activation-card">
             <p className="page-kicker">Activation manuelle</p>
             <h2>Attribuer un plan</h2>
@@ -242,6 +301,10 @@ export default function AdminSubscriptionsPage() {
                 {busy ? "Traitement…" : "Activer"}
               </button>
             </form>
+            <p className="muted-copy">
+              Cette activation manuelle ne confirme aucun paiement. Utilisez-la
+              pour un essai gratuit ou après vérification d’un paiement reçu hors plateforme.
+            </p>
           </section>
 
           <section className="content-section admin-section-gap">
