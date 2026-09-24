@@ -15,6 +15,9 @@ import { listRequestDrafts } from "@/lib/offline-drafts";
 export default function ClientDashboardPage() {
   const { user } = useClientSession();
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [waitingCount, setWaitingCount] = useState(0);
+  const [completedCount, setCompletedCount] = useState(0);
   const [draftCount, setDraftCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -24,11 +27,20 @@ export default function ClientDashboardPage() {
 
     Promise.all([
       apiGet<ApiPage<ServiceRequest>>("/api/v1/requests/"),
+      apiGet<ApiPage<ServiceRequest>>(
+        "/api/v1/requests/?status=PROVIDER_COMPLETED",
+      ),
+      apiGet<ApiPage<ServiceRequest>>(
+        "/api/v1/requests/?status=CLIENT_CONFIRMED",
+      ),
       listRequestDrafts().catch(() => []),
     ])
-      .then(([requestPage, drafts]) => {
+      .then(([allPage, waitingPage, completedPage, drafts]) => {
         if (!active) return;
-        setRequests(requestPage.results);
+        setRequests(allPage.results);
+        setTotalCount(allPage.count);
+        setWaitingCount(waitingPage.count);
+        setCompletedCount(completedPage.count);
         setDraftCount(drafts.length);
       })
       .catch((caught: unknown) => {
@@ -47,17 +59,6 @@ export default function ClientDashboardPage() {
       active = false;
     };
   }, []);
-
-  const activeRequests = requests.filter(
-    (request) =>
-      !["CLIENT_CONFIRMED", "CANCELLED"].includes(request.status),
-  );
-  const completed = requests.filter(
-    (request) => request.status === "CLIENT_CONFIRMED",
-  );
-  const waitingConfirmation = requests.filter(
-    (request) => request.status === "PROVIDER_COMPLETED",
-  );
 
   return (
     <main>
@@ -95,18 +96,18 @@ export default function ClientDashboardPage() {
 
       <section className="metric-grid" aria-label="Résumé">
         <article className="metric-card">
-          <span>Demandes actives</span>
-          <strong>{activeRequests.length}</strong>
-          <small>En cours ou en recherche</small>
+          <span>Total demandes</span>
+          <strong>{totalCount}</strong>
+          <small>Historique complet côté serveur</small>
         </article>
         <article className="metric-card">
           <span>À confirmer</span>
-          <strong>{waitingConfirmation.length}</strong>
+          <strong>{waitingCount}</strong>
           <small>Terminées par le prestataire</small>
         </article>
         <article className="metric-card">
           <span>Terminées</span>
-          <strong>{completed.length}</strong>
+          <strong>{completedCount}</strong>
           <small>Confirmées par vous</small>
         </article>
         <article className="metric-card">
