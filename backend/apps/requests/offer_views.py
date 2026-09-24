@@ -15,8 +15,6 @@ class ProviderOfferSerializer(serializers.ModelSerializer):
     neighborhood_id = serializers.UUIDField(source="service_request.neighborhood_id", read_only=True)
     neighborhood_name = serializers.CharField(source="service_request.neighborhood.name", read_only=True)
     commune_name = serializers.CharField(source="service_request.neighborhood.commune.name", read_only=True)
-    title = serializers.CharField(source="service_request.title", read_only=True)
-    description = serializers.CharField(source="service_request.description", read_only=True)
     priority = serializers.ChoiceField(source="service_request.priority", choices=ServiceRequest.Priority.choices, read_only=True)
 
     class Meta:
@@ -24,7 +22,7 @@ class ProviderOfferSerializer(serializers.ModelSerializer):
         fields = (
             "id", "request_id", "trade_id", "trade_name",
             "neighborhood_id", "neighborhood_name", "commune_name",
-            "title", "description", "priority", "status", "created_at",
+            "priority", "status", "created_at",
         )
         read_only_fields = fields
 
