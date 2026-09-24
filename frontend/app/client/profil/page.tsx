@@ -2,8 +2,18 @@
 
 import { FormEvent, useState } from "react";
 
+import AccountProfileTools from "@/components/account/account-profile-tools";
 import { useClientSession } from "@/components/client/client-shell";
 import { apiMutation } from "@/lib/client-api";
+
+function initials(firstName: string, lastName: string, phone: string) {
+  const source = [firstName, lastName].filter(Boolean).join(" ").trim() || phone;
+  return source
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+}
 
 export default function ClientProfilePage() {
   const { user, refreshUser } = useClientSession();
@@ -92,22 +102,44 @@ export default function ClientProfilePage() {
     }
   }
 
+  const fullName =
+    [user.first_name, user.last_name].filter(Boolean).join(" ") || "Client BKO";
+
   return (
-    <main>
-      <section className="client-page-head">
-        <div>
-          <p className="page-kicker">Mon compte</p>
-          <h1>Profil client</h1>
-          <p>Vos informations de contact et la sécurité du compte.</p>
+    <main className="premium-profile-page">
+      <section className="premium-profile-hero client-profile-hero">
+        <div className="premium-profile-avatar">
+          {user.has_avatar && user.avatar_url ? (
+            <img src={user.avatar_url} alt={fullName} />
+          ) : (
+            <span>{initials(user.first_name, user.last_name, user.phone)}</span>
+          )}
+        </div>
+
+        <div className="premium-profile-identity">
+          <span className="premium-profile-role">Compte client</span>
+          <h1>{fullName}</h1>
+          <p>{user.email || "Ajoutez votre adresse e-mail à votre profil."}</p>
+          <div className="premium-profile-badges">
+            <span>{user.phone}</span>
+            <span className={user.phone_verified_at ? "verified" : "pending"}>
+              {user.phone_verified_at ? "✓ Téléphone vérifié" : "Téléphone à vérifier"}
+            </span>
+          </div>
         </div>
       </section>
 
-      {message && <div className="form-success">{message}</div>}
-      {error && <div className="inline-error">{error}</div>}
+      {message && <div className="form-success premium-profile-message">{message}</div>}
+      {error && <div className="inline-error premium-profile-message">{error}</div>}
 
-      <div className="profile-grid">
-        <section className="detail-card">
-          <h2>Informations personnelles</h2>
+      <div className="premium-profile-main-grid">
+        <section className="account-tool-card premium-personal-card">
+          <div className="account-tool-heading">
+            <span className="page-kicker">Informations</span>
+            <h2>Informations personnelles</h2>
+            <p>Gardez vos coordonnées à jour pour faciliter vos interventions.</p>
+          </div>
+
           <form className="form-stack" onSubmit={saveProfile}>
             <div className="form-grid two">
               <label className="field">
@@ -127,6 +159,7 @@ export default function ClientProfilePage() {
                 />
               </label>
             </div>
+
             <label className="field">
               <span>E-mail</span>
               <input
@@ -135,34 +168,39 @@ export default function ClientProfilePage() {
                 onChange={(event) => setEmail(event.target.value)}
               />
             </label>
+
             <label className="field">
               <span>Téléphone</span>
               <input disabled value={user.phone} />
-              <small>Le numéro de connexion ne se modifie pas ici.</small>
+              <small>Le numéro utilisé pour la connexion ne se modifie pas ici.</small>
             </label>
+
             <button className="button-primary" disabled={busy} type="submit">
-              Enregistrer
+              {busy ? "Enregistrement…" : "Enregistrer mes informations"}
             </button>
           </form>
         </section>
 
-        <section className="detail-card">
-          <p className="page-kicker">Sécurité</p>
-          <h2>Vérification du téléphone</h2>
+        <section className="account-tool-card premium-verification-card">
+          <div className="account-tool-heading">
+            <span className="page-kicker">Sécurité du compte</span>
+            <h2>Vérification du téléphone</h2>
+            <p>
+              Le numéro vérifié protège votre compte et permet au prestataire
+              attribué de vous contacter.
+            </p>
+          </div>
 
           {user.phone_verified_at ? (
-            <div className="verified-box">
-              <strong>✓ Numéro vérifié</strong>
-              <p>
-                Votre compte peut créer des demandes de service.
-              </p>
+            <div className="premium-verified-panel">
+              <span className="premium-verified-icon">✓</span>
+              <div>
+                <strong>Numéro vérifié</strong>
+                <p>Votre compte peut envoyer des demandes de service.</p>
+              </div>
             </div>
           ) : (
             <div className="form-stack">
-              <p>
-                Un code à 6 chiffres est nécessaire avant l’envoi de votre
-                première demande.
-              </p>
               <button
                 className="button-secondary"
                 disabled={busy}
@@ -196,6 +234,12 @@ export default function ClientProfilePage() {
           )}
         </section>
       </div>
+
+      <AccountProfileTools
+        user={user}
+        refreshUser={refreshUser}
+        titlePrefix="Personnalisation"
+      />
     </main>
   );
 }
