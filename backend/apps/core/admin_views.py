@@ -1,11 +1,15 @@
 from django.contrib.auth import get_user_model
+from django.core.exceptions import (
+    PermissionDenied as DjangoPermissionDenied,
+    ValidationError as DjangoValidationError,
+)
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from rest_framework import serializers, status
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -363,11 +367,16 @@ class AdminProviderReviewView(APIView):
             profile.identity_checked = serializer.validated_data["identity_checked"]
         profile.save(update_fields=["review_note", "identity_checked", "updated_at"])
 
-        reviewed = review_provider(
-            profile.pk,
-            request.user,
-            serializer.validated_data["decision"],
-        )
+        try:
+            reviewed = review_provider(
+                profile.pk,
+                request.user,
+                serializer.validated_data["decision"],
+            )
+        except DjangoPermissionDenied as exc:
+            raise PermissionDenied(str(exc)) from exc
+        except DjangoValidationError as exc:
+            raise ValidationError({"detail": exc.messages}) from exc
 
         reviewed = (
             ProviderProfile.objects.select_related("user")
@@ -433,7 +442,14 @@ class AdminRequestDispatchView(APIView):
 
     def post(self, request, pk):
         reject_extra_fields(request.data, set())
-        offers_created = dispatch_request(pk, request.user)
+        try:
+            offers_created = dispatch_request(pk, request.user)
+        except ServiceRequest.DoesNotExist as exc:
+            raise NotFound("Demande introuvable.") from exc
+        except DjangoPermissionDenied as exc:
+            raise PermissionDenied(str(exc)) from exc
+        except DjangoValidationError as exc:
+            raise ValidationError({"detail": exc.messages}) from exc
         service_request = (
             ServiceRequest.objects.select_related(
                 "client",
