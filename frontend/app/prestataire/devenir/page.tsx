@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   ApiReadError,
@@ -104,7 +104,7 @@ export default function BecomeProviderPage() {
   const [info, setInfo] = useState("");
   const [error, setError] = useState("");
 
-  async function continueFlow(account: PublicUser) {
+  const continueFlow = useCallback(async (account: PublicUser) => {
     setUser(account);
 
     if (account.role === "PROVIDER") {
@@ -139,7 +139,7 @@ export default function BecomeProviderPage() {
       }
       throw caught;
     }
-  }
+  }, [router]);
 
   useEffect(() => {
     let active = true;
@@ -162,7 +162,7 @@ export default function BecomeProviderPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [continueFlow]);
 
   useEffect(() => {
     if (stage !== "application") return;
@@ -942,9 +942,24 @@ export default function BecomeProviderPage() {
                       </strong>
                       <div>
                         {selectedTradeIds.map((id) => (
-                          <span key={id}>
+                          <button
+                            className="provider-selected-chip"
+                            key={id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedTradeIds((current) =>
+                                current.filter((item) => item !== id),
+                              );
+                              setSelectedTradeLabels((labels) => {
+                                const next = { ...labels };
+                                delete next[id];
+                                return next;
+                              });
+                            }}
+                          >
                             {selectedTradeLabels[id] || "Métier sélectionné"}
-                          </span>
+                            <span aria-hidden="true">×</span>
+                          </button>
                         ))}
                       </div>
                     </div>
@@ -1030,9 +1045,24 @@ export default function BecomeProviderPage() {
                       </strong>
                       <div>
                         {selectedAreaIds.map((id) => (
-                          <span key={id}>
+                          <button
+                            className="provider-selected-chip"
+                            key={id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedAreaIds((current) =>
+                                current.filter((item) => item !== id),
+                              );
+                              setSelectedAreaLabels((labels) => {
+                                const next = { ...labels };
+                                delete next[id];
+                                return next;
+                              });
+                            }}
+                          >
                             {selectedAreaLabels[id] || "Quartier sélectionné"}
-                          </span>
+                            <span aria-hidden="true">×</span>
+                          </button>
                         ))}
                       </div>
                     </div>
