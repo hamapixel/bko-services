@@ -9,11 +9,28 @@ export default function Home() {
         <p className="eyebrow">Bamako · Services de proximité</p>
         <h1>Le bon professionnel, au bon moment.</h1>
         <p className="intro">
-          Trouvez un professionnel fiable près de chez vous. L’application est
-          en cours de construction ; les demandes seront disponibles après la
-          mise en place des comptes et des règles de sécurité.
+          BKO Services devient installable sur téléphone et ordinateur. Le mode
+          hors connexion protège les actions sensibles : un brouillon conservé
+          localement reste clairement <strong>non envoyé</strong> tant que le
+          serveur ne l’a pas confirmé.
         </p>
-        <p className="build-note">Étape 2 · Socle technique</p>
+
+        <div className="pwa-summary" aria-label="Fonctions PWA disponibles">
+          <div>
+            <strong>Installable</strong>
+            <span>Application plein écran depuis le navigateur compatible.</span>
+          </div>
+          <div>
+            <strong>Connexion instable</strong>
+            <span>Page hors ligne sûre et état réseau visible.</span>
+          </div>
+          <div>
+            <strong>Brouillons locaux</strong>
+            <span>Aucune demande n’est déclarée envoyée sans réponse serveur.</span>
+          </div>
+        </div>
+
+        <p className="build-note">Étape 19 · PWA et fonctionnement hors connexion</p>
       </div>
     </main>
   );
