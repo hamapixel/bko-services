@@ -86,7 +86,7 @@ export default function ProviderSubscriptionPage() {
 
     if (
       !window.confirm(
-        `Préparer une transaction de ${formatXof(plan.price_xof)} pour le plan ${plan.name} ? Le paiement ne sera pas considéré réussi avant confirmation du fournisseur.`,
+        `Créer une transaction de test de ${formatXof(plan.price_xof)} pour le plan ${plan.name} ? Aucun paiement ne sera encaissé.`,
       )
     ) {
       return;
@@ -110,7 +110,7 @@ export default function ProviderSubscriptionPage() {
         ...current.filter((item) => item.id !== payment.id),
       ]);
       setMessage(
-        `Transaction préparée : ${payment.merchant_reference}. Statut actuel : ${PAYMENT_STATUS_LABELS[payment.status]}.`,
+        `Transaction de test créée : ${payment.merchant_reference}. Statut : ${PAYMENT_STATUS_LABELS[payment.status]}. Aucun paiement n’a été encaissé.`,
       );
     } catch (caught) {
       setError(
@@ -226,7 +226,7 @@ export default function ProviderSubscriptionPage() {
                       ? "Préparation…"
                       : plan.price_xof === 0
                         ? "Activation administrative"
-                        : "Préparer le paiement"}
+                        : "Créer une transaction de test"}
                   </button>
                 </article>
               ))}
@@ -242,10 +242,11 @@ export default function ProviderSubscriptionPage() {
             </div>
 
             <div className="provider-payment-warning">
-              <strong>Une transaction PENDING n’est pas un paiement réussi.</strong>
+              <strong>Le paiement en ligne n’est pas encore disponible.</strong>
               <p>
-                Seul le webhook signé du fournisseur peut confirmer le paiement
-                et activer ou renouveler l’abonnement.
+                Créer une transaction de test n’encaisse rien et n’active aucun
+                abonnement. L’activation automatique nécessite la confirmation
+                sécurisée d’un fournisseur de paiement intégré.
               </p>
             </div>
 
