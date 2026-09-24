@@ -28,7 +28,6 @@ export type ProviderProfile = {
   id: string;
   legal_name: string;
   display_name: string;
-  description: string;
   trades: string[];
   service_areas: string[];
   trade_details: ProviderTradeDetail[];
@@ -46,7 +45,6 @@ export type ProviderOffer = {
   neighborhood_id: string;
   neighborhood_name: string;
   commune_name: string;
-  title: string;
   description: string;
   priority: "NORMAL" | "URGENT";
   status: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED" | "CANCELLED";
