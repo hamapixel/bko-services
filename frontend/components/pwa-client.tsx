@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -33,25 +33,62 @@ function isInstalled() {
   );
 }
 
+function subscribeNetwork(callback: () => void) {
+  window.addEventListener("online", callback);
+  window.addEventListener("offline", callback);
+  return () => {
+    window.removeEventListener("online", callback);
+    window.removeEventListener("offline", callback);
+  };
+}
+
+function getNetworkSnapshot() {
+  return navigator.onLine;
+}
+
+function getServerNetworkSnapshot() {
+  return true;
+}
+
+function subscribeInstalled(callback: () => void) {
+  window.addEventListener("appinstalled", callback);
+  const media = window.matchMedia("(display-mode: standalone)");
+  media.addEventListener("change", callback);
+
+  return () => {
+    window.removeEventListener("appinstalled", callback);
+    media.removeEventListener("change", callback);
+  };
+}
+
+function getInstalledSnapshot() {
+  return isInstalled();
+}
+
+function getServerInstalledSnapshot() {
+  return false;
+}
+
 export default function PwaClient() {
-  const [online, setOnline] = useState(true);
+  const online = useSyncExternalStore(
+    subscribeNetwork,
+    getNetworkSnapshot,
+    getServerNetworkSnapshot,
+  );
+  const installed = useSyncExternalStore(
+    subscribeInstalled,
+    getInstalledSnapshot,
+    getServerInstalledSnapshot,
+  );
   const [installPrompt, setInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
-  const [installed, setInstalled] = useState(false);
-  const [iosDevice, setIosDevice] = useState(false);
+  const iosDevice = isIosDevice();
   const [updateReady, setUpdateReady] = useState(false);
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
   const reloadOnControllerChange = useRef(false);
 
   useEffect(() => {
-    setOnline(navigator.onLine);
-    setInstalled(isInstalled());
-    setIosDevice(isIosDevice());
-
-    const onOnline = () => setOnline(true);
-    const onOffline = () => setOnline(false);
     const onInstalled = () => {
-      setInstalled(true);
       setInstallPrompt(null);
     };
     const onBeforeInstallPrompt = (event: Event) => {
@@ -60,8 +97,6 @@ export default function PwaClient() {
       setInstallPrompt(installEvent);
     };
 
-    window.addEventListener("online", onOnline);
-    window.addEventListener("offline", onOffline);
     window.addEventListener("appinstalled", onInstalled);
     window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
 
@@ -106,8 +141,6 @@ export default function PwaClient() {
       );
 
       return () => {
-        window.removeEventListener("online", onOnline);
-        window.removeEventListener("offline", onOffline);
         window.removeEventListener("appinstalled", onInstalled);
         window.removeEventListener(
           "beforeinstallprompt",
@@ -121,8 +154,6 @@ export default function PwaClient() {
     }
 
     return () => {
-      window.removeEventListener("online", onOnline);
-      window.removeEventListener("offline", onOffline);
       window.removeEventListener("appinstalled", onInstalled);
       window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
     };
