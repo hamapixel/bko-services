@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 20 — espace client responsive validé localement**. Connexion/inscription, tableau de bord, demandes, brouillons hors ligne, suivi, confirmation, avis et profil sont branchés sur les API Django sécurisées.
+> Statut : **étape 21 — espace prestataire responsive validé localement**. Connexion prestataire, offres privées, acceptation atomique, interventions, disponibilité, abonnements, paiements et avis sont branchés sur les API Django sécurisées.
 
 ## Principes
 
@@ -48,10 +48,11 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 18 : paiements sécurisés.
 - [x] Étape 19 : PWA complète et hors connexion.
 - [x] Étape 20 : espace client responsive.
+- [x] Étape 21 : espace prestataire responsive.
 
 ## Démarrage sur Windows
 
-Après avoir cloné le dépôt, consulter [l'installation du backend et du frontend](docs/etape-2.md), [le modèle utilisateur](docs/etape-3.md), [l'authentification](docs/etape-4-auth.md), [les lieux](docs/etape-5-lieux.md), [le catalogue](docs/etape-6-catalogue.md), [les prestataires](docs/etape-7-prestataires.md), [les demandes](docs/etape-8-demandes.md), [le matching](docs/etape-9-matching.md) et [l'acceptation atomique](docs/etape-10-acceptation.md), puis [le workflow et les protections IDOR](docs/etape-11-workflow-idor.md) et [les avis clients](docs/etape-12-avis.md), puis [le centre de notifications](docs/etape-13-notifications.md) et [le Web Push](docs/etape-14-web-push.md), puis [le SMS/OTP professionnel](docs/etape-15-sms-otp.md) et [les plaintes / signalements](docs/etape-16-plaintes.md), puis [les plans et abonnements](docs/etape-17-abonnements.md) et [les paiements sécurisés](docs/etape-18-paiements.md), puis [la PWA et le mode hors connexion](docs/etape-19-pwa-offline.md), puis [l'espace client responsive](docs/etape-20-espace-client.md). Sur un poste déjà configuré, depuis la racine du dépôt :
+Après avoir cloné le dépôt, consulter [l'installation du backend et du frontend](docs/etape-2.md), [le modèle utilisateur](docs/etape-3.md), [l'authentification](docs/etape-4-auth.md), [les lieux](docs/etape-5-lieux.md), [le catalogue](docs/etape-6-catalogue.md), [les prestataires](docs/etape-7-prestataires.md), [les demandes](docs/etape-8-demandes.md), [le matching](docs/etape-9-matching.md) et [l'acceptation atomique](docs/etape-10-acceptation.md), puis [le workflow et les protections IDOR](docs/etape-11-workflow-idor.md) et [les avis clients](docs/etape-12-avis.md), puis [le centre de notifications](docs/etape-13-notifications.md) et [le Web Push](docs/etape-14-web-push.md), puis [le SMS/OTP professionnel](docs/etape-15-sms-otp.md) et [les plaintes / signalements](docs/etape-16-plaintes.md), puis [les plans et abonnements](docs/etape-17-abonnements.md) et [les paiements sécurisés](docs/etape-18-paiements.md), puis [la PWA et le mode hors connexion](docs/etape-19-pwa-offline.md), puis [l'espace client responsive](docs/etape-20-espace-client.md), puis [l'espace prestataire responsive](docs/etape-21-espace-prestataire.md). Sur un poste déjà configuré, depuis la racine du dépôt :
 
 ```powershell
 & ".\.venv\Scripts\python.exe" backend\manage.py check
@@ -67,4 +68,4 @@ Chaque étape suit le cycle : explication → commandes → fichiers complets �
 
 ## À venir
 
-Espace prestataire, espace administration, tests, CI, Docker et déploiement. Les exigences avant production figurent dans [docs/architecture.md](docs/architecture.md).
+Espace administration, tests, CI, Docker et déploiement. Les exigences avant production figurent dans [docs/architecture.md](docs/architecture.md).

@@ -89,6 +89,26 @@ class AcceptanceTests(TestCase):
         offers = list(ServiceOffer.objects.filter(service_request=service_request).order_by("created_at", "id"))
         return service_request, providers, offers
 
+    def test_offer_exposes_safe_job_metadata_without_private_contact_details(self):
+        service_request, providers, offers = self.prepare_offers()
+        api = APIClient()
+        api.force_login(providers[0].user)
+
+        response = api.get(f"/api/v1/providers/offers/{offers[0].pk}/")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["request_id"], str(service_request.pk))
+        self.assertEqual(body["trade_name"], self.trade.name)
+        self.assertEqual(body["neighborhood_name"], self.area.name)
+        self.assertEqual(body["commune_name"], self.area.commune.name)
+        for private in ("title", "description", "address_detail", "client_phone"):
+            self.assertNotIn(private, body)
+        self.assertNotIn(self.client_user.phone, str(body))
+        self.assertNotIn(service_request.title, str(body))
+        self.assertNotIn(service_request.description, str(body))
+        self.assertNotIn(service_request.address_detail, str(body))
+
     def test_provider_accepts_own_offer_and_competitors_are_cancelled(self):
         service_request, providers, offers = self.prepare_offers()
         api = APIClient()

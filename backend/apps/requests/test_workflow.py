@@ -106,6 +106,9 @@ class WorkflowAndIdorTests(TestCase):
         detail = assigned.get(f"/api/v1/providers/interventions/{self.service_request.pk}/")
         self.assertEqual(detail.status_code, 200)
         body = detail.json()
+        self.assertEqual(body["trade_name"], self.trade.name)
+        self.assertEqual(body["neighborhood_name"], self.area.name)
+        self.assertEqual(body["commune_name"], self.area.commune.name)
         self.assertEqual(body["address_detail"], "Porte verte, près du marché.")
         self.assertEqual(body["client_phone"], self.client_user.phone)
 
@@ -116,6 +119,21 @@ class WorkflowAndIdorTests(TestCase):
             stranger.get(f"/api/v1/providers/interventions/{self.service_request.pk}/").status_code,
             404,
         )
+
+    def test_provider_intervention_list_filters_validate_status(self):
+        assigned = APIClient()
+        assigned.force_login(self.provider.user)
+
+        accepted = assigned.get("/api/v1/providers/interventions/?status=ACCEPTED")
+        self.assertEqual(accepted.status_code, 200)
+        self.assertEqual(accepted.json()["count"], 1)
+
+        multiple = assigned.get("/api/v1/providers/interventions/?status=ACCEPTED,EN_ROUTE")
+        self.assertEqual(multiple.status_code, 200)
+        self.assertEqual(multiple.json()["count"], 1)
+
+        invalid = assigned.get("/api/v1/providers/interventions/?status=HACKED")
+        self.assertEqual(invalid.status_code, 400)
 
     def test_client_sees_assignment_but_other_client_gets_404(self):
         owner = APIClient()

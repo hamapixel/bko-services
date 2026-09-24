@@ -2,7 +2,7 @@
 
 Frontend Next.js App Router, TypeScript et Tailwind CSS.
 
-L'étape 20 livre le premier espace métier complet : l'espace client responsive.
+Les étapes 20 et 21 livrent les espaces client et prestataire responsive.
 
 ## Développement local
 
@@ -41,4 +41,4 @@ npm.cmd run lint
 npm.cmd run build
 ```
 
-Voir `../docs/etape-20-espace-client.md` pour le parcours client et les règles hors connexion.
+Voir `../docs/etape-20-espace-client.md` pour le parcours client et `../docs/etape-21-espace-prestataire.md` pour le parcours prestataire.

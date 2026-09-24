@@ -36,14 +36,34 @@ class ApplicationSerializer(serializers.ModelSerializer):
 class OwnProviderSerializer(serializers.ModelSerializer):
     trades = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     service_areas = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    trade_details = serializers.SerializerMethodField()
+    service_area_details = serializers.SerializerMethodField()
 
     class Meta:
         model = ProviderProfile
         fields = (
             "id", "legal_name", "display_name", "description", "trades", "service_areas",
-            "status", "is_available", "verified_at",
+            "trade_details", "service_area_details", "status", "is_available", "verified_at",
         )
         read_only_fields = fields
+
+    def get_trade_details(self, obj):
+        return [
+            {"id": str(trade.pk), "name": trade.name}
+            for trade in obj.trades.all().order_by("name", "id")
+        ]
+
+    def get_service_area_details(self, obj):
+        return [
+            {
+                "id": str(area.pk),
+                "name": area.name,
+                "commune_name": area.commune.name,
+            }
+            for area in obj.service_areas.select_related("commune").all().order_by(
+                "commune__name", "name", "id"
+            )
+        ]
 
 
 class PublicProviderSerializer(serializers.ModelSerializer):
