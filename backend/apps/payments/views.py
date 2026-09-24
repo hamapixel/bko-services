@@ -111,7 +111,7 @@ class PaymentWebhookView(APIView):
         serializer = PaymentWebhookSerializer(data=payload)
         serializer.is_valid(raise_exception=True)
 
-        payment, result = process_verified_webhook(
+        payment, result, response_status = process_verified_webhook(
             serializer.validated_data,
             raw_body,
         )
@@ -119,7 +119,8 @@ class PaymentWebhookView(APIView):
             {
                 "result": result,
                 "transaction": PaymentTransactionSerializer(payment).data,
-            }
+            },
+            status=response_status,
         )
 
 
