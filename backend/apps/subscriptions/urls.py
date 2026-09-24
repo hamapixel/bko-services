@@ -6,6 +6,7 @@ from .views import (
     AdminPlanDetailView,
     AdminPlanListCreateView,
     AdminProviderSubscriptionView,
+    AdminSubscriptionProviderListView,
     AdminRenewSubscriptionView,
     AdminSubscriptionListView,
     MySubscriptionView,
@@ -25,6 +26,11 @@ urlpatterns = [
         "admin/subscriptions/",
         AdminSubscriptionListView.as_view(),
         name="subscription-admin-list",
+    ),
+    path(
+        "admin/providers/",
+        AdminSubscriptionProviderListView.as_view(),
+        name="subscription-admin-providers",
     ),
     path(
         "admin/providers/<uuid:provider_id>/",
