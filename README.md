@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 19 — PWA complète et mode hors connexion implémentés sur la branche de fonctionnalité, validation locale en cours**. Le frontend est installable, conserve le Web Push, affiche un état réseau explicite et ne met jamais en cache ni en file d'attente silencieuse les actions métier.
+> Statut : **étape 19 — PWA complète et mode hors connexion validés localement**. Le frontend est installable, conserve le Web Push, affiche un état réseau explicite et ne met jamais en cache ni en file d'attente silencieuse les actions métier.
 
 ## Principes
 
@@ -46,7 +46,7 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 16 : plaintes / signalements.
 - [x] Étape 17 : plans et abonnements prestataires.
 - [x] Étape 18 : paiements sécurisés.
-- [ ] Étape 19 : PWA complète et hors connexion — validation locale en cours.
+- [x] Étape 19 : PWA complète et hors connexion.
 
 ## Démarrage sur Windows
 
