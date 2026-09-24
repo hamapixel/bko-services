@@ -174,7 +174,7 @@ export default function ConnexionPage() {
             <label className="login-field">
               <span>Numéro de téléphone</span>
               <div className="login-input-wrap">
-                <span className="login-input-icon" aria-hidden="true">+223</span>
+                <span className="login-input-icon" aria-hidden="true">Tél.</span>
                 <input
                   className="login-input-with-prefix"
                   autoComplete="tel"
