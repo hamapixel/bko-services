@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <main className="home">
@@ -9,28 +11,36 @@ export default function Home() {
         <p className="eyebrow">Bamako · Services de proximité</p>
         <h1>Le bon professionnel, au bon moment.</h1>
         <p className="intro">
-          BKO Services devient installable sur téléphone et ordinateur. Le mode
-          hors connexion protège les actions sensibles : un brouillon conservé
-          localement reste clairement <strong>non envoyé</strong> tant que le
-          serveur ne l’a pas confirmé.
+          Décrivez votre besoin, suivez l’intervention et gardez le contrôle
+          depuis votre téléphone. Les brouillons restent clairement
+          <strong> non envoyés</strong> tant que le serveur ne les a pas reçus.
         </p>
 
-        <div className="pwa-summary" aria-label="Fonctions PWA disponibles">
+        <div className="home-actions">
+          <Link className="button-primary" href="/connexion">
+            Accéder à l’espace client
+          </Link>
+          <Link className="button-secondary" href="/connexion">
+            Créer un compte
+          </Link>
+        </div>
+
+        <div className="pwa-summary" aria-label="Fonctions disponibles">
           <div>
-            <strong>Installable</strong>
-            <span>Application plein écran depuis le navigateur compatible.</span>
+            <strong>Professionnels vérifiés</strong>
+            <span>Suivi du prestataire attribué et de chaque étape.</span>
           </div>
           <div>
             <strong>Connexion instable</strong>
-            <span>Page hors ligne sûre et état réseau visible.</span>
+            <span>Brouillons locaux et état hors connexion explicite.</span>
           </div>
           <div>
-            <strong>Brouillons locaux</strong>
-            <span>Aucune demande n’est déclarée envoyée sans réponse serveur.</span>
+            <strong>Suivi complet</strong>
+            <span>Confirmation de fin et avis après l’intervention.</span>
           </div>
         </div>
 
-        <p className="build-note">Étape 19 · PWA et fonctionnement hors connexion</p>
+        <p className="build-note">BKO Services · Espace client responsive</p>
       </div>
     </main>
   );
