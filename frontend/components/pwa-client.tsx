@@ -69,6 +69,18 @@ function getServerInstalledSnapshot() {
   return false;
 }
 
+function subscribeEnvironment() {
+  return () => undefined;
+}
+
+function getIosSnapshot() {
+  return isIosDevice();
+}
+
+function getServerIosSnapshot() {
+  return false;
+}
+
 export default function PwaClient() {
   const online = useSyncExternalStore(
     subscribeNetwork,
@@ -82,7 +94,11 @@ export default function PwaClient() {
   );
   const [installPrompt, setInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
-  const iosDevice = isIosDevice();
+  const iosDevice = useSyncExternalStore(
+    subscribeEnvironment,
+    getIosSnapshot,
+    getServerIosSnapshot,
+  );
   const [updateReady, setUpdateReady] = useState(false);
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
   const reloadOnControllerChange = useRef(false);
