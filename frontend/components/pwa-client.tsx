@@ -117,6 +117,26 @@ export default function PwaClient() {
     window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
 
     if ("serviceWorker" in navigator && window.isSecureContext) {
+      // Never let a development service worker keep stale Next.js assets/CSS.
+      // Production still keeps the installable PWA behavior.
+      if (process.env.NODE_ENV !== "production") {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          registrations.forEach((registration) => registration.unregister());
+        });
+        if ("caches" in window) {
+          caches.keys().then((keys) => {
+            keys
+              .filter((key) => key.startsWith("bko-services-"))
+              .forEach((key) => caches.delete(key));
+          });
+        }
+
+        return () => {
+          window.removeEventListener("appinstalled", onInstalled);
+          window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+        };
+      }
+
       navigator.serviceWorker
         .register("/sw.js", { scope: "/" })
         .then((registration) => {
