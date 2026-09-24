@@ -42,6 +42,20 @@ export function useClientSession() {
   return context;
 }
 
+function navIsActive(pathname: string, href: string) {
+  if (href === "/client") return pathname === href;
+  if (href === "/client/demandes/nouvelle") {
+    return pathname.startsWith("/client/demandes/nouvelle");
+  }
+  if (href === "/client/demandes") {
+    return (
+      pathname.startsWith("/client/demandes") &&
+      !pathname.startsWith("/client/demandes/nouvelle")
+    );
+  }
+  return pathname.startsWith(href);
+}
+
 function initials(user: PublicUser) {
   const source =
     [user.first_name, user.last_name].filter(Boolean).join(" ").trim() ||
@@ -181,10 +195,7 @@ export default function ClientShell({ children }: { children: ReactNode }) {
 
           <nav className="client-nav" aria-label="Navigation client">
             {NAVIGATION.map((item) => {
-              const active =
-                item.href === "/client"
-                  ? pathname === item.href
-                  : pathname.startsWith(item.href);
+              const active = navIsActive(pathname, item.href);
               return (
                 <Link
                   className={active ? "client-nav-link active" : "client-nav-link"}
@@ -262,10 +273,7 @@ export default function ClientShell({ children }: { children: ReactNode }) {
 
         <nav className="client-bottom-nav" aria-label="Navigation mobile">
           {NAVIGATION.slice(0, 4).map((item) => {
-            const active =
-              item.href === "/client"
-                ? pathname === item.href
-                : pathname.startsWith(item.href);
+            const active = navIsActive(pathname, item.href);
             return (
               <Link
                 className={active ? "bottom-nav-link active" : "bottom-nav-link"}
