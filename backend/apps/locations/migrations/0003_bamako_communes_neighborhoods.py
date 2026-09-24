@@ -39,7 +39,7 @@ BAMAKO_COMMUNES = {
         "Dravéla Bolibana",
         "Kodabougou",
         "Koulouba",
-        "Koulouninko",
+        "Koulouniko",
         "N'Tomikorobougou",
         "Niomirambougou",
         "Ouolofobougou",
