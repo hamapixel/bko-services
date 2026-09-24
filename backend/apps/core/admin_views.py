@@ -12,11 +12,13 @@ from rest_framework.views import APIView
 
 from apps.complaints.models import Complaint
 from apps.payments.models import PaymentTransaction
+from apps.payments.services import can_manage_payments
 from apps.providers.models import ProviderProfile, ProviderReview
-from apps.providers.review import review_provider
-from apps.requests.matching import dispatch_request
+from apps.providers.review import can_review_providers, review_provider
+from apps.requests.matching import can_dispatch_requests, dispatch_request
 from apps.requests.models import ServiceRequest
 from apps.subscriptions.models import ProviderSubscription
+from apps.subscriptions.services import can_manage_subscriptions
 
 from .admin_permissions import (
     CanReviewProviders,
@@ -206,6 +208,14 @@ class AdminOverviewView(APIView):
                 ServiceRequest.Status.CANCELLED,
             }
         ]
+        can_view_users = bool(
+            request.user.is_superuser or request.user.has_perm("accounts.view_user")
+        )
+        can_view_requests = bool(
+            request.user.is_superuser
+            or request.user.has_perm("requests.view_servicerequest")
+        )
+
         return Response(
             {
                 "users_total": User.objects.count(),
@@ -237,6 +247,15 @@ class AdminOverviewView(APIView):
                     starts_at__lte=now,
                     ends_at__gt=now,
                 ).count(),
+                "capabilities": {
+                    "users": can_view_users,
+                    "providers": can_review_providers(request.user),
+                    "requests": can_view_requests,
+                    "dispatch_requests": can_dispatch_requests(request.user),
+                    "complaints": True,
+                    "payments": can_manage_payments(request.user),
+                    "subscriptions": can_manage_subscriptions(request.user),
+                },
             }
         )
 
