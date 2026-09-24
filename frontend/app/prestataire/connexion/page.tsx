@@ -17,6 +17,7 @@ export default function ProviderLoginPage() {
   const router = useRouter();
   const [phone, setPhone] = useState("+223");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -55,76 +56,93 @@ export default function ProviderLoginPage() {
   }
 
   return (
-    <main className="provider-auth-page">
-      <section className="provider-auth-hero">
-        <div className="provider-brand auth-brand">
-          <span className="brand-mark" aria-hidden="true">B</span>
+    <main className="login-shell login-shell-provider">
+      <section className="login-visual">
+        <div className="login-brand">
+          <span className="login-brand-mark" aria-hidden="true">B</span>
           <span>
             <strong>BKO Services</strong>
             <small>Prestataires</small>
           </span>
         </div>
-        <div>
-          <p className="eyebrow">Espace professionnel</p>
-          <h1>Recevez, acceptez, intervenez.</h1>
-          <p className="intro">
-            Consultez vos offres, gérez votre disponibilité et faites avancer
-            chaque intervention selon le workflow sécurisé BKO Services.
+
+        <div className="login-visual-copy">
+          <span className="login-badge">Espace professionnel</span>
+          <h1>Vos interventions, au même endroit.</h1>
+          <p>
+            Consultez vos offres, gérez votre disponibilité et suivez chaque
+            intervention simplement.
           </p>
+          <div className="login-points" aria-label="Avantages prestataire">
+            <span>Offres ciblées</span>
+            <span>Suivi des interventions</span>
+            <span>Accès sécurisé</span>
+          </div>
         </div>
-        <div className="auth-benefits">
-          <span>✓ Offres ciblées selon métier et zone</span>
-          <span>✓ Adresse privée seulement après attribution</span>
-          <span>✓ Abonnement et paiements suivis côté serveur</span>
-        </div>
+
+        <p className="login-visual-foot">BKO Services · Réseau prestataires</p>
       </section>
 
-      <section className="provider-auth-form-panel">
-        <div className="auth-form-wrap">
-          <p className="auth-kicker">Prestataire vérifié</p>
-          <h2>Connexion</h2>
-          <p className="auth-help">
-            Utilisez le numéro associé à votre compte prestataire validé.
-          </p>
+      <section className="login-card-zone">
+        <div className="login-card">
+          <div className="login-card-head">
+            <span className="login-kicker">Prestataire vérifié</span>
+            <h2>Connexion</h2>
+            <p>Accédez à votre espace professionnel BKO Services.</p>
+          </div>
 
-          <form className="auth-form" onSubmit={submit}>
-            <label className="field">
+          <form className="login-form" onSubmit={submit}>
+            <label className="login-field">
               <span>Numéro de téléphone</span>
-              <input
-                autoComplete="tel"
-                inputMode="tel"
-                maxLength={16}
-                required
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-              />
+              <div className="login-input-wrap">
+                <span className="login-input-icon" aria-hidden="true">+223</span>
+                <input
+                  className="login-input-with-prefix"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  maxLength={16}
+                  required
+                  placeholder="+223 70 00 00 00"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                />
+              </div>
             </label>
-            <label className="field">
+
+            <label className="login-field">
               <span>Mot de passe</span>
-              <input
-                autoComplete="current-password"
-                minLength={8}
-                required
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
+              <div className="login-input-wrap">
+                <input
+                  className="login-input-with-action"
+                  autoComplete="current-password"
+                  minLength={8}
+                  required
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+                <button
+                  className="login-input-action"
+                  type="button"
+                  onClick={() => setShowPassword((value) => !value)}
+                >
+                  {showPassword ? "Masquer" : "Afficher"}
+                </button>
+              </div>
             </label>
 
-            {error && <p className="form-error" role="alert">{error}</p>}
+            {error && <p className="login-error" role="alert">{error}</p>}
 
-            <button className="button-primary button-wide" disabled={busy} type="submit">
+            <button className="login-submit" disabled={busy} type="submit">
               {busy ? "Connexion…" : "Se connecter"}
             </button>
           </form>
 
-          <p className="provider-login-help">
-            Pas encore prestataire ? La candidature part d’un compte client
-            vérifié puis doit être approuvée par l’administration.
-          </p>
-          <Link className="text-link" href="/connexion">
-            Retour à l’espace client
-          </Link>
+          <div className="login-links">
+            <p>Pas encore prestataire ? Votre profil doit être validé par BKO Services.</p>
+            <Link href="/connexion">Retour à l’espace client</Link>
+          </div>
         </div>
       </section>
     </main>
