@@ -12,6 +12,7 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const [phone, setPhone] = useState("+223");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -52,75 +53,94 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <main className="admin-auth-page">
-      <section className="admin-auth-hero">
-        <div className="admin-brand auth-brand">
-          <span className="brand-mark" aria-hidden="true">B</span>
+    <main className="login-shell login-shell-admin">
+      <section className="login-visual">
+        <div className="login-brand">
+          <span className="login-brand-mark" aria-hidden="true">B</span>
           <span>
             <strong>BKO Services</strong>
             <small>Administration</small>
           </span>
         </div>
-        <div>
-          <p className="eyebrow">Accès réservé</p>
-          <h1>Superviser la plateforme sans contourner les permissions.</h1>
-          <p className="intro">
-            Les sections visibles dépendent des droits attribués au compte.
-            Les opérations sensibles restent validées côté Django.
+
+        <div className="login-visual-copy">
+          <span className="login-badge">Accès réservé</span>
+          <h1>Pilotez BKO Services en toute sécurité.</h1>
+          <p>
+            Un espace clair pour superviser les prestataires, demandes,
+            paiements et opérations sensibles.
           </p>
+          <div className="login-points" aria-label="Sécurité administration">
+            <span>Permissions contrôlées</span>
+            <span>Actions auditées</span>
+            <span>Données protégées</span>
+          </div>
         </div>
-        <div className="auth-benefits">
-          <span>✓ Permissions Django appliquées côté API</span>
-          <span>✓ Actions sensibles auditées</span>
-          <span>✓ Données privées affichées seulement si nécessaires</span>
-        </div>
+
+        <p className="login-visual-foot">Console sécurisée · BKO Services</p>
       </section>
 
-      <section className="admin-auth-form-panel">
-        <div className="auth-form-wrap">
-          <p className="auth-kicker">Administration</p>
-          <h2>Connexion</h2>
-          <p className="auth-help">
-            Utilisez un compte administrateur actif et habilité.
-          </p>
+      <section className="login-card-zone">
+        <div className="login-card login-card-admin">
+          <div className="login-security-mark" aria-hidden="true">B</div>
+          <div className="login-card-head">
+            <span className="login-kicker">Administration</span>
+            <h2>Connexion sécurisée</h2>
+            <p>Utilisez votre compte administrateur autorisé.</p>
+          </div>
 
-          <form className="auth-form" onSubmit={submit}>
-            <label className="field">
+          <form className="login-form" onSubmit={submit}>
+            <label className="login-field">
               <span>Numéro de téléphone</span>
-              <input
-                autoComplete="tel"
-                inputMode="tel"
-                maxLength={16}
-                required
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-              />
+              <div className="login-input-wrap">
+                <span className="login-input-icon" aria-hidden="true">+223</span>
+                <input
+                  className="login-input-with-prefix"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  maxLength={16}
+                  required
+                  placeholder="+223 70 00 00 00"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                />
+              </div>
             </label>
-            <label className="field">
+
+            <label className="login-field">
               <span>Mot de passe</span>
-              <input
-                autoComplete="current-password"
-                minLength={8}
-                required
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
+              <div className="login-input-wrap">
+                <input
+                  className="login-input-with-action"
+                  autoComplete="current-password"
+                  minLength={8}
+                  required
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+                <button
+                  className="login-input-action"
+                  type="button"
+                  onClick={() => setShowPassword((value) => !value)}
+                >
+                  {showPassword ? "Masquer" : "Afficher"}
+                </button>
+              </div>
             </label>
 
-            {error && <p className="form-error" role="alert">{error}</p>}
+            {error && <p className="login-error" role="alert">{error}</p>}
 
-            <button className="button-primary button-wide" disabled={busy} type="submit">
+            <button className="login-submit" disabled={busy} type="submit">
               {busy ? "Vérification…" : "Accéder à l’administration"}
             </button>
           </form>
 
-          <p className="provider-login-help">
-            L’administration métier est distincte du Django Admin technique.
-          </p>
-          <Link className="text-link" href="/">
-            Retour à l’accueil
-          </Link>
+          <div className="login-links">
+            <p>Accès réservé aux comptes disposant des permissions requises.</p>
+            <Link href="/">Retour à l’accueil</Link>
+          </div>
         </div>
       </section>
     </main>
