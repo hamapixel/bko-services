@@ -1,5 +1,6 @@
 from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -47,7 +48,6 @@ class ProviderInterventionListView(ListAPIView):
             statuses = [value.strip() for value in raw_status.split(",") if value.strip()]
             allowed_statuses = set(ServiceRequest.Status.values)
             if not statuses or any(value not in allowed_statuses for value in statuses):
-                from rest_framework.exceptions import ValidationError
                 raise ValidationError({"status": "Statut d'intervention invalide."})
             queryset = queryset.filter(status__in=statuses)
         return queryset
