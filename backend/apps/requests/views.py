@@ -24,7 +24,7 @@ class ClientRequestListView(ListAPIView):
     def get_queryset(self):
         return (
             ServiceRequest.objects.filter(client=self.request.user)
-            .select_related("assigned_provider__user")
+            .select_related("trade", "neighborhood__commune", "assigned_provider__user", "review")
             .prefetch_related("status_history")
         )
 
