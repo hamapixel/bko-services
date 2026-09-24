@@ -35,6 +35,13 @@ export type Trade = {
 export type City = {
   id: string;
   name: string;
+  region: string | null;
+};
+
+export type Region = {
+  id: string;
+  name: string;
+  kind: "REGION" | "DISTRICT";
 };
 
 export type Commune = {
@@ -145,13 +152,13 @@ export async function apiGetAll<T>(path: string): Promise<T[]> {
   let pages = 0;
 
   while (next && pages < 100) {
-    const target = next.startsWith("http")
+    const target: string = next.startsWith("http")
       ? (() => {
           const url = new URL(next);
           return url.pathname + url.search;
         })()
       : next;
-    const page = await apiGet<ApiPage<T>>(target);
+    const page: ApiPage<T> = await apiGet<ApiPage<T>>(target);
     items.push(...page.results);
     next = page.next;
     pages += 1;

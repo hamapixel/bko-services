@@ -9,6 +9,7 @@ export type RequestDraftPayload = {
 
 export type RequestDraftContext = {
   category?: string;
+  region?: string;
   city?: string;
   commune?: string;
 };

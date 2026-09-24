@@ -4,8 +4,27 @@ from django.db import models
 from django.db.models.functions import Lower
 
 
+class Region(models.Model):
+    class Kind(models.TextChoices):
+        REGION = "REGION", "Région"
+        DISTRICT = "DISTRICT", "District"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=120)
+    kind = models.CharField(max_length=8, choices=Kind.choices, default=Kind.REGION)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["name", "id"]
+        constraints = [models.UniqueConstraint(Lower("name"), name="locations_region_name_ci_unique")]
+
+    def __str__(self):
+        return self.name
+
+
 class City(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    region = models.ForeignKey(Region, related_name="cities", on_delete=models.PROTECT, null=True, blank=True)
     name = models.CharField(max_length=120)
     is_active = models.BooleanField(default=True)
 

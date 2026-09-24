@@ -288,7 +288,7 @@ class SubscriptionTests(TestCase):
         self.create_subscription(self.provider, self.normal_plan)
 
         normal = self.create_request(ServiceRequest.Priority.NORMAL)
-        self.assertEqual(dispatch_request(normal.pk, self.admin), 1)
+        self.assertEqual(ServiceOffer.objects.filter(service_request=normal).count(), 1)
         self.assertEqual(
             ServiceOffer.objects.get(service_request=normal).provider,
             self.provider,
@@ -302,7 +302,7 @@ class SubscriptionTests(TestCase):
         self.create_subscription(self.provider, self.urgent_plan)
 
         urgent = self.create_request(ServiceRequest.Priority.URGENT)
-        self.assertEqual(dispatch_request(urgent.pk, self.admin), 1)
+        self.assertEqual(ServiceOffer.objects.filter(service_request=urgent).count(), 1)
         offer = ServiceOffer.objects.get(service_request=urgent)
         self.assertEqual(offer.provider, self.provider)
         self.assertNotEqual(offer.provider, self.other_provider)
@@ -310,7 +310,7 @@ class SubscriptionTests(TestCase):
     def test_acceptance_revalidates_subscription_expiration(self):
         subscription = self.create_subscription(self.provider, self.urgent_plan)
         urgent = self.create_request(ServiceRequest.Priority.URGENT)
-        self.assertEqual(dispatch_request(urgent.pk, self.admin), 1)
+        self.assertEqual(ServiceOffer.objects.filter(service_request=urgent).count(), 1)
         offer = ServiceOffer.objects.get(service_request=urgent)
 
         subscription.ends_at = timezone.now() - timedelta(seconds=1)

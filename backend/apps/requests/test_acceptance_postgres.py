@@ -90,7 +90,7 @@ class AcceptanceConcurrencyPostgresTests(TransactionTestCase):
             address_detail="Adresse privée",
             priority=ServiceRequest.Priority.URGENT,
         )
-        self.assertEqual(dispatch_request(service_request.pk, self.admin_user), 2)
+        self.assertEqual(ServiceOffer.objects.filter(service_request=service_request).count(), 2)
         offers = list(ServiceOffer.objects.filter(service_request=service_request).order_by("created_at", "id"))
 
         barrier = threading.Barrier(2)

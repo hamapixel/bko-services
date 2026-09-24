@@ -9,7 +9,7 @@ from .models import RequestStatusHistory, ServiceRequest
 class CreateRequestSerializer(serializers.Serializer):
     trade = serializers.PrimaryKeyRelatedField(queryset=Trade.objects.filter(is_active=True, category__is_active=True))
     neighborhood = serializers.PrimaryKeyRelatedField(
-        queryset=Neighborhood.objects.filter(is_active=True, commune__is_active=True, commune__city__is_active=True)
+        queryset=Neighborhood.objects.filter(is_active=True, commune__is_active=True, commune__city__is_active=True, commune__city__region__is_active=True)
     )
     title = serializers.CharField(max_length=150)
     description = serializers.CharField(max_length=2000)

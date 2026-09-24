@@ -85,7 +85,7 @@ class AvailabilityView(APIView):
             if user.phone_verified_at is None:
                 raise ValidationError({"detail": "Le téléphone doit être vérifié."})
             if not profile.trades.filter(is_active=True, category__is_active=True).exists() or not profile.service_areas.filter(
-                is_active=True, commune__is_active=True, commune__city__is_active=True
+                is_active=True, commune__is_active=True, commune__city__is_active=True, commune__city__region__is_active=True
             ).exists():
                 raise ValidationError({"detail": "Un métier et un quartier actifs sont nécessaires."})
         profile.is_available = serializer.validated_data["is_available"]
@@ -106,4 +106,5 @@ class PublicProviderListView(ListAPIView):
         service_areas__is_active=True,
         service_areas__commune__is_active=True,
         service_areas__commune__city__is_active=True,
+        service_areas__commune__city__region__is_active=True,
     ).distinct()

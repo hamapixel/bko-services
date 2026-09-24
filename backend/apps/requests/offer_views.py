@@ -36,6 +36,7 @@ def own_pending_offers(user):
         service_request__neighborhood__is_active=True,
         service_request__neighborhood__commune__is_active=True,
         service_request__neighborhood__commune__city__is_active=True,
+        service_request__neighborhood__commune__city__region__is_active=True,
         provider__user=user,
         provider__status="VERIFIED",
         provider__is_available=True,

@@ -45,6 +45,8 @@ def _validate_provider_eligibility(provider, user, service_request):
         not neighborhood.is_active
         or not neighborhood.commune.is_active
         or not neighborhood.commune.city.is_active
+        or not neighborhood.commune.city.region
+        or not neighborhood.commune.city.region.is_active
     ):
         raise ValidationError({"offer": "Le quartier de cette demande n'est plus disponible."})
 

@@ -85,7 +85,7 @@ class AcceptanceTests(TestCase):
     def prepare_offers(self):
         providers = [self.create_provider(), self.create_provider()]
         service_request = self.create_request()
-        self.assertEqual(dispatch_request(service_request.pk, self.admin_user), 2)
+        self.assertEqual(ServiceOffer.objects.filter(service_request=service_request).count(), 2)
         offers = list(ServiceOffer.objects.filter(service_request=service_request).order_by("created_at", "id"))
         return service_request, providers, offers
 

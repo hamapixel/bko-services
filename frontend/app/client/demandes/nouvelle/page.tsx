@@ -7,12 +7,14 @@ import { useRouter } from "next/navigation";
 import { useClientSession } from "@/components/client/client-shell";
 import {
   apiGet,
+  apiGetAll,
   apiMutation,
   type ApiPage,
   type Category,
   type City,
   type Commune,
   type Neighborhood,
+  type Region,
   type ServiceRequest,
   type Trade,
 } from "@/lib/client-api";
@@ -28,12 +30,14 @@ import { OfflineActionError } from "@/lib/safe-api";
 
 type FormState = RequestDraftPayload & {
   category: string;
+  region: string;
   city: string;
   commune: string;
 };
 
 const EMPTY_FORM: FormState = {
   category: "",
+  region: "",
   trade: "",
   city: "",
   commune: "",
@@ -55,6 +59,7 @@ export default function NewClientRequestPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [trades, setTrades] = useState<Trade[]>([]);
   const [cities, setCities] = useState<City[]>([]);
+  const [regions, setRegions] = useState<Region[]>([]);
   const [communes, setCommunes] = useState<Commune[]>([]);
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
   const [draft, setDraft] = useState<RequestDraft | null>(null);
@@ -72,18 +77,21 @@ export default function NewClientRequestPage() {
 
     Promise.all([
       apiGet<ApiPage<Category>>("/api/v1/catalog/categories/"),
-      apiGet<ApiPage<City>>("/api/v1/locations/cities/"),
+      apiGetAll<Region>("/api/v1/locations/regions/"),
       draftId ? getRequestDraft(draftId) : Promise.resolve(null),
     ])
-      .then(([categoryPage, cityPage, localDraft]) => {
+      .then(([categoryPage, regionItems, localDraft]) => {
         if (!active) return;
         setCategories(categoryPage.results);
-        setCities(cityPage.results);
+        setRegions(regionItems);
         setDraft(localDraft);
 
         if (localDraft) {
           setForm({
             category: localDraft.context?.category ?? "",
+            region: localDraft.context?.region ?? regionItems.find(
+              (region) => region.name.toLowerCase() === "district de bamako",
+            )?.id ?? "",
             trade: localDraft.payload.trade,
             city: localDraft.context?.city ?? "",
             commune: localDraft.context?.commune ?? "",
@@ -94,11 +102,11 @@ export default function NewClientRequestPage() {
             priority: localDraft.payload.priority,
           });
         } else {
-          const bamako = cityPage.results.find(
-            (city) => city.name.toLowerCase() === "bamako",
+          const bamakoDistrict = regionItems.find(
+            (region) => region.name.toLowerCase() === "district de bamako",
           );
-          if (bamako) {
-            setForm((current) => ({ ...current, city: bamako.id }));
+          if (bamakoDistrict) {
+            setForm((current) => ({ ...current, region: bamakoDistrict.id }));
           }
         }
       })
@@ -113,6 +121,23 @@ export default function NewClientRequestPage() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!form.region) return;
+    let active = true;
+    apiGetAll<City>(`/api/v1/locations/cities/?region=${encodeURIComponent(form.region)}`)
+      .then((items) => {
+        if (!active) return;
+        setCities(items);
+        setForm((current) => {
+          if (current.region !== form.region || current.city) return current;
+          const bamako = items.find((city) => city.name.toLowerCase() === "bamako");
+          return bamako ? { ...current, city: bamako.id } : current;
+        });
+      })
+      .catch((caught) => { if (active) setError(errorMessage(caught)); });
+    return () => { active = false; };
+  }, [form.region]);
 
   useEffect(() => {
     if (!form.category) {
@@ -187,6 +212,11 @@ export default function NewClientRequestPage() {
     setForm((current) => {
       const next = { ...current, [key]: value };
       if (key === "category") next.trade = "";
+      if (key === "region") {
+        next.city = "";
+        next.commune = "";
+        next.neighborhood = "";
+      }
       if (key === "city") {
         next.commune = "";
         next.neighborhood = "";
@@ -197,6 +227,11 @@ export default function NewClientRequestPage() {
 
     if (key === "category") {
       setTrades([]);
+    }
+    if (key === "region") {
+      setCities([]);
+      setCommunes([]);
+      setNeighborhoods([]);
     }
     if (key === "city") {
       setCommunes([]);
@@ -233,6 +268,7 @@ export default function NewClientRequestPage() {
         draft ??
         createRequestDraft(payload, {
           category: form.category,
+          region: form.region,
           city: form.city,
           commune: form.commune,
         });
@@ -241,6 +277,7 @@ export default function NewClientRequestPage() {
         payload,
         context: {
           category: form.category,
+          region: form.region,
           city: form.city,
           commune: form.commune,
         },
@@ -395,10 +432,20 @@ export default function NewClientRequestPage() {
           <div className="form-section-content">
             <h2>Lieu de l’intervention</h2>
             <p>Sélectionnez votre zone puis précisez l’adresse.</p>
-            <div className="form-grid three">
+            <div className="form-grid two">
+              <label className="field">
+                <span>Région / district *</span>
+                <select required value={form.region} onChange={(event) => update("region", event.target.value)}>
+                  <option value="">Choisir</option>
+                  {regions.map((region) => (
+                    <option value={region.id} key={region.id}>{region.name}</option>
+                  ))}
+                </select>
+              </label>
               <label className="field">
                 <span>Ville *</span>
                 <select
+                  disabled={!form.region}
                   required
                   value={form.city}
                   onChange={(event) => update("city", event.target.value)}

@@ -106,6 +106,18 @@ export default function ProviderDashboardPage() {
         </section>
       )}
 
+      {!loading && !error && subscription?.status !== "ACTIVE" && (
+        <section className="dashboard-callout warning-card">
+          <div>
+            <strong>Votre abonnement ne permet pas encore de recevoir des demandes.</strong>
+            <p>Un abonnement actif est nécessaire pour que les demandes de votre métier et de vos quartiers apparaissent ici.</p>
+          </div>
+          <Link className="button-secondary" href="/prestataire/abonnement">
+            Voir mon abonnement
+          </Link>
+        </section>
+      )}
+
       <section className="role-metric-grid">
         <article className="role-metric-card">
           <span className="role-metric-icon">✦</span>
