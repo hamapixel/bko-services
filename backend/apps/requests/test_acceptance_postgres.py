@@ -18,6 +18,7 @@ from .acceptance import accept_offer
 from .matching import dispatch_request
 from .models import ServiceOffer, ServiceRequest
 from .services import create_service_request
+from .workflow import confirm_client_completion, transition_provider_intervention
 
 
 @skipUnless(connection.vendor == "postgresql", "Ce test de concurrence nécessite PostgreSQL.")
@@ -132,3 +133,29 @@ class AcceptanceConcurrencyPostgresTests(TransactionTestCase):
             ).count(),
             1,
         )
+
+    def test_assigned_provider_can_advance_and_client_can_confirm(self):
+        provider = self.create_provider("+22330000012")
+        service_request = create_service_request(
+            self.client_user.pk,
+            trade=self.trade,
+            neighborhood=self.area,
+            title="Fuite urgente",
+            description="Détails privés",
+            address_detail="Adresse privée",
+            priority=ServiceRequest.Priority.URGENT,
+        )
+        offer = ServiceOffer.objects.get(service_request=service_request, provider=provider)
+        accept_offer(offer.pk, provider.user)
+
+        for target in (
+            ServiceRequest.Status.EN_ROUTE,
+            ServiceRequest.Status.ARRIVED,
+            ServiceRequest.Status.IN_PROGRESS,
+            ServiceRequest.Status.PROVIDER_COMPLETED,
+        ):
+            transition_provider_intervention(service_request.pk, provider.user, target)
+        confirm_client_completion(service_request.pk, self.client_user)
+
+        service_request.refresh_from_db()
+        self.assertEqual(service_request.status, ServiceRequest.Status.CLIENT_CONFIRMED)
