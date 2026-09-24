@@ -232,7 +232,7 @@ def process_verified_webhook(payload, raw_body):
             and payment.fulfilled_at is None
         ):
             _attempt_fulfillment(payment)
-        return payment, "duplicate"
+        return payment, "duplicate", 200
 
     if (
         payload["amount_xof"] != payment.amount_xof
@@ -248,9 +248,7 @@ def process_verified_webhook(payload, raw_body):
             accepted=False,
             error_code="amount_or_currency_mismatch",
         )
-        raise ValidationError(
-            {"detail": "Montant ou devise du paiement incompatible."}
-        )
+        return payment, "rejected_amount", 400
 
     conflict = PaymentTransaction.objects.filter(
         provider_transaction_id=payload["provider_transaction_id"]
@@ -266,9 +264,7 @@ def process_verified_webhook(payload, raw_body):
             accepted=False,
             error_code="provider_transaction_reused",
         )
-        raise ValidationError(
-            {"detail": "Référence fournisseur déjà utilisée."}
-        )
+        return payment, "rejected_provider_reference", 400
 
     mapped_status = {
         "SUCCESS": PaymentTransaction.Status.SUCCEEDED,
@@ -293,7 +289,7 @@ def process_verified_webhook(payload, raw_body):
             and payment.fulfilled_at is None
         ):
             _attempt_fulfillment(payment)
-        return payment, "terminal"
+        return payment, "terminal", 200
 
     payment.status = mapped_status
     payment.provider_transaction_id = payload["provider_transaction_id"]
@@ -321,7 +317,7 @@ def process_verified_webhook(payload, raw_body):
     if mapped_status == PaymentTransaction.Status.SUCCEEDED:
         _attempt_fulfillment(payment)
 
-    return payment, "processed"
+    return payment, "processed", 200
 
 
 @transaction.atomic
