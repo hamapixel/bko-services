@@ -211,7 +211,13 @@ export default function ClientShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="client-account-card">
-            <span className="client-avatar">{initials(user)}</span>
+            <span className="client-avatar">
+              {user.has_avatar && user.avatar_url ? (
+                <img src={user.avatar_url} alt="" />
+              ) : (
+                initials(user)
+              )}
+            </span>
             <span className="client-account-copy">
               <strong>
                 {[user.first_name, user.last_name].filter(Boolean).join(" ") ||
@@ -253,8 +259,12 @@ export default function ClientShell({ children }: { children: ReactNode }) {
               <strong>BKO Services</strong>
               <small>Le bon professionnel, au bon moment.</small>
             </div>
-            <Link className="client-mini-avatar" href="/client/profil">
-              {initials(user)}
+            <Link className="client-mini-avatar" href="/client/profil" aria-label="Ouvrir mon profil">
+              {user.has_avatar && user.avatar_url ? (
+                <img src={user.avatar_url} alt="" />
+              ) : (
+                initials(user)
+              )}
             </Link>
           </header>
 
