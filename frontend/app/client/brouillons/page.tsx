@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   deleteRequestDraft,
@@ -21,7 +21,7 @@ export default function ClientDraftsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     try {
       setDrafts(await listRequestDrafts());
       setError("");
@@ -34,11 +34,11 @@ export default function ClientDraftsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void refresh();
-  }, []);
+  }, [refresh]);
 
   async function removeDraft(id: string) {
     if (!window.confirm("Supprimer ce brouillon de cet appareil ?")) {
