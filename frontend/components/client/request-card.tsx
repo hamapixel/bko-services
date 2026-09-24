@@ -40,6 +40,15 @@ export default function RequestCard({
           Prestataire : <strong>{request.assigned_provider_display_name}</strong>
         </div>
       )}
+
+      {request.status === "PROVIDER_COMPLETED" && (
+        <span className="request-review-prompt">Confirmer la fin de l’intervention →</span>
+      )}
+      {request.status === "CLIENT_CONFIRMED" && !request.has_review && (
+        <span className="request-review-prompt">
+          ★ Laisser un avis sur {request.assigned_provider_display_name ?? "le prestataire"} →
+        </span>
+      )}
     </Link>
   );
 }
