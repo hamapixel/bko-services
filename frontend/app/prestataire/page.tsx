@@ -64,19 +64,34 @@ export default function ProviderDashboardPage() {
   }, []);
 
   return (
-    <main>
-      <section className="provider-page-head">
-        <div>
-          <p className="page-kicker">Bonjour</p>
-          <h1>{profile.display_name}</h1>
+    <main className="provider-dashboard-premium">
+      <section className="role-welcome-card provider-welcome-card">
+        <div className="role-welcome-copy">
+          <span className="role-welcome-kicker">
+            {profile.is_available ? "Disponible maintenant" : "Mode indisponible"}
+          </span>
+          <h1>Bonjour {profile.display_name} 👋</h1>
           <p>
-            Gérez votre disponibilité, vos nouvelles offres et les interventions
-            qui vous sont attribuées.
+            Gérez vos offres, vos interventions et votre disponibilité depuis
+            un seul espace professionnel.
           </p>
+          <div className="role-welcome-actions">
+            <Link className="role-primary-action" href="/prestataire/offres">
+              Voir mes offres
+            </Link>
+            <Link className="role-secondary-action" href="/prestataire/profil">
+              Gérer mon profil
+            </Link>
+          </div>
         </div>
-        <Link className="button-secondary" href="/prestataire/profil">
-          Gérer ma disponibilité
-        </Link>
+
+        <div className="provider-welcome-status" aria-hidden="true">
+          <div className="provider-status-ring">
+            <span className={profile.is_available ? "online" : "offline"} />
+            <strong>{profile.is_available ? "Disponible" : "Indisponible"}</strong>
+            <small>Nouvelles offres</small>
+          </div>
+        </div>
       </section>
 
       {!profile.is_available && (
@@ -91,26 +106,40 @@ export default function ProviderDashboardPage() {
         </section>
       )}
 
-      <section className="metric-grid">
-        <article className="metric-card">
-          <span>Offres en attente</span>
-          <strong>{offerCount}</strong>
-          <small>Offres encore acceptables</small>
+      <section className="role-metric-grid">
+        <article className="role-metric-card">
+          <span className="role-metric-icon">✦</span>
+          <div>
+            <small>Offres en attente</small>
+            <strong>{offerCount}</strong>
+            <span>Encore acceptables</span>
+          </div>
         </article>
-        <article className="metric-card">
-          <span>Interventions actives</span>
-          <strong>{activeCount}</strong>
-          <small>Attribuées ou en cours</small>
+        <article className="role-metric-card">
+          <span className="role-metric-icon">↗</span>
+          <div>
+            <small>Interventions actives</small>
+            <strong>{activeCount}</strong>
+            <span>Attribuées ou en cours</span>
+          </div>
         </article>
-        <article className="metric-card">
-          <span>À confirmer par le client</span>
-          <strong>{waitingClientCount}</strong>
-          <small>Terminées de votre côté</small>
+        <article className="role-metric-card">
+          <span className="role-metric-icon">✓</span>
+          <div>
+            <small>À confirmer</small>
+            <strong>{waitingClientCount}</strong>
+            <span>En attente du client</span>
+          </div>
         </article>
-        <article className="metric-card">
-          <span>Abonnement</span>
-          <strong>{subscription?.status === "ACTIVE" ? "Actif" : "Non actif"}</strong>
-          <small>{subscription?.plan.name ?? "Aucun plan actif"}</small>
+        <article className="role-metric-card">
+          <span className="role-metric-icon">◇</span>
+          <div>
+            <small>Abonnement</small>
+            <strong className="role-metric-text">
+              {subscription?.status === "ACTIVE" ? "Actif" : "Non actif"}
+            </strong>
+            <span>{subscription?.plan.name ?? "Aucun plan actif"}</span>
+          </div>
         </article>
       </section>
 
@@ -118,7 +147,7 @@ export default function ProviderDashboardPage() {
       {error && <div className="inline-error">{error}</div>}
 
       {!loading && !error && (
-        <section className="content-section">
+        <section className="content-section role-content-card">
           <div className="section-heading">
             <div>
               <p className="page-kicker">Nouvelles missions</p>
