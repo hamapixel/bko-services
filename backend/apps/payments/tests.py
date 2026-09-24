@@ -464,3 +464,24 @@ class PaymentTests(TestCase):
             api.get("/api/v1/payments/admin/transactions/").status_code,
             403,
         )
+
+
+    def test_admin_payment_list_filters_status_safely(self):
+        created = self.create_payment()
+        self.assertEqual(created.status_code, 201)
+
+        admin = APIClient()
+        admin.force_login(self.admin)
+
+        pending = admin.get("/api/v1/payments/admin/transactions/?status=PENDING")
+        self.assertEqual(pending.status_code, 200)
+        self.assertEqual(pending.json()["count"], 1)
+
+        succeeded = admin.get("/api/v1/payments/admin/transactions/?status=SUCCEEDED")
+        self.assertEqual(succeeded.status_code, 200)
+        self.assertEqual(succeeded.json()["count"], 0)
+
+        self.assertEqual(
+            admin.get("/api/v1/payments/admin/transactions/?status=UNKNOWN").status_code,
+            400,
+        )
