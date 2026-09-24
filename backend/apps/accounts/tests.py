@@ -9,7 +9,9 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from .models import OtpCode
+from apps.messaging.models import SmsDeliveryLog
+
+from .models import OtpCode, PasswordResetCode
 from .otp_delivery import ConsoleSmsProvider
 
 
@@ -152,3 +154,128 @@ class AdminSpaceAccessTests(TestCase):
             admin.get("/api/v1/admin/users/?role=UNKNOWN").status_code,
             400,
         )
+
+
+
+class PasswordResetTests(TestCase):
+    def setUp(self):
+        self.client = APIClient(enforce_csrf_checks=True, HTTP_HOST="localhost")
+        self.token = self.client.get("/api/v1/auth/csrf/").json()["csrfToken"]
+
+    def post(self, path, data=None, *, csrf=True):
+        headers = {"HTTP_X_CSRFTOKEN": self.token} if csrf else {}
+        return self.client.post(path, data or {}, format="json", **headers)
+
+    @override_settings(DEBUG=True, SMS_PROVIDER="")
+    def test_client_can_reset_password_with_hashed_single_use_code(self):
+        User = get_user_model()
+        user = User.objects.create_user(
+            phone="+22312345679",
+            password="Old-complex-password-2026!",
+        )
+
+        with patch.object(ConsoleSmsProvider, "send_sms") as send_sms:
+            response = self.post(
+                "/api/v1/auth/password-reset/request/",
+                {"phone": user.phone},
+            )
+            self.assertEqual(response.status_code, 200)
+            message = send_sms.call_args.args[1]
+
+        code = re.search(r"\b\d{6}\b", message).group()
+        reset_code = PasswordResetCode.objects.get(user=user)
+        self.assertNotEqual(reset_code.code_hash, code)
+        self.assertTrue(check_password(code, reset_code.code_hash))
+        self.assertEqual(
+            SmsDeliveryLog.objects.get().purpose,
+            SmsDeliveryLog.Purpose.PASSWORD_RESET,
+        )
+
+        confirm = self.post(
+            "/api/v1/auth/password-reset/confirm/",
+            {
+                "phone": user.phone,
+                "code": code,
+                "new_password": "New-complex-password-2026!",
+                "confirm_password": "New-complex-password-2026!",
+            },
+        )
+        self.assertEqual(confirm.status_code, 200)
+
+        user.refresh_from_db()
+        self.assertTrue(user.check_password("New-complex-password-2026!"))
+        self.assertFalse(user.check_password("Old-complex-password-2026!"))
+
+        second_use = self.post(
+            "/api/v1/auth/password-reset/confirm/",
+            {
+                "phone": user.phone,
+                "code": code,
+                "new_password": "Another-complex-password-2026!",
+                "confirm_password": "Another-complex-password-2026!",
+            },
+        )
+        self.assertEqual(second_use.status_code, 400)
+
+    @override_settings(DEBUG=True, SMS_PROVIDER="")
+    def test_reset_request_does_not_reveal_unknown_or_non_client_accounts(self):
+        User = get_user_model()
+        provider = User.objects.create_user(
+            phone="+22312345680",
+            password="Provider-password-2026!",
+            role=User.Role.PROVIDER,
+        )
+
+        with patch.object(ConsoleSmsProvider, "send_sms") as send_sms:
+            unknown = self.post(
+                "/api/v1/auth/password-reset/request/",
+                {"phone": "+22312345681"},
+            )
+            provider_response = self.post(
+                "/api/v1/auth/password-reset/request/",
+                {"phone": provider.phone},
+            )
+
+        self.assertEqual(unknown.status_code, 200)
+        self.assertEqual(provider_response.status_code, 200)
+        self.assertEqual(unknown.json(), provider_response.json())
+        send_sms.assert_not_called()
+        self.assertEqual(PasswordResetCode.objects.count(), 0)
+
+    @override_settings(DEBUG=True, SMS_PROVIDER="")
+    def test_reset_requires_csrf_and_matching_confirmation(self):
+        user = get_user_model().objects.create_user(
+            phone="+22312345682",
+            password="Old-complex-password-2026!",
+        )
+        self.assertEqual(
+            self.post(
+                "/api/v1/auth/password-reset/request/",
+                {"phone": user.phone},
+                csrf=False,
+            ).status_code,
+            403,
+        )
+
+        with patch.object(ConsoleSmsProvider, "send_sms") as send_sms:
+            self.assertEqual(
+                self.post(
+                    "/api/v1/auth/password-reset/request/",
+                    {"phone": user.phone},
+                ).status_code,
+                200,
+            )
+            code = re.search(r"\b\d{6}\b", send_sms.call_args.args[1]).group()
+
+        mismatch = self.post(
+            "/api/v1/auth/password-reset/confirm/",
+            {
+                "phone": user.phone,
+                "code": code,
+                "new_password": "New-complex-password-2026!",
+                "confirm_password": "Different-password-2026!",
+            },
+        )
+        self.assertEqual(mismatch.status_code, 400)
+        user.refresh_from_db()
+        self.assertTrue(user.check_password("Old-complex-password-2026!"))
