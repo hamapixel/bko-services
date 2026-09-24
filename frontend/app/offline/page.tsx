@@ -13,16 +13,12 @@ export default function OfflinePage() {
           hors ligne. Une demande conservée sur cet appareil reste un
           <strong> brouillon non envoyé</strong> jusqu’à confirmation du serveur.
         </p>
-        <button
-          className="primary-button"
-          type="button"
-          onClick={undefined}
-        >
-          Reconnexion automatique
-        </button>
+        <a className="primary-button" href="/">
+          Réessayer
+        </a>
         <p className="build-note">
-          Dès que le réseau revient, revenez à la page précédente et envoyez
-          explicitement votre brouillon.
+          Dès que le réseau revient, ouvrez votre brouillon et envoyez-le
+          explicitement.
         </p>
       </section>
     </main>
