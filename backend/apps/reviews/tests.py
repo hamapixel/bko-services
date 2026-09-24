@@ -82,6 +82,11 @@ class ReviewTests(TestCase):
         self.assertNotIn("client", response.json())
         review = Review.objects.get()
         self.assertEqual(review.client, self.client_user)
+
+        request_response = api.get(f"/api/v1/requests/{self.service_request.pk}/")
+        self.assertEqual(request_response.status_code, 200)
+        self.assertTrue(request_response.json()["has_review"])
+
         self.assertEqual(review.provider, self.provider)
         self.assertEqual(review.service_request, self.service_request)
 

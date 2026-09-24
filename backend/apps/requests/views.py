@@ -22,11 +22,27 @@ class ClientRequestListView(ListAPIView):
         return [ScopedRateThrottle()] if self.request.method == "POST" else []
 
     def get_queryset(self):
-        return (
+        queryset = (
             ServiceRequest.objects.filter(client=self.request.user)
-            .select_related("assigned_provider__user")
+            .select_related("trade", "neighborhood__commune", "assigned_provider__user", "review")
             .prefetch_related("status_history")
         )
+
+        raw_status = self.request.query_params.get("status")
+        if raw_status:
+            statuses = [value.strip() for value in raw_status.split(",") if value.strip()]
+            allowed_statuses = set(ServiceRequest.Status.values)
+            if not statuses or any(value not in allowed_statuses for value in statuses):
+                raise ValidationError({"status": "Statut de demande invalide."})
+            queryset = queryset.filter(status__in=statuses)
+
+        priority = self.request.query_params.get("priority")
+        if priority:
+            if priority not in ServiceRequest.Priority.values:
+                raise ValidationError({"priority": "Priorité de demande invalide."})
+            queryset = queryset.filter(priority=priority)
+
+        return queryset
 
     def post(self, request):
         if not isinstance(request.data, dict) or set(request.data) - set(CreateRequestSerializer().fields):

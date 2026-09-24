@@ -7,11 +7,18 @@ export type RequestDraftPayload = {
   priority: "NORMAL" | "URGENT";
 };
 
+export type RequestDraftContext = {
+  category?: string;
+  city?: string;
+  commune?: string;
+};
+
 export type RequestDraft = {
   id: string;
   kind: "SERVICE_REQUEST";
   state: "LOCAL_DRAFT";
   payload: RequestDraftPayload;
+  context?: RequestDraftContext;
   createdAt: string;
   updatedAt: string;
 };
@@ -57,6 +64,7 @@ function transactionDone(transaction: IDBTransaction): Promise<void> {
 
 export function createRequestDraft(
   payload: RequestDraftPayload,
+  context?: RequestDraftContext,
 ): RequestDraft {
   const now = new Date().toISOString();
 
@@ -65,6 +73,7 @@ export function createRequestDraft(
     kind: "SERVICE_REQUEST",
     state: "LOCAL_DRAFT",
     payload,
+    context,
     createdAt: now,
     updatedAt: now,
   };

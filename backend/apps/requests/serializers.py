@@ -26,6 +26,10 @@ class StatusHistorySerializer(serializers.ModelSerializer):
 
 class OwnRequestSerializer(serializers.ModelSerializer):
     status_history = StatusHistorySerializer(many=True, read_only=True)
+    trade_name = serializers.CharField(source="trade.name", read_only=True)
+    neighborhood_name = serializers.CharField(source="neighborhood.name", read_only=True)
+    commune_name = serializers.CharField(source="neighborhood.commune.name", read_only=True)
+    has_review = serializers.SerializerMethodField()
     assigned_provider_id = serializers.UUIDField(read_only=True)
     assigned_provider_display_name = serializers.SerializerMethodField()
     assigned_provider_phone = serializers.SerializerMethodField()
@@ -33,11 +37,15 @@ class OwnRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceRequest
         fields = (
-            "id", "trade", "neighborhood", "title", "description", "address_detail",
-            "priority", "status", "assigned_provider_id", "assigned_provider_display_name",
+            "id", "trade", "trade_name", "neighborhood", "neighborhood_name", "commune_name",
+            "title", "description", "address_detail", "priority", "status", "has_review",
+            "assigned_provider_id", "assigned_provider_display_name",
             "assigned_provider_phone", "created_at", "updated_at", "status_history",
         )
         read_only_fields = fields
+
+    def get_has_review(self, obj):
+        return hasattr(obj, "review")
 
     def get_assigned_provider_display_name(self, obj):
         return obj.assigned_provider.display_name if obj.assigned_provider_id else None
