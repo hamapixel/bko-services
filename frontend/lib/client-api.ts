@@ -139,6 +139,31 @@ export async function apiGet<T>(path: string): Promise<T> {
   return readJson<T>(response);
 }
 
+export async function apiGetAll<T>(path: string): Promise<T[]> {
+  const items: T[] = [];
+  let next: string | null = path;
+  let pages = 0;
+
+  while (next && pages < 100) {
+    const target = next.startsWith("http")
+      ? (() => {
+          const url = new URL(next);
+          return url.pathname + url.search;
+        })()
+      : next;
+    const page = await apiGet<ApiPage<T>>(target);
+    items.push(...page.results);
+    next = page.next;
+    pages += 1;
+  }
+
+  if (next) {
+    throw new Error("Trop de pages à charger.");
+  }
+
+  return items;
+}
+
 export async function getCsrfToken() {
   if (!networkAvailable()) {
     throw new OfflineActionError();
