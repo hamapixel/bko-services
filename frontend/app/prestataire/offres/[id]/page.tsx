@@ -165,8 +165,8 @@ export default function ProviderOfferDetailPage() {
           <section className="security-note">
             <strong>Données privées masquées</strong>
             <p>
-              L’adresse précise et le téléphone apparaîtront uniquement si
-              l’attribution vous est réellement accordée.
+              Le titre, la description, l’adresse précise et le téléphone du client
+              apparaîtront uniquement si l’attribution vous est réellement accordée.
             </p>
           </section>
         </aside>
