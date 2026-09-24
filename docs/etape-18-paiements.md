@@ -277,3 +277,17 @@ Après validation complète :
 & ".\.venv\Scripts\python.exe" backend\manage.py showmigrations payments
 git status
 ```
+
+
+## Validation locale du 24 septembre 2026
+
+Validation effectuée avec succès :
+
+- tests de l'application `payments` : **14 tests OK** ;
+- suite complète backend : **104 tests OK** ;
+- **1 test PostgreSQL ignoré sous SQLite**, comme prévu ;
+- `manage.py check` : aucun problème ;
+- `makemigrations --check --dry-run` : aucune modification détectée ;
+- migration `payments.0001_initial` appliquée localement ;
+- `showmigrations payments` affiche `[X] 0001_initial` ;
+- branche locale propre après validation.
