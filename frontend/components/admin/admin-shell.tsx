@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,
   type ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -70,10 +71,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState("");
 
-  async function refreshOverview() {
+  const refreshOverview = useCallback(async () => {
     const next = await apiGet<AdminOverview>("/api/v1/admin/overview/");
     setOverview(next);
-  }
+  }, []);
 
   useEffect(() => {
     if (isLoginPage) return;
@@ -122,7 +123,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             refreshOverview,
           }
         : null,
-    [overview, user],
+    [overview, refreshOverview, user],
   );
 
   async function logout() {
