@@ -7,8 +7,8 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   ApiReadError,
   apiGet,
+  apiGetAll,
   apiMutation,
-  type ApiPage,
   type Category,
   type City,
   type Commune,
@@ -171,19 +171,19 @@ export default function BecomeProviderPage() {
     setLoadingOptions(true);
 
     Promise.all([
-      apiGet<ApiPage<Category>>("/api/v1/catalog/categories/"),
-      apiGet<ApiPage<City>>("/api/v1/locations/cities/"),
+      apiGetAll<Category>("/api/v1/catalog/categories/"),
+      apiGetAll<City>("/api/v1/locations/cities/"),
     ])
-      .then(([categoryPage, cityPage]) => {
+      .then(([categoryItems, cityItems]) => {
         if (!active) return;
-        setCategories(categoryPage.results);
-        setCities(cityPage.results);
+        setCategories(categoryItems);
+        setCities(cityItems);
 
-        if (!cityId) {
-          const bamako = cityPage.results.find(
-            (city) => city.name.toLowerCase() === "bamako",
-          );
-          if (bamako) setCityId(bamako.id);
+        const bamako = cityItems.find(
+          (city) => city.name.toLowerCase() === "bamako",
+        );
+        if (bamako) {
+          setCityId((current) => current || bamako.id);
         }
       })
       .catch((caught) => {
@@ -205,11 +205,11 @@ export default function BecomeProviderPage() {
     }
 
     let active = true;
-    apiGet<ApiPage<Trade>>(
+    apiGetAll<Trade>(
       "/api/v1/catalog/trades/?category=" + encodeURIComponent(categoryId),
     )
-      .then((page) => {
-        if (active) setTrades(page.results);
+      .then((items) => {
+        if (active) setTrades(items);
       })
       .catch((caught) => {
         if (active) setError(messageFromError(caught));
@@ -227,11 +227,11 @@ export default function BecomeProviderPage() {
     }
 
     let active = true;
-    apiGet<ApiPage<Commune>>(
+    apiGetAll<Commune>(
       "/api/v1/locations/communes/?city=" + encodeURIComponent(cityId),
     )
-      .then((page) => {
-        if (active) setCommunes(page.results);
+      .then((items) => {
+        if (active) setCommunes(items);
       })
       .catch((caught) => {
         if (active) setError(messageFromError(caught));
@@ -249,12 +249,12 @@ export default function BecomeProviderPage() {
     }
 
     let active = true;
-    apiGet<ApiPage<Neighborhood>>(
+    apiGetAll<Neighborhood>(
       "/api/v1/locations/neighborhoods/?commune=" +
         encodeURIComponent(communeId),
     )
-      .then((page) => {
-        if (active) setNeighborhoods(page.results);
+      .then((items) => {
+        if (active) setNeighborhoods(items);
       })
       .catch((caught) => {
         if (active) setError(messageFromError(caught));
