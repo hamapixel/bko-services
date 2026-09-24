@@ -10,13 +10,12 @@ export default function ProviderOfferCard({ offer }: { offer: ProviderOffer }) {
           <span className="request-meta">
             {offer.trade_name} · {offer.commune_name}
           </span>
-          <h3>{offer.title}</h3>
+          <h3>{offer.trade_name} · {offer.neighborhood_name}</h3>
         </div>
         {offer.priority === "URGENT" && (
           <span className="urgent-label">Urgente</span>
         )}
       </div>
-      <p className="provider-offer-description">{offer.description}</p>
       <div className="request-card-details">
         <span>📍 {offer.neighborhood_name}</span>
         <span>🕒 {formatDate(offer.created_at)}</span>
