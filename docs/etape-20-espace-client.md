@@ -317,3 +317,18 @@ http://localhost:3000
 Le proxy Next.js enverra les requêtes `/api/*` vers Django.
 
 La validation fonctionnelle navigateur sera faite après réussite de `lint`, `build` et des tests backend.
+
+
+## Validation locale du 24 septembre 2026
+
+Validation effectuée avec succès :
+
+- `npm.cmd run lint` : **OK** ;
+- `npm.cmd run build` : **OK** avec Next.js 16.3.6 / Turbopack ;
+- TypeScript : **OK** ;
+- routes générées : `/`, `/client`, `/client/brouillons`, `/client/demandes`, `/client/demandes/[id]`, `/client/demandes/nouvelle`, `/client/profil`, `/connexion`, `/manifest.webmanifest`, `/offline` ;
+- `manage.py check` : aucun problème ;
+- `makemigrations --check --dry-run` : aucune modification détectée ;
+- suite complète backend : **105 tests OK** ;
+- **1 test PostgreSQL ignoré sous SQLite**, comme prévu ;
+- branche locale propre après validation.
