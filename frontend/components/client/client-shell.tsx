@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,
   type ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -60,10 +61,10 @@ export default function ClientShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sessionError, setSessionError] = useState("");
 
-  async function loadUser() {
+  const loadUser = useCallback(async () => {
     const profile = await apiGet<PublicUser>("/api/v1/auth/me/");
     setUser(profile);
-  }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -95,10 +96,6 @@ export default function ClientShell({ children }: { children: ReactNode }) {
     };
   }, [router]);
 
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [pathname]);
-
   const contextValue = useMemo(
     () =>
       user
@@ -107,7 +104,7 @@ export default function ClientShell({ children }: { children: ReactNode }) {
             refreshUser: loadUser,
           }
         : null,
-    [user],
+    [loadUser, user],
   );
 
   async function logout() {
@@ -193,6 +190,7 @@ export default function ClientShell({ children }: { children: ReactNode }) {
                   className={active ? "client-nav-link active" : "client-nav-link"}
                   href={item.href}
                   key={item.href}
+                  onClick={() => setMenuOpen(false)}
                 >
                   <span className="client-nav-icon" aria-hidden="true">{item.icon}</span>
                   <span>{item.label}</span>
