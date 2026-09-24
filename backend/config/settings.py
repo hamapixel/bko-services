@@ -118,6 +118,8 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "auth_register": "3/hour",
         "auth_login": "5/min",
+        "password_reset_request": "5/hour",
+        "password_reset_confirm": "10/min",
         "otp_request": "5/hour",
         "otp_verify": "10/min",
         "otp_ip": "20/hour",
