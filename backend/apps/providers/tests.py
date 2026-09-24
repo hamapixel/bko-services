@@ -55,6 +55,18 @@ class ProviderTests(TestCase):
         response = self.request("post", path, self.application)
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()["status"], "PENDING")
+        self.assertEqual(
+            response.json()["trade_details"],
+            [{"id": str(self.trade.pk), "name": self.trade.name}],
+        )
+        self.assertEqual(
+            response.json()["service_area_details"],
+            [{
+                "id": str(self.area.pk),
+                "name": self.area.name,
+                "commune_name": self.area.commune.name,
+            }],
+        )
         self.assertNotIn("identity_checked", response.json())
         self.user.refresh_from_db()
         self.assertEqual(self.user.role, self.user.Role.CLIENT)
