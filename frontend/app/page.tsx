@@ -23,6 +23,9 @@ export default function Home() {
           <Link className="button-secondary" href="/connexion">
             Créer un compte
           </Link>
+          <Link className="button-secondary" href="/prestataire/connexion">
+            Espace prestataire
+          </Link>
         </div>
 
         <div className="pwa-summary" aria-label="Fonctions disponibles">
