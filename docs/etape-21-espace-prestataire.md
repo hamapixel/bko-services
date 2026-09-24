@@ -343,3 +343,20 @@ http://localhost:3000/prestataire/connexion
 ```
 
 Pour le test fonctionnel complet, il faut utiliser un compte réellement `PROVIDER`, vérifié et avec téléphone vérifié. Les scénarios seront testés après réussite de `lint`, `build` et des tests backend.
+
+
+## Validation locale du 24 septembre 2026
+
+Validation effectuée avec succès :
+
+- `npm.cmd run lint` : **OK** avant le correctif final de confidentialité ;
+- correctif final limité au contrat d'offre, aux types TypeScript, au rendu d'offre et à la documentation, sans nouveau hook ni import inutilisé ;
+- `npm.cmd run build` après le correctif final : **OK** avec Next.js 16.3.6 / Turbopack ;
+- TypeScript : **OK** ;
+- routes prestataire générées : `/prestataire`, `/prestataire/abonnement`, `/prestataire/avis`, `/prestataire/connexion`, `/prestataire/interventions`, `/prestataire/interventions/[id]`, `/prestataire/offres`, `/prestataire/offres/[id]`, `/prestataire/profil` ;
+- `manage.py check` : aucun problème ;
+- `makemigrations --check --dry-run` : aucune modification détectée ;
+- suite complète backend : **107 tests OK** ;
+- **1 test PostgreSQL ignoré sous SQLite**, comme prévu ;
+- confidentialité avant attribution validée : aucun `title`, `description`, `address_detail` ni `client_phone` dans les offres ;
+- branche locale propre après validation.
