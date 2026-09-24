@@ -171,6 +171,10 @@ class SubscriptionTests(TestCase):
             ).status_code,
             403,
         )
+        self.assertEqual(
+            denied.get("/api/v1/subscriptions/admin/providers/").status_code,
+            403,
+        )
 
         allowed = APIClient()
         allowed.force_login(self.admin)
@@ -178,6 +182,10 @@ class SubscriptionTests(TestCase):
             allowed.get("/api/v1/subscriptions/admin/plans/").status_code,
             200,
         )
+        providers = allowed.get("/api/v1/subscriptions/admin/providers/")
+        self.assertEqual(providers.status_code, 200)
+        self.assertEqual(providers.json()["count"], 2)
+        self.assertFalse(providers.json()["results"][0]["has_subscription"])
 
     def test_admin_activation_creates_period_and_history(self):
         api = APIClient()

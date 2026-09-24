@@ -367,3 +367,24 @@ class ComplaintTests(TestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertEqual(Complaint.objects.count(), 0)
+
+
+    def test_admin_complaint_list_filters_status_safely(self):
+        created = self.post_complaint(self.client_user)
+        self.assertEqual(created.status_code, 201)
+
+        admin = APIClient()
+        admin.force_login(self.admin_user)
+
+        opened = admin.get("/api/v1/complaints/admin/?status=OPEN")
+        self.assertEqual(opened.status_code, 200)
+        self.assertEqual(opened.json()["count"], 1)
+
+        resolved = admin.get("/api/v1/complaints/admin/?status=RESOLVED")
+        self.assertEqual(resolved.status_code, 200)
+        self.assertEqual(resolved.json()["count"], 0)
+
+        self.assertEqual(
+            admin.get("/api/v1/complaints/admin/?status=INVALID").status_code,
+            400,
+        )

@@ -15,6 +15,7 @@ from .permissions import CanManageSubscriptions
 from .serializers import (
     ActivateSubscriptionSerializer,
     AdminProviderSubscriptionSerializer,
+    AdminSubscriptionProviderOptionSerializer,
     CancelSubscriptionSerializer,
     ProviderSubscriptionSerializer,
     PublicSubscriptionPlanSerializer,
@@ -113,6 +114,20 @@ class AdminPlanDetailView(APIView):
         validate_plan_attributes(combined)
         serializer.save()
         return Response(SubscriptionPlanSerializer(plan).data)
+
+
+class AdminSubscriptionProviderListView(ListAPIView):
+    permission_classes = [CanManageSubscriptions]
+    serializer_class = AdminSubscriptionProviderOptionSerializer
+    queryset = (
+        ProviderProfile.objects.filter(
+            status=ProviderProfile.Status.VERIFIED,
+            user__role="PROVIDER",
+            user__is_active=True,
+        )
+        .select_related("subscription")
+        .order_by("display_name", "id")
+    )
 
 
 class AdminSubscriptionListView(ListAPIView):

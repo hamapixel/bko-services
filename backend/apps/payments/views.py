@@ -127,11 +127,19 @@ class PaymentWebhookView(APIView):
 class AdminPaymentListView(ListAPIView):
     permission_classes = [CanManagePayments]
     serializer_class = AdminPaymentTransactionSerializer
-    queryset = PaymentTransaction.objects.all().select_related(
-        "provider",
-        "plan",
-        "subscription",
-    )
+
+    def get_queryset(self):
+        queryset = PaymentTransaction.objects.all().select_related(
+            "provider",
+            "plan",
+            "subscription",
+        )
+        payment_status = self.request.query_params.get("status")
+        if payment_status:
+            if payment_status not in PaymentTransaction.Status.values:
+                raise ValidationError({"status": "Statut de paiement invalide."})
+            queryset = queryset.filter(status=payment_status)
+        return queryset
 
 
 class AdminPaymentDetailView(RetrieveAPIView):
