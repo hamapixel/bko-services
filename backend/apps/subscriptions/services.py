@@ -297,3 +297,87 @@ def cancel_subscription(subscription_id, actor, *, note):
         note=note,
     )
     return subscription
+
+
+
+@transaction.atomic
+def apply_paid_subscription(
+    provider_id,
+    *,
+    plan_id,
+    duration_days,
+    payment_reference,
+):
+    """Apply a server-confirmed paid period without trusting client state."""
+    if duration_days < 1:
+        raise ValidationError({"duration_days": "La durée payée est invalide."})
+
+    now = timezone.now()
+    provider = _locked_provider(provider_id)
+    _validate_provider_for_subscription(provider)
+
+    try:
+        plan = SubscriptionPlan.objects.select_for_update().get(pk=plan_id)
+    except SubscriptionPlan.DoesNotExist as exc:
+        raise NotFound("Plan payé introuvable.") from exc
+
+    subscription = (
+        ProviderSubscription.objects.select_for_update()
+        .filter(provider=provider)
+        .first()
+    )
+
+    if subscription is not None:
+        _expire_if_needed(subscription, actor=None, now=now)
+        subscription.refresh_from_db()
+
+    if (
+        subscription is not None
+        and subscription.status == ProviderSubscription.Status.ACTIVE
+        and subscription.ends_at > now
+    ):
+        starts_at = subscription.starts_at
+        base = subscription.ends_at
+        action = SubscriptionHistory.Action.RENEWED
+    else:
+        starts_at = now
+        base = now
+        action = SubscriptionHistory.Action.ACTIVATED
+
+    ends_at = base + timedelta(days=duration_days)
+
+    if subscription is None:
+        subscription = ProviderSubscription.objects.create(
+            provider=provider,
+            plan=plan,
+            status=ProviderSubscription.Status.ACTIVE,
+            starts_at=starts_at,
+            ends_at=ends_at,
+            activated_by=None,
+        )
+    else:
+        subscription.plan = plan
+        subscription.status = ProviderSubscription.Status.ACTIVE
+        subscription.starts_at = starts_at
+        subscription.ends_at = ends_at
+        subscription.activated_by = None
+        subscription.cancelled_at = None
+        subscription.save(
+            update_fields=[
+                "plan",
+                "status",
+                "starts_at",
+                "ends_at",
+                "activated_by",
+                "cancelled_at",
+                "updated_at",
+            ]
+        )
+
+    _record_history(
+        subscription,
+        actor=None,
+        action=action,
+        note=f"Paiement confirmé {payment_reference}",
+    )
+    return subscription

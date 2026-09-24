@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "apps.messaging",
     "apps.complaints",
     "apps.subscriptions",
+    "apps.payments",
 ]
 
 MIDDLEWARE = [
@@ -108,6 +109,7 @@ REST_FRAMEWORK = {
         "otp_ip": "20/hour",
         "request_create": "10/hour",
         "complaint_create": "5/day",
+        "payment_create": "10/hour",
     },
 }
 
@@ -134,3 +136,7 @@ OTP_CODE_TTL_SECONDS = 300
 OTP_MAX_ATTEMPTS = 5
 OTP_PHONE_DAILY_LIMIT = 5
 OTP_MIN_REQUEST_INTERVAL_SECONDS = 60
+
+
+PAYMENT_PROVIDER = os.getenv("PAYMENT_PROVIDER", "GENERIC").strip() or "GENERIC"
+PAYMENT_WEBHOOK_SECRET = os.getenv("PAYMENT_WEBHOOK_SECRET", "")
