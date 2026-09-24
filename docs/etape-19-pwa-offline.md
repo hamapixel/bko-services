@@ -339,3 +339,18 @@ Les étapes suivantes utiliseront cette infrastructure :
 L'étape 20 branchera notamment le vrai formulaire de demande sur `offline-drafts.ts` et `safe-api.ts`.
 
 La règle restera : **un brouillon local n'est jamais une demande serveur**.
+
+
+## Validation locale du 24 septembre 2026
+
+Validation effectuée avec succès :
+
+- `npm.cmd run lint` : **OK** ;
+- `npm.cmd run build` : **OK** avec Next.js 16.3.6 / Turbopack ;
+- build TypeScript : **OK** ;
+- routes statiques générées : `/`, `/manifest.webmanifest`, `/offline` ;
+- `manage.py check` : aucun problème ;
+- suite complète backend : **104 tests OK** ;
+- **1 test PostgreSQL ignoré sous SQLite**, comme prévu.
+
+La validation réelle d'installation sur Android/iPhone et la simulation réseau hors ligne restent des vérifications manuelles de navigateur/appareil à effectuer avant production, mais le socle PWA compile et les tests de non-régression backend passent.
