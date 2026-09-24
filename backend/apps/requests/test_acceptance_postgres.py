@@ -11,7 +11,10 @@ from rest_framework.exceptions import ValidationError
 
 from apps.catalog.models import Category, Trade
 from apps.locations.models import City, Commune, Neighborhood
+from apps.notifications.models import Notification
 from apps.providers.models import ProviderProfile
+from apps.reviews.models import Review
+from apps.reviews.services import create_review
 from apps.subscriptions.models import ProviderSubscription, SubscriptionPlan
 
 from .acceptance import accept_offer
@@ -156,6 +159,18 @@ class AcceptanceConcurrencyPostgresTests(TransactionTestCase):
         ):
             transition_provider_intervention(service_request.pk, provider.user, target)
         confirm_client_completion(service_request.pk, self.client_user)
+        create_review(
+            service_request.pk,
+            self.client_user,
+            rating=5,
+            comment="Intervention réussie.",
+        )
 
         service_request.refresh_from_db()
         self.assertEqual(service_request.status, ServiceRequest.Status.CLIENT_CONFIRMED)
+        self.assertEqual(Review.objects.get(service_request=service_request).provider, provider)
+        self.assertTrue(Notification.objects.filter(
+            recipient=provider.user,
+            service_request=service_request,
+            kind=Notification.Kind.REVIEW_RECEIVED,
+        ).exists())
