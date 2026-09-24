@@ -9,7 +9,6 @@ from apps.locations.models import City, Commune, Neighborhood
 from apps.providers.models import ProviderProfile
 from apps.subscriptions.models import ProviderSubscription, SubscriptionPlan
 from apps.requests.acceptance import accept_offer
-from apps.requests.matching import dispatch_request
 from apps.requests.models import ServiceOffer, ServiceRequest
 from apps.requests.services import create_service_request
 from apps.requests.workflow import confirm_client_completion, transition_provider_intervention
@@ -26,11 +25,6 @@ class NotificationCenterTests(TestCase):
             password="Strong-password-2026!",
             phone_verified_at=timezone.now(),
         )
-        self.admin_user = get_user_model().objects.create_superuser(
-            phone="+22360000001",
-            password="Strong-admin-2026!",
-        )
-
         city = City.objects.get(name="Bamako")
         commune = Commune.objects.create(city=city, name="Commune notifications")
         self.area = Neighborhood.objects.create(commune=commune, name="Quartier notifications")
@@ -86,8 +80,8 @@ class NotificationCenterTests(TestCase):
         )
         return profile
 
-    def dispatch_two_offers(self):
-        self.assertEqual(dispatch_request(self.service_request.pk, self.admin_user), 2)
+    def assert_two_offers_created(self):
+        self.assertEqual(ServiceOffer.objects.filter(service_request=self.service_request).count(), 2)
 
     def accept_provider1(self):
         offer = ServiceOffer.objects.get(
@@ -98,7 +92,7 @@ class NotificationCenterTests(TestCase):
         self.service_request.refresh_from_db()
 
     def test_notifications_are_private_and_can_be_marked_read(self):
-        self.dispatch_two_offers()
+        self.assert_two_offers_created()
 
         own = APIClient()
         own.force_login(self.provider1.user)
@@ -134,7 +128,7 @@ class NotificationCenterTests(TestCase):
         self.assertEqual(APIClient().get("/api/v1/notifications/").status_code, 403)
 
     def test_read_all_only_marks_current_users_notifications(self):
-        self.dispatch_two_offers()
+        self.assert_two_offers_created()
         create_notification(
             recipient_id=self.provider1.user_id,
             kind=Notification.Kind.CLIENT_CONFIRMED,
@@ -164,7 +158,7 @@ class NotificationCenterTests(TestCase):
         )
 
     def test_complete_business_flow_creates_expected_notifications(self):
-        self.dispatch_two_offers()
+        self.assert_two_offers_created()
 
         self.assertEqual(
             list(
@@ -259,7 +253,7 @@ class NotificationCenterTests(TestCase):
         )
 
     def test_invalid_transition_does_not_create_progress_notification(self):
-        self.dispatch_two_offers()
+        self.assert_two_offers_created()
         self.accept_provider1()
 
         api = APIClient()
@@ -305,7 +299,7 @@ class NotificationCenterTests(TestCase):
         )
 
     def test_unread_query_returns_only_unread_notifications(self):
-        self.dispatch_two_offers()
+        self.assert_two_offers_created()
         notification = Notification.objects.get(
             recipient=self.provider1.user,
             kind=Notification.Kind.OFFER_RECEIVED,
