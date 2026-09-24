@@ -73,7 +73,7 @@ export default function ClientRequestDetailPage() {
         {},
       );
       setRequest(updated);
-      setMessage("Fin de l’intervention confirmée.");
+      setMessage("Fin confirmée. Vous pouvez maintenant noter le prestataire ci-dessous.");
     } catch (caught) {
       setError(
         caught instanceof Error ? caught.message : "Confirmation impossible.",
@@ -222,7 +222,8 @@ export default function ClientRequestDetailPage() {
           {request.status === "CLIENT_CONFIRMED" && !request.has_review && (
             <section className="detail-card">
               <p className="page-kicker">Votre avis</p>
-              <h2>Comment s’est passée l’intervention ?</h2>
+              <h2>Votre avis sur {request.assigned_provider_display_name ?? "le prestataire"}</h2>
+              <p>Comment s’est passée l’intervention ?</p>
               <div className="rating-row" aria-label="Note">
                 {[1, 2, 3, 4, 5].map((value) => (
                   <button
@@ -230,6 +231,7 @@ export default function ClientRequestDetailPage() {
                     key={value}
                     type="button"
                     aria-label={`${value} étoile${value > 1 ? "s" : ""}`}
+                    aria-pressed={rating === value}
                     onClick={() => setRating(value)}
                   >
                     ★
