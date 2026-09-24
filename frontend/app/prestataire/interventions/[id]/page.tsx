@@ -13,7 +13,6 @@ import {
   STATUS_LABELS,
   statusTone,
   type ProviderIntervention,
-  type RequestStatus,
 } from "@/lib/provider-api";
 
 export default function ProviderInterventionDetailPage() {
