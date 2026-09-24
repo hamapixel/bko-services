@@ -70,11 +70,18 @@ class AdminComplaintListView(ListAPIView):
     serializer_class = AdminComplaintSerializer
 
     def get_queryset(self):
-        return (
+        queryset = (
             Complaint.objects.all()
             .select_related("reporter", "service_request")
             .prefetch_related("status_history")
         )
+        raw_status = self.request.query_params.get("status")
+        if raw_status:
+            statuses = [value.strip() for value in raw_status.split(",") if value.strip()]
+            if not statuses or any(value not in Complaint.Status.values for value in statuses):
+                raise ValidationError({"status": "Statut de plainte invalide."})
+            queryset = queryset.filter(status__in=statuses)
+        return queryset
 
 
 class AdminComplaintDetailView(RetrieveAPIView):
