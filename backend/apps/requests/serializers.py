@@ -64,12 +64,16 @@ class OwnRequestSerializer(serializers.ModelSerializer):
 
 class ProviderInterventionSerializer(serializers.ModelSerializer):
     status_history = StatusHistorySerializer(many=True, read_only=True)
+    trade_name = serializers.CharField(source="trade.name", read_only=True)
+    neighborhood_name = serializers.CharField(source="neighborhood.name", read_only=True)
+    commune_name = serializers.CharField(source="neighborhood.commune.name", read_only=True)
     client_phone = serializers.CharField(source="client.phone", read_only=True)
 
     class Meta:
         model = ServiceRequest
         fields = (
-            "id", "trade", "neighborhood", "title", "description", "address_detail",
-            "priority", "status", "client_phone", "created_at", "updated_at", "status_history",
+            "id", "trade", "trade_name", "neighborhood", "neighborhood_name", "commune_name",
+            "title", "description", "address_detail", "priority", "status",
+            "client_phone", "created_at", "updated_at", "status_history",
         )
         read_only_fields = fields
