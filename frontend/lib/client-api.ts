@@ -1,4 +1,4 @@
-import { sendJsonMutation } from "@/lib/safe-api";
+import { networkAvailable, OfflineActionError, sendJsonMutation } from "@/lib/safe-api";
 
 export type ApiPage<T> = {
   count: number;
@@ -138,6 +138,9 @@ export async function apiGet<T>(path: string): Promise<T> {
 }
 
 export async function getCsrfToken() {
+  if (!networkAvailable()) {
+    throw new OfflineActionError();
+  }
   const payload = await apiGet<{ csrfToken: string }>("/api/v1/auth/csrf/");
   return payload.csrfToken;
 }
@@ -147,6 +150,9 @@ export async function apiMutation<T>(
   method: "POST" | "PATCH" | "PUT" | "DELETE",
   body?: unknown,
 ) {
+  if (!networkAvailable()) {
+    throw new OfflineActionError();
+  }
   const csrfToken = await getCsrfToken();
   return sendJsonMutation<T>(path, method, { csrfToken, body });
 }
