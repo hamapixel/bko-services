@@ -45,7 +45,8 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 15 : SMS/OTP professionnel.
 - [x] Étape 16 : plaintes / signalements.
 - [x] Étape 17 : plans et abonnements prestataires.
-- [x] Étape 18 : paiements sécurisés.\n- [ ] Étape 19 : PWA complète et hors connexion — validation locale en cours.
+- [x] Étape 18 : paiements sécurisés.
+- [ ] Étape 19 : PWA complète et hors connexion — validation locale en cours.
 
 ## Démarrage sur Windows
 
