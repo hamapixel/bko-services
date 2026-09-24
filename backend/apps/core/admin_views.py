@@ -1,10 +1,11 @@
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from rest_framework import serializers, status
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -12,12 +13,13 @@ from rest_framework.views import APIView
 from apps.complaints.models import Complaint
 from apps.payments.models import PaymentTransaction
 from apps.providers.models import ProviderProfile, ProviderReview
-from apps.providers.review import can_review_providers, review_provider
+from apps.providers.review import review_provider
 from apps.requests.matching import dispatch_request
 from apps.requests.models import ServiceRequest
 from apps.subscriptions.models import ProviderSubscription
 
 from .admin_permissions import (
+    CanReviewProviders,
     CanViewServiceRequests,
     CanViewUsers,
     IsPlatformAdmin,
@@ -278,12 +280,8 @@ class AdminUserDetailView(RetrieveAPIView):
 
 
 class AdminProviderListView(ListAPIView):
+    permission_classes = [CanReviewProviders]
     serializer_class = AdminProviderSerializer
-
-    def get_permissions(self):
-        if not can_review_providers(self.request.user):
-            raise PermissionDenied("Vérification réservée aux administrateurs habilités.")
-        return []
 
     def get_queryset(self):
         queryset = (
@@ -310,13 +308,9 @@ class AdminProviderListView(ListAPIView):
 
 
 class AdminProviderDetailView(RetrieveAPIView):
+    permission_classes = [CanReviewProviders]
     serializer_class = AdminProviderSerializer
     lookup_field = "pk"
-
-    def get_permissions(self):
-        if not can_review_providers(self.request.user):
-            raise PermissionDenied("Vérification réservée aux administrateurs habilités.")
-        return []
 
     def get_queryset(self):
         return (
@@ -328,11 +322,9 @@ class AdminProviderDetailView(RetrieveAPIView):
 
 @method_decorator(csrf_protect, name="dispatch")
 class AdminProviderReviewView(APIView):
-    def get_permissions(self):
-        if not can_review_providers(self.request.user):
-            raise PermissionDenied("Vérification réservée aux administrateurs habilités.")
-        return []
+    permission_classes = [CanReviewProviders]
 
+    @transaction.atomic
     def post(self, request, pk):
         reject_extra_fields(
             request.data,
@@ -352,15 +344,11 @@ class AdminProviderReviewView(APIView):
             profile.identity_checked = serializer.validated_data["identity_checked"]
         profile.save(update_fields=["review_note", "identity_checked", "updated_at"])
 
-        try:
-            reviewed = review_provider(
-                profile.pk,
-                request.user,
-                serializer.validated_data["decision"],
-            )
-        except Exception:
-            profile.refresh_from_db()
-            raise
+        reviewed = review_provider(
+            profile.pk,
+            request.user,
+            serializer.validated_data["decision"],
+        )
 
         reviewed = (
             ProviderProfile.objects.select_related("user")
