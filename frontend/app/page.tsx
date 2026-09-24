@@ -2,49 +2,135 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <main className="home">
-      <div className="home-card">
-        <div className="brand" aria-label="BKO Services">
-          <span className="brand-mark" aria-hidden="true">B</span>
-          <span>BKO Services</span>
-        </div>
-        <p className="eyebrow">Bamako · Services de proximité</p>
-        <h1>Le bon professionnel, au bon moment.</h1>
-        <p className="intro">
-          Décrivez votre besoin, suivez l’intervention et gardez le contrôle
-          depuis votre téléphone. Les brouillons restent clairement
-          <strong> non envoyés</strong> tant que le serveur ne les a pas reçus.
-        </p>
-
-        <div className="home-actions">
-          <Link className="button-primary" href="/connexion">
-            Accéder à l’espace client
-          </Link>
-          <Link className="button-secondary" href="/connexion">
-            Créer un compte
-          </Link>
-          <Link className="button-secondary" href="/prestataire/connexion">
-            Espace prestataire
-          </Link>
-        </div>
-
-        <div className="pwa-summary" aria-label="Fonctions disponibles">
-          <div>
-            <strong>Professionnels vérifiés</strong>
-            <span>Suivi du prestataire attribué et de chaque étape.</span>
+    <main className="home-premium">
+      <section className="home-premium-shell">
+        <header className="home-premium-topbar">
+          <div className="home-premium-brand" aria-label="BKO Services">
+            <span className="home-premium-mark" aria-hidden="true">B</span>
+            <span>
+              <strong>BKO Services</strong>
+              <small>Bamako</small>
+            </span>
           </div>
-          <div>
-            <strong>Connexion instable</strong>
-            <span>Brouillons locaux et état hors connexion explicite.</span>
+
+          <div className="home-premium-nav">
+            <Link href="/prestataire/connexion">Prestataire</Link>
+            <Link className="home-premium-login" href="/connexion">
+              Se connecter
+            </Link>
           </div>
-          <div>
-            <strong>Suivi complet</strong>
-            <span>Confirmation de fin et avis après l’intervention.</span>
+        </header>
+
+        <div className="home-premium-grid">
+          <div className="home-premium-copy">
+            <span className="home-premium-badge">Services de proximité à Bamako</span>
+            <h1>
+              Trouvez le bon professionnel.
+              <span> Rapidement.</span>
+            </h1>
+            <p>
+              Décrivez votre besoin, recevez un prestataire vérifié et suivez
+              chaque étape de l’intervention depuis votre téléphone.
+            </p>
+
+            <div className="home-premium-actions">
+              <Link className="home-premium-primary" href="/connexion">
+                Trouver un professionnel
+              </Link>
+              <Link className="home-premium-secondary" href="/connexion">
+                Créer mon compte
+              </Link>
+            </div>
+
+            <div className="home-premium-trust">
+              <span><strong>✓</strong> Prestataires vérifiés</span>
+              <span><strong>✓</strong> Suivi clair</span>
+              <span><strong>✓</strong> Paiement et données sécurisés</span>
+            </div>
+          </div>
+
+          <div className="home-premium-showcase" aria-hidden="true">
+            <div className="home-phone-card">
+              <div className="home-phone-head">
+                <span className="home-phone-mini-mark">B</span>
+                <div>
+                  <strong>BKO Services</strong>
+                  <small>Votre demande</small>
+                </div>
+                <span className="home-online-dot" />
+              </div>
+
+              <div className="home-phone-welcome">
+                <small>Bonjour 👋</small>
+                <strong>De quoi avez-vous besoin ?</strong>
+              </div>
+
+              <div className="home-service-grid">
+                <div><span>⚡</span><strong>Électricité</strong></div>
+                <div><span>🔧</span><strong>Plomberie</strong></div>
+                <div><span>❄</span><strong>Climatisation</strong></div>
+                <div><span>＋</span><strong>Voir plus</strong></div>
+              </div>
+
+              <div className="home-status-card">
+                <div className="home-status-top">
+                  <span>Intervention en cours</span>
+                  <strong>En route</strong>
+                </div>
+                <div className="home-status-line"><span /></div>
+                <div className="home-provider-mini">
+                  <span>MK</span>
+                  <div>
+                    <strong>Moussa K.</strong>
+                    <small>Prestataire vérifié</small>
+                  </div>
+                  <b>4.9 ★</b>
+                </div>
+              </div>
+            </div>
+
+            <div className="home-float-card home-float-verified">
+              <span>✓</span>
+              <div>
+                <strong>Prestataire vérifié</strong>
+                <small>Identité contrôlée</small>
+              </div>
+            </div>
+
+            <div className="home-float-card home-float-fast">
+              <span>↗</span>
+              <div>
+                <strong>Suivi simple</strong>
+                <small>Chaque étape visible</small>
+              </div>
+            </div>
           </div>
         </div>
 
-        <p className="build-note">BKO Services · Espace client responsive</p>
-      </div>
+        <div className="home-premium-bottom">
+          <article>
+            <span>01</span>
+            <div>
+              <strong>Décrivez votre besoin</strong>
+              <small>Quelques informations suffisent.</small>
+            </div>
+          </article>
+          <article>
+            <span>02</span>
+            <div>
+              <strong>Un professionnel est proposé</strong>
+              <small>Selon son métier et sa zone.</small>
+            </div>
+          </article>
+          <article>
+            <span>03</span>
+            <div>
+              <strong>Suivez l’intervention</strong>
+              <small>Jusqu’à votre confirmation finale.</small>
+            </div>
+          </article>
+        </div>
+      </section>
     </main>
   );
 }
