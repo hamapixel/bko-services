@@ -6187,3 +6187,29 @@ textarea:disabled {
     width: 100%;
   }
 }
+
+
+.provider-selected-chip {
+  display: inline-flex;
+  min-height: 29px;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: #edf4fa;
+  color: #31536f;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.provider-selected-chip span {
+  color: #9c4c25;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.provider-selected-chip:hover {
+  background: #e4eef7;
+}
