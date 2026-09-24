@@ -26,7 +26,12 @@ def own_provider_interventions(user):
             assigned_provider__user=user,
             assigned_provider__user__role="PROVIDER",
         )
-        .select_related("client", "assigned_provider__user")
+        .select_related(
+            "client",
+            "trade",
+            "neighborhood__commune",
+            "assigned_provider__user",
+        )
         .prefetch_related("status_history")
     )
 
@@ -36,7 +41,16 @@ class ProviderInterventionListView(ListAPIView):
     serializer_class = ProviderInterventionSerializer
 
     def get_queryset(self):
-        return own_provider_interventions(self.request.user)
+        queryset = own_provider_interventions(self.request.user)
+        raw_status = self.request.query_params.get("status")
+        if raw_status:
+            statuses = [value.strip() for value in raw_status.split(",") if value.strip()]
+            allowed_statuses = set(ServiceRequest.Status.values)
+            if not statuses or any(value not in allowed_statuses for value in statuses):
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({"status": "Statut d'intervention invalide."})
+            queryset = queryset.filter(status__in=statuses)
+        return queryset
 
 
 class ProviderInterventionDetailView(RetrieveAPIView):
