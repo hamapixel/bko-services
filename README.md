@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 21 — espace prestataire responsive implémenté sur la branche de fonctionnalité, validation locale en cours**. Connexion prestataire, offres privées, acceptation atomique, interventions, disponibilité, abonnements, paiements et avis sont branchés sur les API Django sécurisées.
+> Statut : **étape 21 — espace prestataire responsive validé localement**. Connexion prestataire, offres privées, acceptation atomique, interventions, disponibilité, abonnements, paiements et avis sont branchés sur les API Django sécurisées.
 
 ## Principes
 
@@ -48,7 +48,7 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 18 : paiements sécurisés.
 - [x] Étape 19 : PWA complète et hors connexion.
 - [x] Étape 20 : espace client responsive.
-- [ ] Étape 21 : espace prestataire responsive — validation locale en cours.
+- [x] Étape 21 : espace prestataire responsive.
 
 ## Démarrage sur Windows
 
