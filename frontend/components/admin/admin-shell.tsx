@@ -73,6 +73,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(!isLoginPage);
   const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState("");
+  const userId = user?.id;
+  const hasOverview = overview !== null;
 
   const refreshOverview = useCallback(async () => {
     const next = await apiGet<AdminOverview>("/api/v1/admin/overview/");
@@ -121,6 +123,57 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       active = false;
     };
   }, [isLoginPage, router]);
+
+  useEffect(() => {
+    if (isLoginPage || !userId || !hasOverview) return;
+
+    let active = true;
+    let checking = false;
+
+    async function verifySession() {
+      if (!active || checking) return;
+      checking = true;
+      try {
+        const account = await apiGet<PublicUser>("/api/v1/auth/me/");
+        if (!active) return;
+        if (account.id !== userId) {
+          setUser(null);
+          setOverview(null);
+          router.replace("/admin/connexion");
+          return;
+        }
+        const nextOverview = await apiGet<AdminOverview>("/api/v1/admin/overview/");
+        if (active) setOverview(nextOverview);
+      } catch (caught) {
+        if (
+          active && caught instanceof ApiReadError &&
+          (caught.status === 401 || caught.status === 403)
+        ) {
+          setUser(null);
+          setOverview(null);
+          router.replace("/admin/connexion");
+        }
+      } finally {
+        checking = false;
+      }
+    }
+
+    function onVisibilityChange() {
+      if (document.visibilityState === "visible") void verifySession();
+    }
+
+    window.addEventListener("focus", verifySession);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    const interval = window.setInterval(verifySession, 60_000);
+    void verifySession();
+
+    return () => {
+      active = false;
+      window.removeEventListener("focus", verifySession);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.clearInterval(interval);
+    };
+  }, [hasOverview, isLoginPage, pathname, router, userId]);
 
   const contextValue = useMemo(
     () =>
