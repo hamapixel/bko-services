@@ -108,6 +108,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
@@ -120,6 +121,7 @@ REST_FRAMEWORK = {
         "auth_login": "5/min",
         "password_reset_request": "5/hour",
         "password_reset_confirm": "10/min",
+        "password_change": "5/hour",
         "otp_request": "5/hour",
         "otp_verify": "10/min",
         "otp_ip": "20/hour",
