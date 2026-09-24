@@ -14,7 +14,7 @@ export default function Home() {
           </div>
 
           <div className="home-premium-nav">
-            <Link href="/prestataire/connexion">Prestataire</Link>
+            <Link href="/prestataire/devenir">Devenir prestataire</Link>
             <Link className="home-premium-login" href="/connexion">
               Se connecter
             </Link>
