@@ -190,3 +190,12 @@ export function adminStatusTone(value: string) {
   }
   return "active";
 }
+
+
+export type AdminSubscriptionProviderOption = {
+  id: string;
+  display_name: string;
+  status: "VERIFIED";
+  has_subscription: boolean;
+  subscription_id: string | null;
+};
