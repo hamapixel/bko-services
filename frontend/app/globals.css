@@ -1475,3 +1475,9 @@ textarea:disabled {
   gap: 10px;
   margin-top: 28px;
 }
+
+@media (max-width: 820px) {
+  .pwa-status {
+    bottom: max(82px, calc(66px + env(safe-area-inset-bottom)));
+  }
+}
