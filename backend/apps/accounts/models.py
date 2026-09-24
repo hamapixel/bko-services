@@ -28,6 +28,7 @@ class User(AbstractUser):
     )
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.CLIENT)
     phone_verified_at = models.DateTimeField(blank=True, null=True)
+    avatar = models.FileField(upload_to="avatars/", blank=True)
 
     USERNAME_FIELD = "phone"
     REQUIRED_FIELDS = []
