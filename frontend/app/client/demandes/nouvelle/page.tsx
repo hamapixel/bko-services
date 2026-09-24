@@ -116,7 +116,6 @@ export default function NewClientRequestPage() {
 
   useEffect(() => {
     if (!form.category) {
-      setTrades([]);
       return;
     }
     let active = true;
@@ -136,7 +135,6 @@ export default function NewClientRequestPage() {
 
   useEffect(() => {
     if (!form.city) {
-      setCommunes([]);
       return;
     }
     let active = true;
@@ -156,7 +154,6 @@ export default function NewClientRequestPage() {
 
   useEffect(() => {
     if (!form.commune) {
-      setNeighborhoods([]);
       return;
     }
     let active = true;
@@ -197,6 +194,17 @@ export default function NewClientRequestPage() {
       if (key === "commune") next.neighborhood = "";
       return next;
     });
+
+    if (key === "category") {
+      setTrades([]);
+    }
+    if (key === "city") {
+      setCommunes([]);
+      setNeighborhoods([]);
+    }
+    if (key === "commune") {
+      setNeighborhoods([]);
+    }
     setMessage("");
     setError("");
   }
