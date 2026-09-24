@@ -405,3 +405,21 @@ http://localhost:3000/admin/connexion
 ```
 
 Un compte admin sans permission ne doit voir que les sections correspondant à ses capacités.
+
+
+## Validation locale du 24 septembre 2026
+
+Validation effectuée avec succès :
+
+- `npm.cmd ci` : **OK** ;
+- audit npm : **0 vulnérabilité** ;
+- avertissement de support ESLint affiché par npm, non bloquant pour cette étape ;
+- avertissement `allow-scripts` pour `unrs-resolver`, non bloquant ; aucun script n'a été approuvé automatiquement ;
+- `npm.cmd run lint` : **OK, 0 erreur, 0 warning** ;
+- `npm.cmd run build` : **OK** avec Next.js 16.3.6 / Turbopack ;
+- TypeScript : **OK** ;
+- 26 routes générées, dont tout l'espace `/admin` ;
+- `manage.py check` : aucun problème ;
+- `makemigrations --check --dry-run` : aucune modification détectée ;
+- suite complète backend : **112 tests OK** ;
+- **1 test PostgreSQL ignoré sous SQLite**, comme prévu.
