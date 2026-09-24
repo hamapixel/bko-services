@@ -66,3 +66,48 @@ class VerifyPhoneSerializer(serializers.Serializer):
         max_length=6,
         validators=[RegexValidator(regex=r"^\d{6}$", message="Le code doit contenir six chiffres.")],
     )
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=16)
+
+    def validate_phone(self, value):
+        value = value.strip()
+        field = User._meta.get_field("phone")
+        try:
+            field.run_validators(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.messages) from exc
+        return value
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=16)
+    code = serializers.CharField(
+        min_length=6,
+        max_length=6,
+        validators=[
+            RegexValidator(
+                regex=r"^\d{6}$",
+                message="Le code doit contenir six chiffres.",
+            )
+        ],
+    )
+    new_password = serializers.CharField(write_only=True, trim_whitespace=False)
+    confirm_password = serializers.CharField(write_only=True, trim_whitespace=False)
+
+    def validate_phone(self, value):
+        value = value.strip()
+        field = User._meta.get_field("phone")
+        try:
+            field.run_validators(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.messages) from exc
+        return value
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError(
+                {"confirm_password": "Les deux mots de passe ne correspondent pas."}
+            )
+        return attrs
