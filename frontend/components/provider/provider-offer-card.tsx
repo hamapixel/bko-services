@@ -21,7 +21,7 @@ export default function ProviderOfferCard({ offer }: { offer: ProviderOffer }) {
         <span>🕒 {formatDate(offer.created_at)}</span>
       </div>
       <div className="provider-offer-privacy">
-        Adresse précise et téléphone masqués avant acceptation.
+        Titre, description, adresse précise et téléphone masqués avant acceptation.
       </div>
       <Link
         className="button-primary"
