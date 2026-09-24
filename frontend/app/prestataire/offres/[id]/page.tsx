@@ -105,7 +105,7 @@ export default function ProviderOfferDetailPage() {
             ← Offres
           </Link>
           <p className="page-kicker">{offer.trade_name}</p>
-          <h1>{offer.title}</h1>
+          <h1>{offer.trade_name} · {offer.neighborhood_name}</h1>
           <div className="detail-badges">
             <span className="status-badge neutral">Offre en attente</span>
             {offer.priority === "URGENT" && (
@@ -138,9 +138,10 @@ export default function ProviderOfferDetailPage() {
               <dd>{formatDate(offer.created_at)}</dd>
             </div>
           </dl>
-          <div className="description-box">
-            <strong>Description</strong>
-            <p>{offer.description}</p>
+          <div className="provider-offer-privacy">
+            Le titre, la description libre, l’adresse précise et le téléphone
+            du client restent masqués avant attribution, car ces champs peuvent
+            contenir des informations personnelles.
           </div>
         </section>
 
