@@ -6,6 +6,10 @@ const apiOrigin = (process.env.BKO_API_ORIGIN ?? "http://127.0.0.1:8000").replac
 );
 
 const nextConfig: NextConfig = {
+  // Django/DRF routes use trailing slashes. Keep them intact before the API
+  // rewrite, otherwise Next.js removes the slash and Django adds it back,
+  // creating a redirect loop on proxied API requests.
+  skipTrailingSlashRedirect: true,
   async rewrites() {
     return [
       {
