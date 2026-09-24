@@ -48,7 +48,8 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 18 : paiements sécurisés.
 - [x] Étape 19 : PWA complète et hors connexion.
 - [x] Étape 20 : espace client responsive.
-- [x] Étape 21 : espace prestataire responsive.\n- [ ] Étape 22 : espace administration responsive — validation locale en cours.
+- [x] Étape 21 : espace prestataire responsive.
+- [ ] Étape 22 : espace administration responsive — validation locale en cours.
 
 ## Démarrage sur Windows
 
