@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element -- private authenticated avatar URLs intentionally bypass image optimization. */
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
