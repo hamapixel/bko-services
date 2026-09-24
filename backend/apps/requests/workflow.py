@@ -47,7 +47,7 @@ def _locked_request(request_id):
     try:
         return (
             ServiceRequest.objects.select_for_update()
-            .select_related("client", "assigned_provider__user")
+            .select_related("client")
             .get(pk=request_id)
         )
     except ServiceRequest.DoesNotExist as exc:
