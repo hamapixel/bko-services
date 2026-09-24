@@ -64,9 +64,10 @@ function initials(profile: ProviderProfile) {
 export default function ProviderShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const isLoginPage = pathname === "/prestataire/connexion";
   const [user, setUser] = useState<PublicUser | null>(null);
   const [profile, setProfile] = useState<ProviderProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!isLoginPage);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sessionError, setSessionError] = useState("");
 
@@ -76,6 +77,10 @@ export default function ProviderShell({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (isLoginPage) {
+      return;
+    }
+
     let active = true;
 
     Promise.all([
@@ -110,7 +115,7 @@ export default function ProviderShell({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, [router]);
+  }, [isLoginPage, router]);
 
   const contextValue = useMemo(
     () =>
@@ -131,6 +136,10 @@ export default function ProviderShell({ children }: { children: ReactNode }) {
       router.replace("/prestataire/connexion");
       router.refresh();
     }
+  }
+
+  if (isLoginPage) {
+    return <>{children}</>;
   }
 
   if (loading) {
