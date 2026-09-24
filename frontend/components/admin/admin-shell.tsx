@@ -24,6 +24,7 @@ type AdminSessionValue = {
   user: PublicUser;
   overview: AdminOverview;
   refreshOverview: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 };
 
 const AdminSessionContext = createContext<AdminSessionValue | null>(null);
@@ -36,6 +37,7 @@ const NAV_ITEMS = [
   { href: "/admin/abonnements", label: "Abonnements", icon: "◇", capability: "subscriptions" },
   { href: "/admin/paiements", label: "Paiements", icon: "₣", capability: "payments" },
   { href: "/admin/utilisateurs", label: "Utilisateurs", icon: "●", capability: "users" },
+  { href: "/admin/profil", label: "Mon profil", icon: "◉", capability: null },
 ] as const;
 
 export function useAdminSession() {
@@ -74,6 +76,11 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const refreshOverview = useCallback(async () => {
     const next = await apiGet<AdminOverview>("/api/v1/admin/overview/");
     setOverview(next);
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    const next = await apiGet<PublicUser>("/api/v1/auth/me/");
+    setUser(next);
   }, []);
 
   useEffect(() => {
@@ -121,9 +128,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             user,
             overview,
             refreshOverview,
+            refreshUser,
           }
         : null,
-    [overview, refreshOverview, user],
+    [overview, refreshOverview, refreshUser, user],
   );
 
   async function logout() {
@@ -214,7 +222,13 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="admin-account-card">
-            <span className="admin-avatar">{initials(user)}</span>
+            <span className="admin-avatar">
+              {user.has_avatar && user.avatar_url ? (
+                <img src={user.avatar_url} alt="" />
+              ) : (
+                initials(user)
+              )}
+            </span>
             <span className="admin-account-copy">
               <strong>
                 {[user.first_name, user.last_name].filter(Boolean).join(" ") ||
@@ -252,6 +266,13 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               <small>Supervision et opérations habilitées.</small>
             </div>
             <span className="admin-role-badge">{user.role}</span>
+            <Link className="admin-topbar-avatar" href="/admin/profil" aria-label="Ouvrir mon profil">
+              {user.has_avatar && user.avatar_url ? (
+                <img src={user.avatar_url} alt="" />
+              ) : (
+                initials(user)
+              )}
+            </Link>
           </header>
 
           <div className="admin-content">{children}</div>
