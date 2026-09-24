@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 17 — plans et abonnements prestataires implémentés sur la branche de fonctionnalité, validation locale en cours**. Le matching et l'acceptation exigent maintenant un abonnement effectif avec les droits correspondant aux demandes normales ou urgentes. Le paiement réel reste réservé à l'étape 18.
+> Statut : **étape 17 — plans et abonnements prestataires validés localement**. Le matching et l'acceptation exigent un abonnement effectif avec les droits correspondant aux demandes normales ou urgentes. La migration `subscriptions.0001_initial` est appliquée. Le paiement réel reste réservé à l'étape 18.
 
 ## Principes
 
@@ -44,7 +44,7 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 14 : Web Push et service worker minimal.
 - [x] Étape 15 : SMS/OTP professionnel.
 - [x] Étape 16 : plaintes / signalements.
-- [ ] Étape 17 : plans et abonnements prestataires — validation locale en cours.
+- [x] Étape 17 : plans et abonnements prestataires.
 
 ## Démarrage sur Windows
 
