@@ -3,6 +3,7 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.contrib.auth.hashers import check_password, make_password
 from django.test import TestCase, override_settings
 from django.utils import timezone
@@ -112,3 +113,42 @@ class PhoneOtpTests(TestCase):
         self.assertEqual(self.post(path, {"code": "123456"}).status_code, 429)
         self.user.refresh_from_db()
         self.assertIsNone(self.user.phone_verified_at)
+
+
+class AdminSpaceAccessTests(TestCase):
+    def test_admin_overview_gates_staff_and_user_listing_permission(self):
+        User = get_user_model()
+        client_user = User.objects.create_user(
+            phone="+22312990000",
+            password="Strong-password-2026!",
+        )
+        denied = APIClient()
+        denied.force_login(client_user)
+        self.assertEqual(denied.get("/api/v1/admin/overview/").status_code, 403)
+
+        staff = User.objects.create_user(
+            phone="+22312990001",
+            password="Strong-admin-2026!",
+            role=User.Role.ADMIN,
+            is_staff=True,
+            phone_verified_at=timezone.now(),
+        )
+        admin = APIClient()
+        admin.force_login(staff)
+
+        overview = admin.get("/api/v1/admin/overview/")
+        self.assertEqual(overview.status_code, 200)
+        self.assertFalse(overview.json()["capabilities"]["users"])
+        self.assertEqual(admin.get("/api/v1/admin/users/").status_code, 403)
+
+        staff.user_permissions.add(Permission.objects.get(codename="view_user"))
+        overview = admin.get("/api/v1/admin/overview/")
+        self.assertTrue(overview.json()["capabilities"]["users"])
+        listing = admin.get("/api/v1/admin/users/?role=CLIENT")
+        self.assertEqual(listing.status_code, 200)
+        self.assertGreaterEqual(listing.json()["count"], 1)
+        self.assertNotIn("password", listing.json()["results"][0])
+        self.assertEqual(
+            admin.get("/api/v1/admin/users/?role=UNKNOWN").status_code,
+            400,
+        )
