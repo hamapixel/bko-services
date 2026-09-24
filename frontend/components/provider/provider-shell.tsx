@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element -- private authenticated avatar URLs intentionally bypass image optimization. */
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -297,8 +298,12 @@ export default function ProviderShell({ children }: { children: ReactNode }) {
               <strong>{profile.display_name}</strong>
               <small>Gérez vos offres et interventions.</small>
             </div>
-            <Link className="provider-mini-avatar" href="/prestataire/profil">
-              {initials(profile)}
+            <Link className="provider-mini-avatar" href="/prestataire/profil" aria-label="Ouvrir mon profil">
+              {user.has_avatar && user.avatar_url ? (
+                <img src={user.avatar_url} alt="" />
+              ) : (
+                initials(profile)
+              )}
             </Link>
           </header>
 
