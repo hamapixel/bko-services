@@ -1,0 +1,16 @@
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ("accounts", "0003_passwordresetcode"),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name="user",
+            name="avatar",
+            field=models.FileField(blank=True, upload_to="avatars/"),
+        ),
+    ]
