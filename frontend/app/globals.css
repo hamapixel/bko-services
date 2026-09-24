@@ -1481,3 +1481,9 @@ textarea:disabled {
     bottom: max(82px, calc(66px + env(safe-area-inset-bottom)));
   }
 }
+
+.load-more-row {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0 4px;
+}
