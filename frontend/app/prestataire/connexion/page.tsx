@@ -139,8 +139,11 @@ export default function ProviderLoginPage() {
             </button>
           </form>
 
-          <div className="login-links">
-            <p>Pas encore prestataire ? Votre profil doit être validé par BKO Services.</p>
+          <div className="login-links provider-login-links">
+            <p>Vous souhaitez rejoindre le réseau BKO Services ?</p>
+            <Link className="provider-create-link" href="/prestataire/devenir">
+              Créer mon dossier prestataire
+            </Link>
             <Link href="/connexion">Retour à l’espace client</Link>
           </div>
         </div>
