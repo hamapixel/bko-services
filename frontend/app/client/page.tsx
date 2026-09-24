@@ -60,23 +60,38 @@ export default function ClientDashboardPage() {
     };
   }, []);
 
+  const firstName = user.first_name || "Bienvenue";
+
   return (
-    <main>
-      <section className="client-page-head dashboard-head">
-        <div>
-          <p className="page-kicker">Bonjour</p>
-          <h1>
-            {user.first_name ? `${user.first_name},` : "Bienvenue,"} que
-            souhaitez-vous faire ?
-          </h1>
+    <main className="client-dashboard-premium">
+      <section className="client-welcome-card">
+        <div className="client-welcome-copy">
+          <span className="client-welcome-kicker">Bonjour {firstName} 👋</span>
+          <h1>Quel service vous faut-il aujourd’hui ?</h1>
           <p>
-            Créez une demande et suivez chaque étape jusqu’à la fin de
-            l’intervention.
+            Décrivez votre besoin en quelques secondes. BKO Services vous aide
+            à suivre la demande jusqu’à la fin de l’intervention.
           </p>
+          <div className="client-welcome-actions">
+            <Link className="client-premium-primary" href="/client/demandes/nouvelle">
+              <span aria-hidden="true">＋</span>
+              Nouvelle demande
+            </Link>
+            <Link className="client-premium-secondary" href="/client/demandes">
+              Voir mes demandes
+            </Link>
+          </div>
         </div>
-        <Link className="button-primary" href="/client/demandes/nouvelle">
-          + Nouvelle demande
-        </Link>
+
+        <div className="client-welcome-visual" aria-hidden="true">
+          <div className="client-service-orb client-service-orb-one">⚡</div>
+          <div className="client-service-orb client-service-orb-two">🔧</div>
+          <div className="client-service-orb client-service-orb-three">❄</div>
+          <div className="client-welcome-center">
+            <span>B</span>
+            <small>BKO Services</small>
+          </div>
+        </div>
       </section>
 
       {!user.phone_verified_at && (
@@ -94,34 +109,46 @@ export default function ClientDashboardPage() {
         </section>
       )}
 
-      <section className="metric-grid" aria-label="Résumé">
-        <article className="metric-card">
-          <span>Total demandes</span>
-          <strong>{totalCount}</strong>
-          <small>Historique complet côté serveur</small>
+      <section className="client-metric-grid" aria-label="Résumé">
+        <article className="client-metric-card">
+          <div className="client-metric-icon">▦</div>
+          <div>
+            <span>Total demandes</span>
+            <strong>{totalCount}</strong>
+            <small>Votre historique</small>
+          </div>
         </article>
-        <article className="metric-card">
-          <span>À confirmer</span>
-          <strong>{waitingCount}</strong>
-          <small>Terminées par le prestataire</small>
+        <article className="client-metric-card">
+          <div className="client-metric-icon">✓</div>
+          <div>
+            <span>À confirmer</span>
+            <strong>{waitingCount}</strong>
+            <small>En attente de votre validation</small>
+          </div>
         </article>
-        <article className="metric-card">
-          <span>Terminées</span>
-          <strong>{completedCount}</strong>
-          <small>Confirmées par vous</small>
+        <article className="client-metric-card">
+          <div className="client-metric-icon">★</div>
+          <div>
+            <span>Terminées</span>
+            <strong>{completedCount}</strong>
+            <small>Interventions confirmées</small>
+          </div>
         </article>
-        <article className="metric-card">
-          <span>Brouillons</span>
-          <strong>{draftCount}</strong>
-          <small>Stockés seulement sur cet appareil</small>
+        <article className="client-metric-card">
+          <div className="client-metric-icon">✎</div>
+          <div>
+            <span>Brouillons</span>
+            <strong>{draftCount}</strong>
+            <small>Sur cet appareil</small>
+          </div>
         </article>
       </section>
 
-      <section className="content-section">
+      <section className="content-section client-recent-section">
         <div className="section-heading">
           <div>
-            <p className="page-kicker">Suivi</p>
-            <h2>Demandes récentes</h2>
+            <p className="page-kicker">Activité récente</p>
+            <h2>Vos dernières demandes</h2>
           </div>
           <Link className="text-link" href="/client/demandes">
             Voir tout
@@ -137,11 +164,11 @@ export default function ClientDashboardPage() {
         )}
 
         {!loading && !error && requests.length === 0 && (
-          <div className="empty-state compact">
+          <div className="empty-state compact client-empty-premium">
+            <span className="client-empty-icon" aria-hidden="true">＋</span>
             <strong>Aucune demande pour le moment</strong>
             <p>
-              Décrivez votre besoin et BKO Services enregistrera votre première
-              demande.
+              Votre prochaine intervention commencera ici.
             </p>
             <Link className="button-primary" href="/client/demandes/nouvelle">
               Créer ma première demande
