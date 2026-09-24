@@ -579,6 +579,12 @@ textarea:disabled {
   font-size: 13px;
 }
 
+.request-review-prompt {
+  color: #bb5416;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .provider-dot {
   width: 8px;
   height: 8px;
