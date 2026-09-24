@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from apps.providers.models import ProviderProfile
+
 from .models import ProviderSubscription, SubscriptionHistory, SubscriptionPlan
 from .services import effective_subscription_status
 
@@ -122,3 +124,20 @@ def validate_plan_attributes(attrs):
             }
         )
     return attrs
+
+
+class AdminSubscriptionProviderOptionSerializer(serializers.ModelSerializer):
+    has_subscription = serializers.SerializerMethodField()
+    subscription_id = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProviderProfile
+        fields = ("id", "display_name", "status", "has_subscription", "subscription_id")
+        read_only_fields = fields
+
+    def get_has_subscription(self, obj):
+        return hasattr(obj, "subscription")
+
+    def get_subscription_id(self, obj):
+        subscription = getattr(obj, "subscription", None)
+        return str(subscription.pk) if subscription else None
