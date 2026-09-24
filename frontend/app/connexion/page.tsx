@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
@@ -228,6 +229,14 @@ export default function ConnexionPage() {
               <p className="login-hint">
                 Minimum 8 caractères. Choisissez un mot de passe difficile à deviner.
               </p>
+            )}
+
+            {mode === "login" && (
+              <div className="login-forgot-row">
+                <Link href="/connexion/mot-de-passe-oublie">
+                  Mot de passe oublié ?
+                </Link>
+              </div>
             )}
 
             {error && <p className="login-error" role="alert">{error}</p>}
