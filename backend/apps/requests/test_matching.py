@@ -1,3 +1,4 @@
+from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -10,6 +11,7 @@ from rest_framework.test import APIClient
 from apps.catalog.models import Category, Trade
 from apps.locations.models import City, Commune, Neighborhood
 from apps.providers.models import ProviderProfile
+from apps.subscriptions.models import ProviderSubscription, SubscriptionPlan
 
 from .matching import dispatch_request
 from .models import RequestStatusHistory, ServiceOffer, ServiceRequest
@@ -29,6 +31,14 @@ class MatchingTests(TestCase):
         self.area = Neighborhood.objects.create(commune=commune, name="Quartier exemple")
         self.trade = Trade.objects.create(category=Category.objects.create(name="Maison"), name="Plomberie")
         self.next_phone = 10
+        self.plan = SubscriptionPlan.objects.create(
+            code="matching-test",
+            name="Matching Test",
+            price_xof=0,
+            duration_days=30,
+            can_receive_requests=True,
+            can_receive_urgent_requests=True,
+        )
 
     def request(self, priority="NORMAL"):
         return create_service_request(
@@ -41,7 +51,7 @@ class MatchingTests(TestCase):
             priority=priority,
         )
 
-    def provider(self, *, available=True, verified=True, phone_verified=True, trade=True, area=True):
+    def provider(self, *, available=True, verified=True, phone_verified=True, trade=True, area=True, subscribed=True):
         phone = f"+2231{self.next_phone:07d}"
         self.next_phone += 1
         user = get_user_model().objects.create_user(
@@ -62,6 +72,14 @@ class MatchingTests(TestCase):
             profile.trades.add(self.trade)
         if area:
             profile.service_areas.add(self.area)
+        if subscribed:
+            now = timezone.now()
+            ProviderSubscription.objects.create(
+                provider=profile,
+                plan=self.plan,
+                starts_at=now - timedelta(minutes=1),
+                ends_at=now + timedelta(days=30),
+            )
         return profile
 
     def test_urgent_request_creates_at_most_five_private_offers(self):
@@ -102,6 +120,7 @@ class MatchingTests(TestCase):
         self.provider(phone_verified=False)
         self.provider(trade=False)
         self.provider(area=False)
+        self.provider(subscribed=False)
         selected = self.provider()
         service_request = self.request()
         self.trade.category.is_active = False

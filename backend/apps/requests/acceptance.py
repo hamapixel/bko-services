@@ -6,6 +6,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 from apps.notifications.models import Notification
 from apps.notifications.services import create_notification
 from apps.providers.models import ProviderProfile
+from apps.subscriptions.services import provider_has_entitlement
 
 from .models import RequestStatusHistory, ServiceOffer, ServiceRequest
 
@@ -52,6 +53,12 @@ def _validate_provider_eligibility(provider, user, service_request):
 
     if not provider.service_areas.filter(pk=neighborhood.pk).exists():
         raise ValidationError({"offer": "Vous ne desservez plus le quartier demandé."})
+
+    is_urgent = service_request.priority == ServiceRequest.Priority.URGENT
+    if not provider_has_entitlement(provider.pk, urgent=is_urgent):
+        raise ValidationError(
+            {"offer": "Votre abonnement ne permet plus d'accepter cette demande."}
+        )
 
 
 @transaction.atomic

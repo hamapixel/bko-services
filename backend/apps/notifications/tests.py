@@ -1,3 +1,4 @@
+from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
@@ -6,6 +7,7 @@ from rest_framework.test import APIClient
 from apps.catalog.models import Category, Trade
 from apps.locations.models import City, Commune, Neighborhood
 from apps.providers.models import ProviderProfile
+from apps.subscriptions.models import ProviderSubscription, SubscriptionPlan
 from apps.requests.acceptance import accept_offer
 from apps.requests.matching import dispatch_request
 from apps.requests.models import ServiceOffer, ServiceRequest
@@ -35,6 +37,14 @@ class NotificationCenterTests(TestCase):
         self.trade = Trade.objects.create(
             category=Category.objects.create(name="Catégorie notifications"),
             name="Métier notifications",
+        )
+        self.plan = SubscriptionPlan.objects.create(
+            code="notifications-test",
+            name="Notifications Test",
+            price_xof=0,
+            duration_days=30,
+            can_receive_requests=True,
+            can_receive_urgent_requests=True,
         )
 
         self.provider1 = self.create_provider("+22360000010", "Prestataire 1")
@@ -67,6 +77,13 @@ class NotificationCenterTests(TestCase):
         )
         profile.trades.add(self.trade)
         profile.service_areas.add(self.area)
+        now = timezone.now()
+        ProviderSubscription.objects.create(
+            provider=profile,
+            plan=self.plan,
+            starts_at=now - timedelta(minutes=1),
+            ends_at=now + timedelta(days=30),
+        )
         return profile
 
     def dispatch_two_offers(self):
