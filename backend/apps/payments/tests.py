@@ -353,6 +353,52 @@ class PaymentTests(TestCase):
         self.assertEqual(existing.ends_at, old_end + timedelta(days=30))
         self.assertEqual(existing.history.count(), 1)
 
+    def test_expired_subscription_requires_new_confirmed_payment(self):
+        now = timezone.now()
+        existing = ProviderSubscription.objects.create(
+            provider=self.provider,
+            plan=self.plan,
+            starts_at=now - timedelta(days=31),
+            ends_at=now - timedelta(days=1),
+            activated_by=self.admin,
+        )
+        api = APIClient()
+        api.force_login(self.provider.user)
+        self.assertEqual(
+            api.get("/api/v1/subscriptions/me/").json()["subscription"]["status"],
+            "EXPIRED",
+        )
+
+        created = self.create_payment(key="expired-renew-0001")
+        self.assertEqual(created.status_code, 201)
+        payment = PaymentTransaction.objects.get()
+        self.assertEqual(payment.purpose, PaymentTransaction.Purpose.ACTIVATE)
+        # Browser redirects and status reads never extend an expired subscription.
+        for result in ("retour", "erreur"):
+            detail = api.get(
+                "/api/v1/payments/transactions/" + str(payment.pk) + "/",
+                {"paiement": result},
+            )
+            self.assertEqual(detail.json()["status"], "PENDING")
+            self.assertEqual(
+                api.get("/api/v1/subscriptions/me/").json()["subscription"]["status"],
+                "EXPIRED",
+            )
+
+        before = timezone.now()
+        confirmed, _ = self.signed_webhook(
+            payment, provider_transaction_id="provider-txn-expired-renew"
+        )
+        self.assertEqual(confirmed.status_code, 200)
+        existing.refresh_from_db()
+        self.assertEqual(existing.status, ProviderSubscription.Status.ACTIVE)
+        self.assertGreaterEqual(existing.starts_at, before)
+        self.assertEqual(existing.ends_at, existing.starts_at + timedelta(days=30))
+        self.assertEqual(
+            api.get("/api/v1/subscriptions/me/").json()["subscription"]["status"],
+            "ACTIVE",
+        )
+
     def test_payment_uses_price_and_duration_snapshots_after_plan_change(self):
         self.create_payment(key="snapshot-key-0001")
         payment = PaymentTransaction.objects.get()
