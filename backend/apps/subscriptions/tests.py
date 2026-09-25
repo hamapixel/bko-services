@@ -145,6 +145,7 @@ class SubscriptionTests(TestCase):
             {
                 "code": "mensuel-essentiel", "name": "Mensuel Essentiel",
                 "price_xof": 0, "duration_days": 30, "is_active": False,
+                "max_active_jobs": 1,
                 "can_receive_requests": True, "can_receive_urgent_requests": False,
             },
             format="json",
@@ -160,6 +161,7 @@ class SubscriptionTests(TestCase):
         )
         self.assertEqual(updated.status_code, 200)
         self.assertEqual(updated.json()["duration_days"], 30)
+        self.assertEqual(updated.json()["max_active_jobs"], 1)
         public_codes = [item["code"] for item in APIClient().get(
             "/api/v1/subscriptions/plans/"
         ).json()["results"]]
