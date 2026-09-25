@@ -1,12 +1,23 @@
 from datetime import timedelta
 
 from django.db import transaction
+from django.db.models import Count, F, Q
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
 from apps.providers.models import ProviderProfile
+from apps.requests.models import ServiceRequest
 
 from .models import ProviderSubscription, SubscriptionHistory, SubscriptionPlan
+
+
+ACTIVE_INTERVENTION_STATUSES = (
+    ServiceRequest.Status.ACCEPTED,
+    ServiceRequest.Status.EN_ROUTE,
+    ServiceRequest.Status.ARRIVED,
+    ServiceRequest.Status.IN_PROGRESS,
+    ServiceRequest.Status.DISPUTED,
+)
 
 
 def can_manage_subscriptions(user):
@@ -46,21 +57,19 @@ def subscription_is_effective(subscription, *, urgent=False, at=None):
         return False
     if urgent and not subscription.plan.can_receive_urgent_requests:
         return False
+    limit = subscription.plan.max_active_jobs
+    if limit is not None and ServiceRequest.objects.filter(
+        assigned_provider_id=subscription.provider_id,
+        status__in=ACTIVE_INTERVENTION_STATUSES,
+    ).count() >= limit:
+        return False
     return True
 
 
 def provider_has_entitlement(provider_id, *, urgent=False, at=None):
-    at = at or timezone.now()
-    queryset = ProviderSubscription.objects.filter(
-        provider_id=provider_id,
-        status=ProviderSubscription.Status.ACTIVE,
-        starts_at__lte=at,
-        ends_at__gt=at,
-        plan__can_receive_requests=True,
-    )
-    if urgent:
-        queryset = queryset.filter(plan__can_receive_urgent_requests=True)
-    return queryset.exists()
+    return eligible_provider_ids_queryset(urgent=urgent, at=at).filter(
+        provider_id=provider_id
+    ).exists()
 
 
 def eligible_provider_ids_queryset(*, urgent=False, at=None):
@@ -73,6 +82,13 @@ def eligible_provider_ids_queryset(*, urgent=False, at=None):
     )
     if urgent:
         queryset = queryset.filter(plan__can_receive_urgent_requests=True)
+    queryset = queryset.annotate(
+        active_jobs=Count(
+            "provider__assigned_requests",
+            filter=Q(provider__assigned_requests__status__in=ACTIVE_INTERVENTION_STATUSES),
+            distinct=True,
+        )
+    ).filter(Q(plan__max_active_jobs__isnull=True) | Q(active_jobs__lt=F("plan__max_active_jobs")))
     return queryset.values("provider_id")
 
 
