@@ -429,7 +429,7 @@ export default function AdminSubscriptionsPage() {
                 type="button"
                 onClick={createTrialPlan}
               >
-                {creatingTrial ? "Préparation…" : "Activer le nouvel essai de 14 jours"}
+                {creatingTrial ? "Préparation…" : trialPlan?.is_active ? "Corriger l’essai de 14 jours" : "Activer l’essai de 14 jours"}
               </button>
             )}
           </section>
