@@ -24,6 +24,7 @@ export default function ProviderSubscriptionPage() {
   const [subscription, setSubscription] = useState<ProviderSubscription | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
+  const [waveAvailable, setWaveAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busyPlan, setBusyPlan] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -52,12 +53,14 @@ export default function ProviderSubscriptionPage() {
       ),
       apiGet<ApiPage<SubscriptionPlan>>("/api/v1/subscriptions/plans/"),
       apiGet<ApiPage<PaymentTransaction>>("/api/v1/payments/transactions/"),
+      apiGet<{ wave: boolean; orange_money: boolean }>("/api/v1/payments/methods/"),
     ])
-      .then(([subscriptionPayload, planPage, paymentPage]) => {
+      .then(([subscriptionPayload, planPage, paymentPage, methods]) => {
         if (!active) return;
         setSubscription(subscriptionPayload.subscription);
         setPlans(planPage.results);
         setPayments(paymentPage.results);
+        setWaveAvailable(methods.wave);
       })
       .catch((caught) => {
         if (!active) return;
@@ -76,17 +79,17 @@ export default function ProviderSubscriptionPage() {
     };
   }, []);
 
-  async function preparePayment(plan: SubscriptionPlan) {
+  async function payWithWave(plan: SubscriptionPlan) {
     if (plan.price_xof === 0) {
       setError(
-        "Ce plan gratuit ne peut pas être activé par le flux de paiement automatique.",
+        "Ce plan gratuit nécessite une activation administrative.",
       );
       return;
     }
 
     if (
       !window.confirm(
-        `Créer une transaction de test de ${formatXof(plan.price_xof)} pour le plan ${plan.name} ? Aucun paiement ne sera encaissé.`,
+        `Payer ${formatXof(plan.price_xof)} avec Wave pour le plan ${plan.name} ? Vous serez redirigé vers Wave.`,
       )
     ) {
       return;
@@ -98,7 +101,7 @@ export default function ProviderSubscriptionPage() {
     try {
       const key = `web-${crypto.randomUUID()}`;
       const payment = await apiMutation<PaymentTransaction>(
-        "/api/v1/payments/transactions/",
+        "/api/v1/payments/wave/checkout/",
         "POST",
         {
           plan_id: plan.id,
@@ -109,14 +112,13 @@ export default function ProviderSubscriptionPage() {
         payment,
         ...current.filter((item) => item.id !== payment.id),
       ]);
-      setMessage(
-        `Transaction de test créée : ${payment.merchant_reference}. Statut : ${PAYMENT_STATUS_LABELS[payment.status]}. Aucun paiement n’a été encaissé.`,
-      );
+      if (!payment.checkout_url) throw new Error("Lien de paiement Wave indisponible.");
+      window.location.assign(payment.checkout_url);
     } catch (caught) {
       setError(
         caught instanceof Error
           ? caught.message
-          : "Impossible de préparer la transaction.",
+          : "Impossible de lancer le paiement Wave.",
       );
     } finally {
       setBusyPlan(null);
@@ -218,15 +220,15 @@ export default function ProviderSubscriptionPage() {
                   </div>
                   <button
                     className="button-primary button-wide"
-                    disabled={busyPlan !== null || plan.price_xof === 0}
+                    disabled={busyPlan !== null || plan.price_xof === 0 || !waveAvailable}
                     type="button"
-                    onClick={() => preparePayment(plan)}
+                    onClick={() => payWithWave(plan)}
                   >
                     {busyPlan === plan.id
                       ? "Préparation…"
                       : plan.price_xof === 0
                         ? "Activation administrative"
-                        : "Créer une transaction de test"}
+                        : waveAvailable ? "Payer avec Wave" : "Paiement bientôt disponible"}
                   </button>
                 </article>
               ))}
@@ -242,11 +244,12 @@ export default function ProviderSubscriptionPage() {
             </div>
 
             <div className="provider-payment-warning">
-              <strong>Le paiement en ligne n’est pas encore disponible.</strong>
+              <strong>{waveAvailable ? "Paiement Wave" : "Paiement mobile bientôt disponible"}</strong>
               <p>
-                Créer une transaction de test n’encaisse rien et n’active aucun
-                abonnement. L’activation automatique nécessite la confirmation
-                sécurisée d’un fournisseur de paiement intégré.
+                {waveAvailable
+                  ? "Après paiement sur Wave, actualisez vos statuts. Seule la confirmation sécurisée de Wave active votre abonnement."
+                  : "La connexion du compte marchand Wave est en cours. Aucun paiement n’est encaissé sur cette page pour le moment."}
+                {" "}Orange Money sera proposé après activation du compte marchand et de son intégration.
               </p>
             </div>
 
@@ -271,6 +274,9 @@ export default function ProviderSubscriptionPage() {
                       <span className={`status-badge ${paymentTone(payment.status)}`}>
                         {PAYMENT_STATUS_LABELS[payment.status]}
                       </span>
+                      {payment.status === "PENDING" && payment.checkout_url && (
+                        <a href={payment.checkout_url} rel="noopener noreferrer">Reprendre sur Wave</a>
+                      )}
                     </div>
                   </article>
                 ))}
