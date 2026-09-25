@@ -222,6 +222,13 @@ export default function ProviderSubscriptionPage() {
                     Du {formatDate(subscription.starts_at)} au{" "}
                     {formatDate(subscription.ends_at)}.
                   </p>
+                  {subscription.status === "EXPIRED" && (
+                    <p>
+                      Votre abonnement a expiré. Choisissez un plan actif ci-dessous
+                      et effectuez un nouveau paiement. Vous conservez votre compte ;
+                      la nouvelle période commence après confirmation du paiement.
+                    </p>
+                  )}
                   <div className="subscription-entitlements">
                     <span>
                       {subscription.plan.can_receive_requests ? "✓" : "×"} Demandes normales
