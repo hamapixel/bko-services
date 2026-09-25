@@ -6,10 +6,16 @@ from .views import (
     AdminRetryFulfillmentView,
     PaymentDetailView,
     PaymentListCreateView,
+    PaymentMethodsView,
     PaymentWebhookView,
+    WaveCheckoutView,
+    WaveWebhookView,
 )
 
 urlpatterns = [
+    path("methods/", PaymentMethodsView.as_view(), name="payment-methods"),
+    path("wave/checkout/", WaveCheckoutView.as_view(), name="wave-checkout"),
+    path("webhooks/wave/", WaveWebhookView.as_view(), name="wave-webhook"),
     path("transactions/", PaymentListCreateView.as_view(), name="payments"),
     path(
         "transactions/<uuid:pk>/",
