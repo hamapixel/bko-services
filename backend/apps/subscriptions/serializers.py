@@ -7,6 +7,16 @@ from .services import effective_subscription_status
 
 
 class SubscriptionPlanSerializer(serializers.ModelSerializer):
+    def validate(self, attrs):
+        code = attrs.get("code", self.instance.code if self.instance else "")
+        active = attrs.get("is_active", self.instance.is_active if self.instance else True)
+        price = attrs.get("price_xof", self.instance.price_xof if self.instance else 0)
+        if code.startswith("mensuel-") and active and price == 0:
+            raise serializers.ValidationError(
+                {"price_xof": "Fixez un prix avant de publier un plan mensuel."}
+            )
+        return attrs
+
     def validate_duration_days(self, value):
         if value < 1:
             raise serializers.ValidationError("La durée doit être d'au moins un jour.")
