@@ -73,6 +73,26 @@ class MatchingTests(TestCase):
         self.assertEqual(offers["count"], 1)
         self.assertEqual(offers["results"][0]["trade_name"], "Plomberie")
 
+    def test_matching_skips_full_provider_and_releases_slot_after_work_is_finished(self):
+        self.plan.max_active_jobs = 1
+        self.plan.save(update_fields=["max_active_jobs"])
+        busy = self.provider()
+        available = self.provider()
+        occupied = ServiceRequest.objects.create(
+            client=self.client_user, trade=self.trade, neighborhood=self.area,
+            assigned_provider=busy, status=ServiceRequest.Status.IN_PROGRESS,
+            title="Intervention en cours", description="Détails", address_detail="Adresse",
+        )
+        waiting = self.request()
+        self.assertEqual(dispatch_request(waiting.pk, self.admin_user), 1)
+        self.assertEqual(waiting.offers.get().provider, available)
+
+        occupied.status = ServiceRequest.Status.PROVIDER_COMPLETED
+        occupied.save(update_fields=["status"])
+        next_request = self.request()
+        self.assertEqual(dispatch_request(next_request.pk, self.admin_user), 1)
+        self.assertEqual(next_request.offers.get().provider, busy)
+
     def provider(self, *, available=True, verified=True, phone_verified=True, trade=True, area=True, subscribed=True):
         phone = f"+2231{self.next_phone:07d}"
         self.next_phone += 1
