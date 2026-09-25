@@ -181,6 +181,7 @@ export default function ProviderSubscriptionPage() {
                     <span>
                       {subscription.plan.can_receive_urgent_requests ? "✓" : "×"} Demandes urgentes
                     </span>
+                    <span>{subscription.plan.max_active_jobs === null ? "Interventions simultanées illimitées" : `${subscription.plan.max_active_jobs} intervention${subscription.plan.max_active_jobs > 1 ? "s" : ""} en cours à la fois`}</span>
                   </div>
                 </>
               ) : (
@@ -217,6 +218,7 @@ export default function ProviderSubscriptionPage() {
                   <div className="subscription-entitlements">
                     <span>{plan.can_receive_requests ? "✓" : "×"} Demandes normales</span>
                     <span>{plan.can_receive_urgent_requests ? "✓" : "×"} Demandes urgentes</span>
+                    <span>{plan.max_active_jobs === null ? "Interventions simultanées illimitées" : `${plan.max_active_jobs} intervention${plan.max_active_jobs > 1 ? "s" : ""} en cours à la fois`}</span>
                   </div>
                   <button
                     className="button-primary button-wide"
