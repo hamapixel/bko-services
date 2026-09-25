@@ -158,3 +158,7 @@ OTP_MIN_REQUEST_INTERVAL_SECONDS = 60
 
 PAYMENT_PROVIDER = os.getenv("PAYMENT_PROVIDER", "GENERIC").strip() or "GENERIC"
 PAYMENT_WEBHOOK_SECRET = os.getenv("PAYMENT_WEBHOOK_SECRET", "")
+WAVE_API_KEY = os.getenv("WAVE_API_KEY", "")
+WAVE_WEBHOOK_SECRET = os.getenv("WAVE_WEBHOOK_SECRET", "")
+# HTTPS origin of the public frontend (not a localhost URL).
+PAYMENT_RETURN_ORIGIN = os.getenv("PAYMENT_RETURN_ORIGIN", "").rstrip("/")
