@@ -30,6 +30,7 @@ type PlanForm = {
   duration_days: string;
   can_receive_requests: boolean;
   can_receive_urgent_requests: boolean;
+  max_active_jobs: string;
   is_active: boolean;
   display_order: string;
 };
@@ -42,14 +43,27 @@ const EMPTY_PLAN: PlanForm = {
   duration_days: "30",
   can_receive_requests: true,
   can_receive_urgent_requests: false,
+  max_active_jobs: "1",
   is_active: false,
   display_order: "10",
 };
 
 const MONTHLY_DRAFTS = [
-  { code: "mensuel-essentiel", name: "Mensuel Essentiel", display_order: 10 },
-  { code: "mensuel-plus", name: "Mensuel Plus", display_order: 20 },
-  { code: "mensuel-pro", name: "Mensuel Pro", display_order: 30 },
+  {
+    code: "mensuel-essentiel", name: "Mensuel Essentiel", display_order: 10,
+    description: "Demandes normales dans vos métiers et quartiers. Une intervention en cours à la fois.",
+    can_receive_urgent_requests: false, max_active_jobs: 1,
+  },
+  {
+    code: "mensuel-plus", name: "Mensuel Plus", display_order: 20,
+    description: "Demandes normales et urgentes dans vos métiers et quartiers. Trois interventions en cours à la fois.",
+    can_receive_urgent_requests: true, max_active_jobs: 3,
+  },
+  {
+    code: "mensuel-pro", name: "Mensuel Pro", display_order: 30,
+    description: "Demandes normales et urgentes dans vos métiers et quartiers. Nombre d’interventions en cours illimité.",
+    can_receive_urgent_requests: true, max_active_jobs: null,
+  },
 ];
 
 export default function AdminSubscriptionsPage() {
@@ -64,6 +78,7 @@ export default function AdminSubscriptionsPage() {
   const [busy, setBusy] = useState(false);
   const [creatingTrial, setCreatingTrial] = useState(false);
   const [creatingDrafts, setCreatingDrafts] = useState(false);
+  const [updatingBenefits, setUpdatingBenefits] = useState(false);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [planForm, setPlanForm] = useState<PlanForm>(EMPTY_PLAN);
   const [error, setError] = useState("");
@@ -130,6 +145,14 @@ export default function AdminSubscriptionsPage() {
   const missingMonthlyDrafts = MONTHLY_DRAFTS.filter(
     (draft) => !plans.some((plan) => plan.code === draft.code),
   );
+  const outdatedMonthlyPlans = MONTHLY_DRAFTS.filter((draft) => {
+    const plan = plans.find((item) => item.code === draft.code);
+    return plan && (
+      plan.can_receive_requests !== true
+      || plan.can_receive_urgent_requests !== draft.can_receive_urgent_requests
+      || plan.max_active_jobs !== draft.max_active_jobs
+    );
+  });
 
   async function createTrialPlan() {
     setCreatingTrial(true);
@@ -143,11 +166,14 @@ export default function AdminSubscriptionsPage() {
           description: "Offres normales et urgentes pendant 14 jours après activation par l’administration.",
           price_xof: 0, duration_days: 14,
           can_receive_requests: true, can_receive_urgent_requests: true,
+          max_active_jobs: 1,
           is_active: true, display_order: 0,
         },
       );
-      if (!plan.is_active) {
-        await apiMutation(`/api/v1/subscriptions/admin/plans/${plan.id}/`, "PATCH", { is_active: true });
+      if (!plan.is_active || plan.max_active_jobs !== 1) {
+        await apiMutation(`/api/v1/subscriptions/admin/plans/${plan.id}/`, "PATCH", {
+          is_active: true, max_active_jobs: 1,
+        });
       }
       if (legacyTrial) {
         await apiMutation(
@@ -174,9 +200,9 @@ export default function AdminSubscriptionsPage() {
     try {
       for (const draft of missingMonthlyDrafts) {
         await apiMutation("/api/v1/subscriptions/admin/plans/", "POST", {
-          ...draft, description: "Prix et droits à configurer avant publication.",
+          ...draft,
           price_xof: 0, duration_days: 30,
-          can_receive_requests: true, can_receive_urgent_requests: false,
+          can_receive_requests: true,
           is_active: false,
         });
       }
@@ -190,6 +216,32 @@ export default function AdminSubscriptionsPage() {
     }
   }
 
+  async function applyMonthlyBenefits() {
+    if (!window.confirm("Appliquer les droits Essentiel (1 intervention), Plus (3) et Pro (illimité) ? Les droits des abonnements déjà actifs seront mis à jour, sans changer les prix ni les dates de fin.")) return;
+    setUpdatingBenefits(true);
+    setError("");
+    setMessage("");
+    try {
+      for (const draft of outdatedMonthlyPlans) {
+        const existing = plans.find((plan) => plan.code === draft.code);
+        if (!existing) continue;
+        await apiMutation(`/api/v1/subscriptions/admin/plans/${existing.id}/`, "PATCH", {
+          description: draft.description,
+          can_receive_requests: true,
+          can_receive_urgent_requests: draft.can_receive_urgent_requests,
+          max_active_jobs: draft.max_active_jobs,
+        });
+      }
+      await refreshData();
+      setMessage("Avantages des plans mis à jour sans modifier leurs prix.");
+    } catch (caught) {
+      await refreshData().catch(() => undefined);
+      setError(caught instanceof Error ? caught.message : "Mise à jour des avantages impossible.");
+    } finally {
+      setUpdatingBenefits(false);
+    }
+  }
+
   function editPlan(plan: AdminPlan) {
     setEditingPlanId(plan.id);
     setPlanForm({
@@ -197,6 +249,7 @@ export default function AdminSubscriptionsPage() {
       price_xof: String(plan.price_xof), duration_days: String(plan.duration_days),
       can_receive_requests: plan.can_receive_requests,
       can_receive_urgent_requests: plan.can_receive_urgent_requests,
+      max_active_jobs: plan.max_active_jobs === null ? "" : String(plan.max_active_jobs),
       is_active: plan.is_active, display_order: String(plan.display_order),
     });
     document.getElementById("plan-editor")?.scrollIntoView({ behavior: "smooth" });
@@ -207,12 +260,17 @@ export default function AdminSubscriptionsPage() {
     const price = Number(planForm.price_xof);
     const duration = Number(planForm.duration_days);
     const order = Number(planForm.display_order);
+    const maxJobs = planForm.max_active_jobs.trim() === "" ? null : Number(planForm.max_active_jobs);
     if (!Number.isSafeInteger(price) || price < 0 || !Number.isInteger(duration) || duration < 1 || !Number.isInteger(order) || order < 0) {
       setError("Vérifiez le prix, la durée et l’ordre d’affichage.");
       return;
     }
     if (planForm.can_receive_urgent_requests && !planForm.can_receive_requests) {
       setError("Les urgences nécessitent aussi le droit aux demandes normales.");
+      return;
+    }
+    if (maxJobs !== null && (!Number.isInteger(maxJobs) || maxJobs < 1 || maxJobs > 32767)) {
+      setError("La limite d’interventions doit être un entier positif, ou vide pour illimité.");
       return;
     }
     if (planForm.code.startsWith("mensuel-") && planForm.is_active && price === 0) {
@@ -229,6 +287,7 @@ export default function AdminSubscriptionsPage() {
         price_xof: price, duration_days: duration,
         can_receive_requests: planForm.can_receive_requests,
         can_receive_urgent_requests: planForm.can_receive_urgent_requests,
+        max_active_jobs: maxJobs,
         is_active: planForm.is_active, display_order: order,
       };
       await apiMutation(
@@ -358,9 +417,10 @@ export default function AdminSubscriptionsPage() {
               14 jours à 0 FCFA, pour les demandes normales et urgentes. Seul un
               administrateur peut l’activer pour un prestataire vérifié. Aucun
               paiement n’est enregistré pour cet essai.
+              {" "}Une intervention en cours à la fois.
             </p>
             {legacyTrial && <p className="muted-copy">L’ancien essai de 7 jours sera désactivé pour les nouvelles activations. Les essais déjà attribués gardent leur date de fin.</p>}
-            {trialPlan?.is_active && !legacyTrial ? (
+            {trialPlan?.is_active && trialPlan.max_active_jobs === 1 && !legacyTrial ? (
               <p className="muted-copy">Le plan d’essai de 14 jours est actif.</p>
             ) : (
               <button
@@ -379,8 +439,13 @@ export default function AdminSubscriptionsPage() {
             <h2>{editingPlanId ? "Modifier un plan" : "Créer un plan"}</h2>
             <p>Les trois modèles mensuels durent 30 jours. Leur prix est à définir avant publication.</p>
             {missingMonthlyDrafts.length > 0 && (
-              <button className="button-secondary" type="button" disabled={creatingDrafts || busy} onClick={createMonthlyDrafts}>
+              <button className="button-secondary" type="button" disabled={creatingDrafts || updatingBenefits || busy} onClick={createMonthlyDrafts}>
                 {creatingDrafts ? "Création…" : "Créer les modèles mensuels manquants"}
+              </button>
+            )}
+            {outdatedMonthlyPlans.length > 0 && (
+              <button className="button-secondary" type="button" disabled={updatingBenefits || creatingDrafts || busy} onClick={applyMonthlyBenefits}>
+                {updatingBenefits ? "Mise à jour…" : "Appliquer les avantages aux plans existants"}
               </button>
             )}
             <form className="admin-plan-form" onSubmit={savePlan}>
@@ -413,6 +478,10 @@ export default function AdminSubscriptionsPage() {
                 </select>
               </label>
               <label className="field">
+                <span>Interventions en cours simultanées</span>
+                <input type="number" min="1" max="32767" step="1" value={planForm.max_active_jobs} onChange={(event) => setPlanForm({ ...planForm, max_active_jobs: event.target.value })} placeholder="Vide = illimité" />
+              </label>
+              <label className="field">
                 <span>Statut</span>
                 <select value={planForm.is_active ? "yes" : "no"} onChange={(event) => setPlanForm({ ...planForm, is_active: event.target.value === "yes" })}>
                   <option value="no">Brouillon (invisible)</option><option value="yes">Actif (visible)</option>
@@ -427,7 +496,7 @@ export default function AdminSubscriptionsPage() {
                 <textarea maxLength={1000} rows={3} value={planForm.description} onChange={(event) => setPlanForm({ ...planForm, description: event.target.value })} placeholder="Expliquez ce que comprend le plan." />
               </label>
               <div className="admin-plan-actions">
-                <button className="button-primary" disabled={busy || creatingDrafts} type="submit">{busy ? "Enregistrement…" : editingPlanId ? "Enregistrer les modifications" : "Créer le plan"}</button>
+                <button className="button-primary" disabled={busy || creatingDrafts || updatingBenefits} type="submit">{busy ? "Enregistrement…" : editingPlanId ? "Enregistrer les modifications" : "Créer le plan"}</button>
                 {editingPlanId && <button className="button-secondary" type="button" onClick={() => { setEditingPlanId(null); setPlanForm(EMPTY_PLAN); }}>Annuler</button>}
               </div>
             </form>
@@ -509,6 +578,7 @@ export default function AdminSubscriptionsPage() {
                   <div className="subscription-entitlements">
                     <span>{plan.can_receive_requests ? "✓" : "×"} Demandes</span>
                     <span>{plan.can_receive_urgent_requests ? "✓" : "×"} Urgences</span>
+                    <span>{plan.max_active_jobs === null ? "Interventions illimitées" : `${plan.max_active_jobs} intervention${plan.max_active_jobs > 1 ? "s" : ""} en cours`}</span>
                   </div>
                   <button className="button-secondary" type="button" onClick={() => editPlan(plan)}>Modifier le plan</button>
                 </article>
