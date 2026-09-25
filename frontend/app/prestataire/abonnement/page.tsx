@@ -79,6 +79,54 @@ export default function ProviderSubscriptionPage() {
     };
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const returned = params.get("paiement");
+    if (returned !== "retour" && returned !== "erreur") return;
+
+    const transactionId = params.get("transaction");
+    if (!transactionId || !/^[0-9a-f-]{36}$/i.test(transactionId)) {
+      return;
+    }
+
+    let active = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let attempts = 0;
+
+    async function checkPayment() {
+      try {
+        const payment = await apiGet<PaymentTransaction>(
+          `/api/v1/payments/transactions/${transactionId}/`,
+        );
+        if (!active) return;
+        if (payment.status === "FAILED" || payment.status === "CANCELLED") {
+          setMessage("Paiement non confirmé. Aucun abonnement n’a été activé par ce retour.");
+          await refreshPayments();
+          return;
+        }
+        if (payment.status === "SUCCEEDED" && payment.fulfilled_at) {
+          await Promise.all([refreshSubscription(), refreshPayments()]);
+          if (active) setMessage("Paiement confirmé par Wave : abonnement actualisé.");
+          return;
+        }
+        setMessage(
+          payment.status === "SUCCEEDED"
+            ? "Paiement confirmé : activation en cours sur le serveur."
+            : "Confirmation de Wave en attente. Ce retour ne valide aucun paiement.",
+        );
+        if (++attempts < 10) timer = setTimeout(checkPayment, 3000);
+      } catch (caught) {
+        if (active) setError(caught instanceof Error ? caught.message : "Vérification du paiement impossible.");
+      }
+    }
+
+    void checkPayment();
+    return () => {
+      active = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
+
   async function payWithWave(plan: SubscriptionPlan) {
     if (plan.price_xof === 0) {
       setError(
