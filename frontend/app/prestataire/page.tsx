@@ -68,7 +68,7 @@ export default function ProviderDashboardPage() {
       <section className="role-welcome-card provider-welcome-card">
         <div className="role-welcome-copy">
           <span className="role-welcome-kicker">
-            {profile.is_available ? "Disponible maintenant" : "Mode indisponible"}
+            {profile.is_available && subscription?.status === "ACTIVE" ? "Disponible maintenant" : profile.is_available ? "Disponible · abonnement requis" : "Mode indisponible"}
           </span>
           <h1>Bonjour {profile.display_name} 👋</h1>
           <p>
@@ -76,8 +76,8 @@ export default function ProviderDashboardPage() {
             un seul espace professionnel.
           </p>
           <div className="role-welcome-actions">
-            <Link className="role-primary-action" href="/prestataire/offres">
-              Voir mes offres
+            <Link className="role-primary-action" href={subscription?.status === "ACTIVE" ? "/prestataire/offres" : "/prestataire/abonnement"}>
+              {subscription?.status === "ACTIVE" ? "Voir mes offres" : "Choisir un abonnement"}
             </Link>
             <Link className="role-secondary-action" href="/prestataire/profil">
               Gérer mon profil
