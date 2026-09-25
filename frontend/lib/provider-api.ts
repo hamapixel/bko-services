@@ -78,6 +78,7 @@ export type SubscriptionPlan = {
   duration_days: number;
   can_receive_requests: boolean;
   can_receive_urgent_requests: boolean;
+  max_active_jobs: number | null;
 };
 
 export type SubscriptionHistory = {
