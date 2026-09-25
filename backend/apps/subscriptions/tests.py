@@ -137,6 +137,34 @@ class SubscriptionTests(TestCase):
         self.assertEqual(codes, ["normal", "urgent"])
         self.assertNotIn("is_active", response.json()["results"][0])
 
+    def test_admin_can_prepare_monthly_plan_but_must_set_price_before_publication(self):
+        admin = APIClient()
+        admin.force_login(self.admin)
+        response = admin.post(
+            "/api/v1/subscriptions/admin/plans/",
+            {
+                "code": "mensuel-essentiel", "name": "Mensuel Essentiel",
+                "price_xof": 0, "duration_days": 30, "is_active": False,
+                "can_receive_requests": True, "can_receive_urgent_requests": False,
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        plan_id = response.json()["id"]
+        path = f"/api/v1/subscriptions/admin/plans/{plan_id}/"
+        self.assertEqual(
+            admin.patch(path, {"is_active": True}, format="json").status_code, 400
+        )
+        updated = admin.patch(
+            path, {"price_xof": 5000, "is_active": True}, format="json"
+        )
+        self.assertEqual(updated.status_code, 200)
+        self.assertEqual(updated.json()["duration_days"], 30)
+        public_codes = [item["code"] for item in APIClient().get(
+            "/api/v1/subscriptions/plans/"
+        ).json()["results"]]
+        self.assertIn("mensuel-essentiel", public_codes)
+
     def test_provider_sees_only_own_subscription(self):
         self.create_subscription(self.provider)
 
