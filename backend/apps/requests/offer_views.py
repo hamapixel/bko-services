@@ -1,8 +1,11 @@
+from django.db.models import Q
 from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from apps.subscriptions.services import eligible_provider_ids_queryset
 
 from .acceptance import accept_offer
 from .models import ServiceOffer, ServiceRequest
@@ -43,6 +46,14 @@ def own_pending_offers(user):
         provider__user__is_active=True,
         provider__user__role="PROVIDER",
         provider__user__phone_verified_at__isnull=False,
+    ).filter(
+        Q(
+            service_request__priority=ServiceRequest.Priority.NORMAL,
+            provider_id__in=eligible_provider_ids_queryset(urgent=False),
+        ) | Q(
+            service_request__priority=ServiceRequest.Priority.URGENT,
+            provider_id__in=eligible_provider_ids_queryset(urgent=True),
+        )
     ).select_related(
         "service_request__trade",
         "service_request__neighborhood__commune",
