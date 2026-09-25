@@ -502,7 +502,12 @@ class PaymentTests(TestCase):
             if method == "GET":
                 return {"result": []}
             self.assertEqual(payload["amount"], "5000")
-            self.assertEqual(payload["success_url"], "https://bko.example/prestataire/abonnement?paiement=retour")
+            return_url = (
+                "https://bko.example/prestataire/abonnement?transaction="
+                + str(PaymentTransaction.objects.get().pk)
+            )
+            self.assertEqual(payload["success_url"], return_url + "&paiement=retour")
+            self.assertEqual(payload["error_url"], return_url + "&paiement=erreur")
             return {
                 "id": "cos-test-123",
                 "amount": payload["amount"],
@@ -524,6 +529,15 @@ class PaymentTests(TestCase):
         self.assertEqual(wave_request.call_count, 2)
         payment = PaymentTransaction.objects.get()
         self.assertFalse(ProviderSubscription.objects.filter(provider=self.provider).exists())
+        # The browser can open or forge either return URL: both are read-only.
+        for result in ("retour", "erreur"):
+            response = api.get(
+                "/api/v1/payments/transactions/" + str(payment.pk) + "/",
+                {"paiement": result, "transaction": str(payment.pk)},
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["status"], "PENDING")
+            self.assertFalse(ProviderSubscription.objects.filter(provider=self.provider).exists())
         generic, _ = self.signed_webhook(payment)
         self.assertEqual(generic.status_code, 400)
         self.assertFalse(ProviderSubscription.objects.filter(provider=self.provider).exists())
