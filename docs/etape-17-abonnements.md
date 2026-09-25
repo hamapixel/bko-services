@@ -15,6 +15,14 @@ Ainsi, si l'abonnement expire entre ces deux moments, l'offre ne peut plus être
 
 ## Plans
 
+### Création depuis l'administration
+
+Dans `/admin/abonnements`, le bouton **Activer le nouvel essai de 14 jours** crée un plan gratuit administrativement attribuable aux prestataires vérifiés. L'ancien plan `essai-7j`, s'il existe, est désactivé pour de nouvelles attributions ; les essais déjà commencés gardent leur date de fin.
+
+Le bouton **Créer les modèles mensuels manquants** prépare trois plans de 30 jours : Essentiel, Plus et Pro. Ils restent inactifs et à 0 FCFA tant que le superadmin n'a pas défini les prix et les droits de chacun dans **Modifier le plan**. Le serveur refuse l'activation d'un plan `mensuel-*` dont le prix est nul. Le formulaire **Créer un plan** permet aussi de créer un plan personnalisé ou de modifier prix, durée, droits, description et visibilité.
+
+Les prestataires ne voient que les plans actifs. Un changement de prix ou de durée ne modifie pas les transactions déjà créées ni la date de fin des abonnements déjà attribués. La durée mensuelle du catalogue est de 30 jours (elle n'est pas un mois calendaire).
+
 Le modèle `SubscriptionPlan` est administrable et contient :
 
 - code unique ;
