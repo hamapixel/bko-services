@@ -93,6 +93,7 @@ def _checkout_for_payment(payment_id):
     session = next((item for item in sessions if _session_matches(payment, item)), None)
     if session is None:
         origin = settings.PAYMENT_RETURN_ORIGIN
+        return_url = origin + "/prestataire/abonnement?transaction=" + str(payment.pk)
         session = _wave_request(
             "POST",
             "/v1/checkout/sessions",
@@ -100,8 +101,8 @@ def _checkout_for_payment(payment_id):
                 "amount": str(payment.amount_xof),
                 "currency": "XOF",
                 "client_reference": payment.merchant_reference,
-                "success_url": origin + "/prestataire/abonnement?paiement=retour",
-                "error_url": origin + "/prestataire/abonnement?paiement=erreur",
+                "success_url": return_url + "&paiement=retour",
+                "error_url": return_url + "&paiement=erreur",
             },
         )
     if not _session_matches(payment, session):
