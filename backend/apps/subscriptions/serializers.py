@@ -33,6 +33,7 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
             "duration_days",
             "can_receive_requests",
             "can_receive_urgent_requests",
+            "max_active_jobs",
             "is_active",
             "display_order",
         )
@@ -51,6 +52,7 @@ class PublicSubscriptionPlanSerializer(serializers.ModelSerializer):
             "duration_days",
             "can_receive_requests",
             "can_receive_urgent_requests",
+            "max_active_jobs",
         )
         read_only_fields = fields
 
