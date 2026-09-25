@@ -105,6 +105,7 @@ export type PaymentTransaction = {
   merchant_reference: string;
   purpose: "ACTIVATE" | "RENEW";
   payment_provider: string;
+  checkout_url: string;
   amount_xof: number;
   currency: "XOF";
   plan_code_snapshot: string;
