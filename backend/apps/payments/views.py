@@ -1,5 +1,6 @@
 import json
 
+from django.conf import settings
 from django.http import Http404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
@@ -27,6 +28,7 @@ from .services import (
     retry_fulfillment,
     verify_webhook_signature,
 )
+from .wave import complete_wave_checkout, start_wave_payment, verify_wave_signature, wave_is_configured
 
 
 def reject_extra_fields(data, allowed):
@@ -52,6 +54,11 @@ class PaymentListCreateView(ListAPIView):
         ).select_related("plan", "subscription")
 
     def post(self, request):
+        if settings.PAYMENT_PROVIDER.upper() == "WAVE":
+            return Response(
+                {"detail": "Utilisez le parcours de paiement Wave."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         reject_extra_fields(request.data, set(PaymentCreateSerializer().fields))
         serializer = PaymentCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -79,12 +86,66 @@ class PaymentDetailView(RetrieveAPIView):
         ).select_related("plan", "subscription")
 
 
+class PaymentMethodsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response({"wave": wave_is_configured(), "orange_money": False})
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class WaveCheckoutView(APIView):
+    permission_classes = [IsAuthenticated]
+    throttle_scope = "payment_create"
+
+    def get_throttles(self):
+        return [ScopedRateThrottle()]
+
+    def post(self, request):
+        reject_extra_fields(request.data, set(PaymentCreateSerializer().fields))
+        serializer = PaymentCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            payment = start_wave_payment(request.user, **serializer.validated_data)
+        except PaymentConfigurationError:
+            return Response({"detail": "Paiement Wave indisponible."}, status=503)
+        return Response(PaymentTransactionSerializer(payment).data)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class WaveWebhookView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        raw_body = request.body
+        try:
+            verify_wave_signature(raw_body, request.headers.get("Wave-Signature", ""))
+        except PaymentConfigurationError:
+            return Response({"detail": "Webhook Wave indisponible."}, status=503)
+        except InvalidPaymentSignature:
+            return Response({"detail": "Signature Wave invalide."}, status=401)
+        try:
+            payload = json.loads(raw_body.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ParseError("Payload Wave invalide.") from exc
+        if not isinstance(payload, dict):
+            raise ParseError("Payload Wave invalide.")
+        result = complete_wave_checkout(payload, raw_body)
+        return Response(
+            {"result": "ignored" if result is None else result[1]},
+            status=200 if result is None else result[2],
+        )
+
+
 @method_decorator(csrf_exempt, name="dispatch")
 class PaymentWebhookView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
 
     def post(self, request):
+        if settings.PAYMENT_PROVIDER.upper() == "WAVE":
+            return Response({"detail": "Webhook générique indisponible."}, status=503)
         raw_body = request.body
         try:
             verify_webhook_signature(
@@ -114,6 +175,7 @@ class PaymentWebhookView(APIView):
         payment, result, response_status = process_verified_webhook(
             serializer.validated_data,
             raw_body,
+            expected_provider=settings.PAYMENT_PROVIDER,
         )
         return Response(
             {
