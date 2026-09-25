@@ -2,6 +2,22 @@
 
 Cette étape ajoute le noyau de paiement serveur de BKO Services. Le flux est volontairement indépendant d'un fournisseur particulier afin de pouvoir brancher ensuite Orange Money, Moov Money, un agrégateur ou un autre prestataire sans modifier les règles métier.
 
+## Wave et Orange Money (septembre 2026)
+
+Le paiement Wave utilise maintenant l'API officielle Checkout : `POST /api/v1/payments/wave/checkout/` crée une session pour le prix du plan côté serveur, puis retourne le lien `pay.wave.com` au prestataire. L'URL de retour dans le navigateur ne valide jamais l'abonnement. Seul `POST /api/v1/payments/webhooks/wave/`, après vérification de `Wave-Signature` (corps brut + horodatage de moins de cinq minutes), de la session Wave, du montant XOF et de la référence unique, active ou renouvelle l'abonnement. Une même confirmation reçue plusieurs fois ne prolonge pas deux fois la durée. Le webhook générique ne peut pas confirmer une transaction Wave.
+
+Le bouton Wave reste désactivé sans configuration marchande. Pour le rendre disponible, il faut :
+
+1. un compte **Wave Business** autorisé à utiliser Checkout et une clé API limitée aux besoins de Checkout ;
+2. une URL HTTPS publique pour le site et l'API ;
+3. enregistrer `https://<domaine-api>/api/v1/payments/webhooks/wave/` dans le portail Wave pour l'événement `checkout.session.completed` et obtenir le secret de signature ;
+4. configurer côté **backend uniquement** `WAVE_API_KEY`, `WAVE_WEBHOOK_SECRET` et `PAYMENT_RETURN_ORIGIN=https://<domaine-site>` (sans chemin), puis appliquer la migration `payments.0002` et redémarrer les serveurs ;
+5. effectuer un essai réel de faible montant sur un environnement de test du marchand et vérifier paiement, notification et renouvellement avant l'ouverture publique.
+
+Il faut également un compte marchand Orange Money Web Payment au Mali et un accès API approuvé par Orange (ou un partenaire sous contrat). Le bouton Orange Money reste indisponible en attendant ces accès et l'intégration des callbacks propres à Orange. Aucun transfert vers un numéro personnel, capture de paiement ou retour navigateur ne peut activer automatiquement un abonnement. Les commissions et conditions sont celles du contrat marchand.
+
+Documentation officielle : https://docs.wave.com/checkout , https://docs.wave.com/webhook , https://developer.orange.com/apis/om-webpay .
+
 ## Principe de sécurité
 
 Le frontend ne peut jamais déclarer un paiement réussi.
