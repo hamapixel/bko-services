@@ -224,9 +224,9 @@ export default function ProviderSubscriptionPage() {
                   </p>
                   {subscription.status === "EXPIRED" && (
                     <p>
-                      Votre abonnement a expiré. Choisissez un plan actif ci-dessous
-                      et effectuez un nouveau paiement. Vous conservez votre compte ;
-                      la nouvelle période commence après confirmation du paiement.
+                      {subscription.free_trial_used_at
+                        ? "Votre essai est terminé. Pour recevoir de nouvelles offres, choisissez un plan mensuel et réglez l’abonnement. Votre compte et vos interventions restent accessibles."
+                        : "Votre abonnement a expiré. Choisissez un plan actif ci-dessous et effectuez un nouveau paiement. Vous conservez votre compte ; la nouvelle période commence après confirmation du paiement."}
                     </p>
                   )}
                   <div className="subscription-entitlements">
@@ -284,9 +284,16 @@ export default function ProviderSubscriptionPage() {
                     {busyPlan === plan.id
                       ? "Préparation…"
                       : plan.price_xof === 0
-                        ? "Activation administrative"
+                        ? subscription?.free_trial_used_at ? "Essai déjà utilisé" : "Activation administrative"
                         : waveAvailable ? "Payer avec Wave" : "Paiement bientôt disponible"}
                   </button>
+                  {plan.price_xof === 0 && (
+                    <p className="muted-copy">
+                      {subscription?.free_trial_used_at
+                        ? "L’essai gratuit est accordé une seule fois. Un plan payant est nécessaire pour les nouvelles offres."
+                        : "Cet essai est accordé une seule fois par l’administration aux prestataires vérifiés."}
+                    </p>
+                  )}
                 </article>
               ))}
             </div>
