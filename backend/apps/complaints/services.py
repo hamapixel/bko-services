@@ -55,7 +55,7 @@ def _is_admin(user):
 def create_complaint(user, *, service_request_id, category, description):
     try:
         service_request = (
-            ServiceRequest.objects.select_for_update()
+            ServiceRequest.objects.select_for_update(of=("self",))
             .select_related("assigned_provider__user")
             .get(pk=service_request_id)
         )
