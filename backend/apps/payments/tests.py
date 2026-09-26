@@ -15,6 +15,7 @@ from apps.subscriptions.models import ProviderSubscription, SubscriptionPlan
 from .models import PaymentTransaction, PaymentWebhookEvent
 
 
+@override_settings(PAYMENT_PROVIDER="TEST", PAYMENT_WEBHOOK_SECRET="test-payment-webhook-secret")
 class PaymentTests(TestCase):
     def setUp(self):
         User = get_user_model()
