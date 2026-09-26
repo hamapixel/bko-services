@@ -8,6 +8,7 @@ import {
   listRequestDrafts,
   type RequestDraft,
 } from "@/lib/offline-drafts";
+import { useClientSession } from "@/components/client/client-shell";
 
 function localDate(value: string) {
   return new Intl.DateTimeFormat("fr-ML", {
@@ -17,6 +18,7 @@ function localDate(value: string) {
 }
 
 export default function ClientDraftsPage() {
+  const { user } = useClientSession();
   const [drafts, setDrafts] = useState<RequestDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -24,7 +26,7 @@ export default function ClientDraftsPage() {
   useEffect(() => {
     let active = true;
 
-    listRequestDrafts()
+    listRequestDrafts(user.id)
       .then((items) => {
         if (!active) return;
         setDrafts(items);
@@ -45,11 +47,11 @@ export default function ClientDraftsPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [user.id]);
 
   async function refreshAfterMutation() {
     try {
-      setDrafts(await listRequestDrafts());
+      setDrafts(await listRequestDrafts(user.id));
       setError("");
     } catch (caught) {
       setError(
@@ -64,7 +66,7 @@ export default function ClientDraftsPage() {
     if (!window.confirm("Supprimer ce brouillon de cet appareil ?")) {
       return;
     }
-    await deleteRequestDraft(id);
+    await deleteRequestDraft(id, user.id);
     await refreshAfterMutation();
   }
 
