@@ -150,6 +150,7 @@ export type AdminSubscription = {
   starts_at: string;
   ends_at: string;
   cancelled_at: string | null;
+  free_trial_used_at: string | null;
   history: SubscriptionHistory[];
   provider_id: string;
   provider_display_name: string;
