@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
@@ -14,8 +15,64 @@ from apps.requests.services import create_service_request
 from apps.requests.workflow import confirm_client_completion, transition_provider_intervention
 from apps.reviews.services import create_review
 
-from .models import Notification
-from .services import create_notification
+from .models import Notification, PushSubscription
+from .services import create_notification, register_push_subscription, send_push_for_notification
+
+
+class PushEndpointSecurityTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            phone="+22369999000", password="Strong-password-2026!"
+        )
+        self.other = get_user_model().objects.create_user(
+            phone="+22369999001", password="Strong-password-2026!"
+        )
+        self.keys = {"p256dh": "test-public-key", "auth": "test-secret"}
+
+    def test_rejects_local_urls_and_accepts_known_push_service(self):
+        api = APIClient()
+        api.force_login(self.user)
+        for endpoint in (
+            "http://127.0.0.1/push",
+            "https://127.0.0.1/push",
+            "https://fcm.googleapis.com.evil.example/push",
+            "https://fcm.googleapis.com:8443/push",
+            "https://attacker@fcm.googleapis.com/push",
+        ):
+            response = api.post(
+                "/api/v1/notifications/push/subscriptions/",
+                {"endpoint": endpoint, "keys": self.keys},
+                format="json",
+            )
+            self.assertEqual(response.status_code, 400)
+        self.assertFalse(PushSubscription.objects.exists())
+
+        endpoint = "https://fcm.googleapis.com/fcm/send/opaque-token"
+        created = api.post(
+            "/api/v1/notifications/push/subscriptions/",
+            {"endpoint": endpoint, "keys": self.keys}, format="json",
+        )
+        self.assertEqual(created.status_code, 201)
+        self.assertEqual(PushSubscription.objects.get(endpoint=endpoint).user_id, self.user.pk)
+
+    @patch("apps.notifications.services.web_push_configured", return_value=True)
+    @patch("apps.notifications.services.webpush")
+    def test_existing_unsafe_endpoint_is_never_contacted(self, send, configured):
+        subscription = PushSubscription.objects.create(
+            user=self.user,
+            endpoint="https://127.0.0.1/private",
+            **self.keys,
+        )
+        notification = Notification.objects.create(
+            recipient=self.user,
+            kind=Notification.Kind.OFFER_RECEIVED,
+            title="Offre",
+            message="Notification privée",
+        )
+        self.assertEqual(send_push_for_notification(notification.pk), 0)
+        send.assert_not_called()
+        subscription.refresh_from_db()
+        self.assertFalse(subscription.is_active)
 
 
 class NotificationCenterTests(TestCase):
