@@ -123,7 +123,7 @@ export default function ClientRequestDetailPage() {
   if (!request) return null;
 
   return (
-    <main>
+    <main className="client-request-detail">
       <section className="client-page-head detail-head">
         <div>
           <Link className="back-link" href="/client/demandes">
@@ -265,13 +265,19 @@ export default function ClientRequestDetailPage() {
         </div>
 
         <aside className="detail-side">
-          <section className="provider-card">
+          <section className="provider-card client-provider-card">
             <p className="page-kicker">Prestataire</p>
             {request.assigned_provider_display_name ? (
               <>
-                <div className="provider-avatar">P</div>
-                <h2>{request.assigned_provider_display_name}</h2>
-                <p>Prestataire attribué à cette demande.</p>
+                <div className="client-provider-identity">
+                  <div className="provider-avatar" aria-hidden="true">
+                    {request.assigned_provider_display_name.trim().charAt(0).toLocaleUpperCase("fr")}
+                  </div>
+                  <div>
+                    <h2>{request.assigned_provider_display_name}</h2>
+                    <p>Prestataire attribué à cette demande.</p>
+                  </div>
+                </div>
                 {request.assigned_provider_phone && (
                   <a
                     className="button-secondary button-wide"
