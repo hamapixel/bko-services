@@ -38,7 +38,8 @@ class AcceptanceConcurrencyPostgresTests(TransactionTestCase):
             phone="+22330000001",
             password="Strong-admin-2026!",
         )
-        city = City.objects.get(name="Bamako")
+        # TransactionTestCase flushes rows between methods, including migration seed data.
+        city, _ = City.objects.get_or_create(name="Bamako")
         commune = Commune.objects.create(city=city, name="Commune concurrence")
         self.area = Neighborhood.objects.create(commune=commune, name="Quartier concurrence")
         self.trade = Trade.objects.create(
