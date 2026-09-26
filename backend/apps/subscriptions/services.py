@@ -171,6 +171,10 @@ def activate_subscription(provider_id, actor, *, plan_id, note=""):
         .filter(provider=provider)
         .first()
     )
+    if plan.price_xof == 0 and subscription is not None and subscription.free_trial_used_at:
+        raise ValidationError(
+            {"detail": "L'essai gratuit a déjà été utilisé. Choisissez un abonnement payant."}
+        )
     if subscription is not None:
         _expire_if_needed(subscription, actor=actor, now=now)
         subscription.refresh_from_db()
@@ -188,6 +192,8 @@ def activate_subscription(provider_id, actor, *, plan_id, note=""):
         subscription.ends_at = now + timedelta(days=plan.duration_days)
         subscription.activated_by = actor
         subscription.cancelled_at = None
+        if plan.price_xof == 0:
+            subscription.free_trial_used_at = now
         subscription.save(
             update_fields=[
                 "plan",
@@ -196,6 +202,7 @@ def activate_subscription(provider_id, actor, *, plan_id, note=""):
                 "ends_at",
                 "activated_by",
                 "cancelled_at",
+                "free_trial_used_at",
                 "updated_at",
             ]
         )
@@ -207,6 +214,7 @@ def activate_subscription(provider_id, actor, *, plan_id, note=""):
             starts_at=now,
             ends_at=now + timedelta(days=plan.duration_days),
             activated_by=actor,
+            free_trial_used_at=now if plan.price_xof == 0 else None,
         )
 
     _record_history(
@@ -243,6 +251,10 @@ def renew_subscription(subscription_id, actor, *, plan_id=None, note=""):
         )
 
     plan = _locked_plan(plan_id) if plan_id else _locked_plan(subscription.plan_id)
+    if plan.price_xof == 0:
+        raise ValidationError(
+            {"detail": "L'essai gratuit ne peut pas être renouvelé. Choisissez un abonnement payant."}
+        )
 
     if (
         subscription.status == ProviderSubscription.Status.ACTIVE
