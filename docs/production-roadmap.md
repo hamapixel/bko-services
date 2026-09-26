@@ -8,6 +8,8 @@ L'application comprend les parcours client, prestataire et administration, les l
 
 Ces fonctionnalités ne prouvent pas encore qu'un paiement, un SMS ou une notification fonctionne avec un compte marchand réel en production. Orange Money n'est pas intégré. Le README historique mentionne Celery et Redis comme architecture cible : aucun worker Celery, Redis ou configuration Docker/CI n'est actuellement présent dans le dépôt.
 
+L'obtention des comptes marchands Wave Business et Orange Money Web Payment au Mali peut démarrer maintenant, en parallèle des étapes 23–24. Si les deux moyens de paiement sont requis au lancement, l'adaptateur Orange et les essais marchands des deux parcours doivent être terminés **avant** l'étape 25 de préparation serveur. Procédure et critères : [paiements-marchands.md](paiements-marchands.md).
+
 ## Étapes restantes et critères de passage
 
 | Étape | Travail | Preuve attendue |
