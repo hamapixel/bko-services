@@ -416,7 +416,9 @@ export default function AdminSubscriptionsPage() {
             <p>
               14 jours à 0 FCFA, pour les demandes normales et urgentes. Seul un
               administrateur peut l’activer pour un prestataire vérifié. Aucun
-              paiement n’est enregistré pour cet essai.
+              paiement n’est enregistré pour cet essai. Il ne peut être accordé
+              qu’une seule fois par prestataire ; après expiration, un plan payant
+              est nécessaire pour recevoir des offres.
               {" "}Une intervention en cours à la fois.
             </p>
             {legacyTrial && <p className="muted-copy">L’ancien essai de 7 jours sera désactivé pour les nouvelles activations. Les essais déjà attribués gardent leur date de fin.</p>}
@@ -615,14 +617,18 @@ export default function AdminSubscriptionsPage() {
                         {subscription.status}
                       </span>
                       <div className="admin-inline-actions">
-                        <button
-                          className="button-secondary"
-                          disabled={busy}
-                          type="button"
-                          onClick={() => renew(subscription)}
-                        >
-                          Renouveler
-                        </button>
+                        {subscription.plan.price_xof === 0 ? (
+                          <span className="muted-copy">Essai non renouvelable</span>
+                        ) : (
+                          <button
+                            className="button-secondary"
+                            disabled={busy}
+                            type="button"
+                            onClick={() => renew(subscription)}
+                          >
+                            Renouveler
+                          </button>
+                        )}
                         {subscription.status === "ACTIVE" && (
                           <button
                             className="button-danger-ghost"
