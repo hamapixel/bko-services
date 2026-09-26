@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { usePathname } from "next/navigation";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -13,14 +14,6 @@ type BeforeInstallPromptEvent = Event & {
 type NavigatorWithStandalone = Navigator & {
   standalone?: boolean;
 };
-
-function isIosDevice() {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
-}
 
 function isInstalled() {
   if (typeof window === "undefined") {
@@ -69,19 +62,8 @@ function getServerInstalledSnapshot() {
   return false;
 }
 
-function subscribeEnvironment() {
-  return () => undefined;
-}
-
-function getIosSnapshot() {
-  return isIosDevice();
-}
-
-function getServerIosSnapshot() {
-  return false;
-}
-
 export default function PwaClient() {
+  const pathname = usePathname();
   const online = useSyncExternalStore(
     subscribeNetwork,
     getNetworkSnapshot,
@@ -94,11 +76,6 @@ export default function PwaClient() {
   );
   const [installPrompt, setInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
-  const iosDevice = useSyncExternalStore(
-    subscribeEnvironment,
-    getIosSnapshot,
-    getServerIosSnapshot,
-  );
   const [updateReady, setUpdateReady] = useState(false);
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
   const reloadOnControllerChange = useRef(false);
@@ -215,7 +192,9 @@ export default function PwaClient() {
     waiting.postMessage({ type: "SKIP_WAITING" });
   }
 
-  if (online && installed && !updateReady) {
+  // Installation is offered on the public home only, never over a signed-in task.
+  const showInstall = online && !installed && !updateReady && pathname === "/" && installPrompt;
+  if (online && !updateReady && !showInstall) {
     return null;
   }
 
@@ -233,16 +212,10 @@ export default function PwaClient() {
         </button>
       )}
 
-      {online && !installed && installPrompt && (
+      {showInstall && (
         <button className="pwa-action" type="button" onClick={installApp}>
           Installer BKO Services
         </button>
-      )}
-
-      {online && !installed && !installPrompt && iosDevice && (
-        <p className="pwa-status-message">
-          iPhone/iPad : Partager → Sur l’écran d’accueil.
-        </p>
       )}
     </aside>
   );
