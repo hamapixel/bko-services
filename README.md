@@ -4,6 +4,8 @@
 
 > Statut : **étapes 0 à 22 développées ; préparation de production en cours**. Les espaces sont branchés sur les API Django. La feuille de route et les prérequis de mise en ligne sont détaillés dans [docs/production-roadmap.md](docs/production-roadmap.md).
 
+Pour ouvrir les abonnements payants avec Wave et Orange Money au Mali, voir [l'obtention des accès marchands et l'intégration](docs/paiements-marchands.md). L'accès Wave est codé mais attend un compte marchand réel ; Orange Money Web Payment nécessite encore l'accord marchand et son adaptateur dédié.
+
 ## Principes
 
 - Les clients n'accéderont qu'à leurs demandes ; les professionnels n'accéderont qu'aux offres qui leur sont adressées et aux interventions qui leur sont attribuées. Ces règles seront appliquées dans l'API et testées contre les accès par identifiant (IDOR).
