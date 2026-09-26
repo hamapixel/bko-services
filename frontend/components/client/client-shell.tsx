@@ -75,6 +75,7 @@ export default function ClientShell({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sessionError, setSessionError] = useState("");
+  const userId = user?.id;
 
   const loadUser = useCallback(async () => {
     const profile = await apiGet<PublicUser>("/api/v1/auth/me/");
@@ -110,6 +111,46 @@ export default function ClientShell({ children }: { children: ReactNode }) {
       active = false;
     };
   }, [router]);
+
+  useEffect(() => {
+    if (!userId) return;
+    let active = true;
+    let checking = false;
+
+    async function verifySession() {
+      if (!active || checking) return;
+      checking = true;
+      try {
+        const account = await apiGet<PublicUser>("/api/v1/auth/me/");
+        if (active && (account.id !== userId || account.role !== "CLIENT")) {
+          setUser(null);
+          router.replace("/connexion");
+        }
+      } catch (caught) {
+        if (active && caught instanceof ApiReadError && (caught.status === 401 || caught.status === 403)) {
+          setUser(null);
+          router.replace("/connexion");
+        }
+      } finally {
+        checking = false;
+      }
+    }
+
+    function onVisibilityChange() {
+      if (document.visibilityState === "visible") void verifySession();
+    }
+
+    window.addEventListener("focus", verifySession);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    const interval = window.setInterval(verifySession, 60_000);
+    void verifySession();
+    return () => {
+      active = false;
+      window.removeEventListener("focus", verifySession);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.clearInterval(interval);
+    };
+  }, [pathname, router, userId]);
 
   const contextValue = useMemo(
     () =>
@@ -173,7 +214,7 @@ export default function ClientShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ClientSessionContext.Provider value={contextValue}>
+    <ClientSessionContext.Provider key={user.id} value={contextValue}>
       <div className="client-app">
         <aside className={`client-sidebar ${menuOpen ? "is-open" : ""}`}>
           <div className="client-sidebar-head">
