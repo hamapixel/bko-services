@@ -638,6 +638,28 @@ class PaymentTests(TestCase):
         self.assertEqual(response.status_code, 503)
         self.assertEqual(PaymentTransaction.objects.count(), 0)
 
+    @override_settings(PAYMENT_PROVIDER="ORANGE_MONEY")
+    def test_orange_mode_never_accepts_generic_payment_or_webhook(self):
+        api = APIClient()
+        api.force_login(self.provider.user)
+        creation = api.post(
+            "/api/v1/payments/transactions/",
+            {"plan_id": str(self.plan.pk), "idempotency_key": "orange-disabled-01"},
+            format="json",
+        )
+        self.assertEqual(creation.status_code, 400)
+        self.assertEqual(PaymentTransaction.objects.count(), 0)
+
+        # Even a correctly signed legacy payload cannot activate an Orange plan.
+        with override_settings(PAYMENT_PROVIDER="TEST"):
+            self.create_payment(key="legacy-test-payment")
+        payment = PaymentTransaction.objects.get()
+        callback, _ = self.signed_webhook(payment)
+        self.assertEqual(callback.status_code, 503)
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, PaymentTransaction.Status.PENDING)
+        self.assertFalse(ProviderSubscription.objects.filter(provider=self.provider).exists())
+
     @override_settings(
         WAVE_API_KEY="wave-test-key", WAVE_WEBHOOK_SECRET="wave-test-webhook",
         PAYMENT_RETURN_ORIGIN="http://localhost:3000",
