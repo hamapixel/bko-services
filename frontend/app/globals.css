@@ -6314,3 +6314,173 @@ textarea:disabled {
 .provider-selected-chip:hover {
   background: #e4eef7;
 }
+
+/* Shared account controls and compact navigation for the three signed-in spaces. */
+.client-sidebar,
+.provider-sidebar,
+.admin-sidebar {
+  overflow-y: auto;
+}
+
+.shell-logout-button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  border: 1px solid #d6e2ee;
+  border-radius: 13px;
+  padding: 8px 14px;
+  background: #fff;
+  color: #173b60;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  box-shadow: 0 5px 16px #102e550a;
+  cursor: pointer;
+  transition: border-color .2s ease, background .2s ease, transform .2s ease;
+}
+
+.shell-logout-button:hover {
+  border-color: #f5b58a;
+  background: #fff5ee;
+  transform: translateY(-1px);
+}
+
+.shell-logout-button > svg {
+  color: #cc652b;
+}
+
+.shell-logout-button:disabled,
+.text-button:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+.shell-logout-button:focus-visible,
+.text-button:focus-visible,
+.client-bottom-nav a:focus-visible,
+.provider-bottom-nav a:focus-visible,
+.admin-bottom-nav a:focus-visible {
+  outline: 3px solid #f27932;
+  outline-offset: 2px;
+}
+
+.shell-logout-error {
+  border-bottom: 1px solid #f4c5bf;
+  padding: 10px clamp(18px, 4vw, 38px);
+  background: #fff1ef;
+  color: #a32f27;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@media (max-width: 820px) {
+  .client-main,
+  .provider-main,
+  .admin-main {
+    padding-bottom: calc(98px + env(safe-area-inset-bottom));
+  }
+
+  .client-bottom-nav,
+  .provider-bottom-nav,
+  .admin-bottom-nav {
+    right: 10px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    left: 10px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 3px;
+    padding: 6px;
+    border: 1px solid #dce6ef;
+    border-radius: 20px;
+    background: #fffffff5;
+    box-shadow: 0 13px 38px #102e552c;
+    backdrop-filter: blur(20px);
+  }
+
+  .bottom-nav-link,
+  .provider-bottom-link,
+  .admin-bottom-link {
+    min-width: 0;
+    min-height: 58px;
+    border-radius: 14px;
+    padding: 5px 1px;
+    color: #657990;
+    transition: background .2s ease, color .2s ease;
+  }
+
+  .bottom-nav-link small,
+  .provider-bottom-link small,
+  .admin-bottom-link small {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .bottom-nav-link.active,
+  .provider-bottom-link.active,
+  .admin-bottom-link.active {
+    background: #edf4fb;
+    color: #123c64;
+  }
+
+  .client-bottom-nav a[href="/client/demandes/nouvelle"] {
+    background: #fff0e6;
+    color: #bb5421;
+  }
+
+  .client-bottom-nav a[href="/client/demandes/nouvelle"].active {
+    background: #f27932;
+    color: #fff;
+  }
+
+  .pwa-status {
+    bottom: calc(100px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 480px) {
+  .client-topbar,
+  .provider-topbar,
+  .admin-topbar {
+    gap: 10px;
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .client-topbar-title,
+  .provider-topbar-title,
+  .admin-topbar-title {
+    min-width: 0;
+  }
+
+  .client-topbar-title strong,
+  .provider-topbar-title strong,
+  .admin-topbar-title strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .shell-logout-button {
+    width: 40px;
+    padding: 0;
+  }
+
+  .shell-logout-button > span:last-child,
+  .admin-role-badge {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-logout-button,
+  .bottom-nav-link,
+  .provider-bottom-link,
+  .admin-bottom-link {
+    transition: none;
+  }
+}
