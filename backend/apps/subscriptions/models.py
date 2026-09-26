@@ -81,6 +81,7 @@ class ProviderSubscription(models.Model):
         related_name="subscriptions_activated",
     )
     cancelled_at = models.DateTimeField(blank=True, null=True)
+    free_trial_used_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
