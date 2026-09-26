@@ -14,15 +14,15 @@ L'obtention des comptes marchands Wave Business et Orange Money Web Payment au M
 
 | Étape | Travail | Preuve attendue |
 | --- | --- | --- |
-| 23 — Qualité | Suite complète sur PostgreSQL, y compris les scénarios de concurrence et le parcours client → prestataire → avis ; contrôle des migrations, sécurité et accessibilité mobile. | CI verte sur une base PostgreSQL et parcours complet reproductible. |
+| 23 — Qualité | Suite PostgreSQL terminée : 130 tests OK, dont concurrence et parcours client → prestataire → avis. Contrôles mobiles et accessibilité à terminer. | Résultats des essais mobiles consignés ; tests PostgreSQL déjà validés localement. |
 | 24 — Automatisation | GitHub Actions pour Django/PostgreSQL, TypeScript, ESLint, build Next.js et vérification des migrations ; protection de la branche de livraison. | Une PR qui échoue aux contrôles ne peut pas être intégrée. |
 | 25 — Préparation serveur | Paramètres Django de production, serveur WSGI, fichiers statiques, reverse proxy HTTPS, stockage durable des avatars, sauvegardes et journaux ; décider si Redis/worker est nécessaire aux notifications et aux limites de débit entre processus. | `check --deploy` examiné, services relancés automatiquement, sauvegarde et restauration testées. |
 | 26 — Préproduction | Domaine de test HTTPS, vraie livraison SMS, Web Push, installation iPhone/Android, essais et abonnements, paiement Wave sous contrat marchand. | Tests sur appareils réels, webhook signé, expiration et renouvellement constatés ; incident simulé. |
 | 27 — Ouverture | Relecture de la PR, intégration, sauvegarde, migration, déploiement contrôlé, surveillance et support. | Parcours de bout en bout réussi sur le domaine final et plan de retour arrière documenté. |
 
-Pour l'étape 23, les commandes PostgreSQL sur Windows et les contrôles manuels mobiles figurent dans [etape-23-qualite.md](etape-23-qualite.md). Le test API client → prestataire → avis et la correction d'un écart de nom d'index sont sur la branche ; l'étape reste ouverte tant que la suite complète n'a pas été exécutée sur PostgreSQL.
+Pour l'étape 23, les commandes PostgreSQL sur Windows et les contrôles manuels mobiles figurent dans [etape-23-qualite.md](etape-23-qualite.md). Le 26 septembre, la suite complète a réussi sur PostgreSQL 18.4 : **130 tests OK, aucun ignoré**. Il reste à consigner les essais mobiles et d'accessibilité. La CI sur PostgreSQL est le travail de l'étape 24.
 
-Le contrôle local `manage.py check --deploy` signale actuellement l'absence de HSTS et de redirection HTTPS au niveau Django (ceux-ci peuvent être assurés par le reverse proxy si configurés et vérifiés), plus la clé volontairement faible utilisée pour l'audit. `STATIC_ROOT` et un serveur WSGI de production restent à configurer. La suite locale passe **130 tests, dont 2 ignorés parce qu'ils exigent PostgreSQL** : elle ne remplace pas la CI PostgreSQL.
+Le contrôle local `manage.py check --deploy` signale actuellement l'absence de HSTS et de redirection HTTPS au niveau Django (ceux-ci peuvent être assurés par le reverse proxy si configurés et vérifiés), plus la clé volontairement faible utilisée pour l'audit. `STATIC_ROOT` et un serveur WSGI de production restent à configurer. La suite SQLite passe **130 tests, dont 2 ignorés** ; la suite PostgreSQL passe **130 tests sans test ignoré**. Ces résultats locaux ne remplacent pas la CI prévue à l'étape 24.
 
 ## Schéma de déploiement conseillé pour la première version
 
