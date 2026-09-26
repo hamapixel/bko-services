@@ -10,7 +10,7 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from apps.catalog.models import Category, Trade
-from apps.locations.models import City, Commune, Neighborhood
+from apps.locations.models import City, Commune, Neighborhood, Region
 from apps.notifications.models import Notification
 from apps.providers.models import ProviderProfile
 from apps.reviews.models import Review
@@ -38,8 +38,9 @@ class AcceptanceConcurrencyPostgresTests(TransactionTestCase):
             phone="+22330000001",
             password="Strong-admin-2026!",
         )
-        # TransactionTestCase flushes rows between methods, including migration seed data.
-        city, _ = City.objects.get_or_create(name="Bamako")
+        # TransactionTestCase flushes migration data between methods; create a complete active area.
+        region = Region.objects.create(name="District concurrence", kind=Region.Kind.DISTRICT)
+        city = City.objects.create(name="Ville concurrence", region=region)
         commune = Commune.objects.create(city=city, name="Commune concurrence")
         self.area = Neighborhood.objects.create(commune=commune, name="Quartier concurrence")
         self.trade = Trade.objects.create(
