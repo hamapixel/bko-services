@@ -1,15 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useClientSession } from "@/components/client/client-shell";
 import {
-  apiGet,
   apiGetAll,
   apiMutation,
-  type ApiPage,
   type Category,
   type City,
   type Commune,
@@ -67,6 +65,7 @@ export default function NewClientRequestPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const sending = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -76,15 +75,19 @@ export default function NewClientRequestPage() {
         : null;
 
     Promise.all([
-      apiGet<ApiPage<Category>>("/api/v1/catalog/categories/"),
+      apiGetAll<Category>("/api/v1/catalog/categories/"),
       apiGetAll<Region>("/api/v1/locations/regions/"),
-      draftId ? getRequestDraft(draftId) : Promise.resolve(null),
+      draftId ? getRequestDraft(draftId, user.id) : Promise.resolve(null),
     ])
-      .then(([categoryPage, regionItems, localDraft]) => {
+      .then(([categoryItems, regionItems, localDraft]) => {
         if (!active) return;
-        setCategories(categoryPage.results);
+        setCategories(categoryItems);
         setRegions(regionItems);
         setDraft(localDraft);
+
+        if (draftId && !localDraft) {
+          setError("Ce brouillon n’est pas disponible pour votre compte sur cet appareil.");
+        }
 
         if (localDraft) {
           setForm({
@@ -120,7 +123,7 @@ export default function NewClientRequestPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [user.id]);
 
   useEffect(() => {
     if (!form.region) return;
@@ -144,11 +147,11 @@ export default function NewClientRequestPage() {
       return;
     }
     let active = true;
-    apiGet<ApiPage<Trade>>(
+    apiGetAll<Trade>(
       `/api/v1/catalog/trades/?category=${encodeURIComponent(form.category)}`,
     )
-      .then((page) => {
-        if (active) setTrades(page.results);
+      .then((items) => {
+        if (active) setTrades(items);
       })
       .catch((caught) => {
         if (active) setError(errorMessage(caught));
@@ -163,11 +166,11 @@ export default function NewClientRequestPage() {
       return;
     }
     let active = true;
-    apiGet<ApiPage<Commune>>(
+    apiGetAll<Commune>(
       `/api/v1/locations/communes/?city=${encodeURIComponent(form.city)}`,
     )
-      .then((page) => {
-        if (active) setCommunes(page.results);
+      .then((items) => {
+        if (active) setCommunes(items);
       })
       .catch((caught) => {
         if (active) setError(errorMessage(caught));
@@ -182,11 +185,11 @@ export default function NewClientRequestPage() {
       return;
     }
     let active = true;
-    apiGet<ApiPage<Neighborhood>>(
+    apiGetAll<Neighborhood>(
       `/api/v1/locations/neighborhoods/?commune=${encodeURIComponent(form.commune)}`,
     )
-      .then((page) => {
-        if (active) setNeighborhoods(page.results);
+      .then((items) => {
+        if (active) setNeighborhoods(items);
       })
       .catch((caught) => {
         if (active) setError(errorMessage(caught));
@@ -259,14 +262,12 @@ export default function NewClientRequestPage() {
   }
 
   async function saveDraftOnly() {
-    if (!validate()) return;
-
     setBusy(true);
     setError("");
     try {
       const base =
         draft ??
-        createRequestDraft(payload, {
+        createRequestDraft(payload, user.id, {
           category: form.category,
           region: form.region,
           city: form.city,
@@ -281,7 +282,7 @@ export default function NewClientRequestPage() {
           city: form.city,
           commune: form.commune,
         },
-      });
+      }, user.id);
       setDraft(saved);
       setMessage("Brouillon enregistré sur cet appareil — non envoyé.");
       window.history.replaceState(
@@ -298,6 +299,7 @@ export default function NewClientRequestPage() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (sending.current) return;
     if (!validate()) return;
 
     if (!user.phone_verified_at) {
@@ -305,6 +307,7 @@ export default function NewClientRequestPage() {
       return;
     }
 
+    sending.current = true;
     setBusy(true);
     setError("");
     setMessage("");
@@ -317,9 +320,13 @@ export default function NewClientRequestPage() {
       );
 
       if (draft) {
-        await deleteRequestDraft(draft.id);
+        // A local cleanup failure cannot turn a successful server creation into a retry.
+        try {
+          await deleteRequestDraft(draft.id, user.id);
+        } catch {
+          // The saved request remains authoritative; an old local draft is harmless.
+        }
       }
-
       router.push(`/client/demandes/${created.id}`);
       router.refresh();
     } catch (caught) {
@@ -327,8 +334,9 @@ export default function NewClientRequestPage() {
         try {
           const base =
             draft ??
-            createRequestDraft(payload, {
+            createRequestDraft(payload, user.id, {
               category: form.category,
+              region: form.region,
               city: form.city,
               commune: form.commune,
             });
@@ -337,10 +345,11 @@ export default function NewClientRequestPage() {
             payload,
             context: {
               category: form.category,
+              region: form.region,
               city: form.city,
               commune: form.commune,
             },
-          });
+          }, user.id);
           setDraft(saved);
           setMessage(
             "Connexion absente : demande conservée comme brouillon non envoyé.",
@@ -357,6 +366,7 @@ export default function NewClientRequestPage() {
         setError(errorMessage(caught));
       }
     } finally {
+      sending.current = false;
       setBusy(false);
     }
   }
@@ -378,6 +388,14 @@ export default function NewClientRequestPage() {
       </section>
 
       <form className="request-form-card" onSubmit={submit}>
+        <div className="request-form-intro">
+          <span className="request-form-eyebrow">Votre demande, étape par étape</span>
+          <h2>Décrivez votre besoin</h2>
+          <p>Choisissez le métier, indiquez le quartier, puis décrivez le problème. Vous pouvez enregistrer un brouillon à tout moment.</p>
+          <div className="request-form-steps" aria-label="Étapes du formulaire">
+            <span>01 · Service</span><span>02 · Lieu</span><span>03 · Détails</span><span>04 · Priorité</span>
+          </div>
+        </div>
         {draft && (
           <div className="draft-banner">
             <strong>Brouillon local</strong>
@@ -521,6 +539,7 @@ export default function NewClientRequestPage() {
                   value={form.title}
                   onChange={(event) => update("title", event.target.value)}
                 />
+                <small className="field-count">{form.title.length}/150 caractères</small>
               </label>
               <label className="field">
                 <span>Description *</span>
@@ -532,6 +551,7 @@ export default function NewClientRequestPage() {
                   value={form.description}
                   onChange={(event) => update("description", event.target.value)}
                 />
+                <small className="field-count">{form.description.length}/2000 caractères</small>
               </label>
             </div>
           </div>
