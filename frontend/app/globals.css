@@ -6742,3 +6742,285 @@ textarea:disabled {
     font-size: 11px;
   }
 }
+
+/* Public home: a calm, continuous path from discovery to action. */
+.home-discover-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: 22px;
+  color: #385979;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.home-discover-link span {
+  color: #d56625;
+  font-size: 18px;
+  transition: transform .25s ease;
+}
+
+.home-discover-link:hover span { transform: translateY(4px); }
+.home-discover-link:focus-visible,
+.home-provider-text-link:focus-visible,
+.home-premium-footer a:focus-visible {
+  outline: 3px solid #f27932;
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.home-preview-label {
+  display: block;
+  margin-top: 14px;
+  color: #7e8da0;
+  font-size: 10px;
+  text-align: right;
+}
+
+.home-story-section,
+.home-provider-section {
+  padding: clamp(64px, 8vw, 112px) clamp(24px, 6vw, 88px);
+}
+
+.home-story-section {
+  scroll-margin-top: 24px;
+  background: #f8fafc;
+}
+
+.home-section-heading {
+  max-width: 690px;
+  margin: 0 auto 40px;
+  text-align: center;
+}
+
+.home-section-kicker {
+  color: #bc5920;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+
+.home-section-heading h2,
+.home-provider-section h2 {
+  margin: 14px 0 16px;
+  color: #102e55;
+  font-size: clamp(32px, 4vw, 52px);
+  line-height: 1.08;
+  letter-spacing: -.045em;
+}
+
+.home-section-heading p,
+.home-provider-section p {
+  margin: 0;
+  color: #586d82;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.home-story-grid {
+  display: grid;
+  max-width: 1160px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin: 0 auto;
+}
+
+.home-story-card {
+  min-height: 260px;
+  padding: clamp(24px, 3vw, 34px);
+  border: 1px solid #e0e8f1;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 12px 35px #102e5508;
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+
+.home-story-symbol {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 14px;
+  background: #fff0e5;
+  color: #b4541b;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.home-story-card h3 {
+  margin: 24px 0 10px;
+  color: #153858;
+  font-size: 19px;
+  letter-spacing: -.025em;
+}
+
+.home-story-card p {
+  margin: 0;
+  color: #607488;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.home-provider-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(290px, .9fr);
+  align-items: center;
+  gap: clamp(32px, 6vw, 96px);
+  background: linear-gradient(145deg, #fff 45%, #f1f6fc);
+}
+
+.home-provider-section > div:first-child {
+  max-width: 640px;
+}
+
+.home-provider-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 22px;
+  margin-top: 28px;
+}
+
+.home-provider-text-link,
+.home-premium-footer a {
+  color: #1c4d75;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.home-provider-visual {
+  max-width: 480px;
+  padding: 28px;
+  border: 1px solid #244a73;
+  border-radius: 28px;
+  background: radial-gradient(circle at 95% 2%, #26527a, transparent 45%), #102e55;
+  box-shadow: 0 30px 55px #102e5526;
+  color: #fff;
+}
+
+.home-provider-visual-top,
+.home-provider-visual-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #cbdced;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.home-provider-visual-top span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 10px;
+  background: #f27932;
+  color: #fff;
+}
+
+.home-provider-visual-main {
+  display: grid;
+  gap: 16px;
+  margin: 26px 0;
+  padding: 28px;
+  border: 1px solid #ffffff2e;
+  border-radius: 20px;
+  background: #ffffff13;
+}
+
+.home-provider-visual-main small {
+  color: #ffb982;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.home-provider-visual-main strong {
+  max-width: 300px;
+  font-size: clamp(23px, 3vw, 32px);
+  line-height: 1.16;
+  letter-spacing: -.04em;
+}
+
+.home-provider-visual-main > span {
+  color: #cbdae9;
+  font-size: 12px;
+}
+
+.home-provider-visual-foot span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #59cb94;
+}
+
+.home-premium-footer {
+  display: flex;
+  min-height: 94px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px clamp(24px, 6vw, 88px);
+  border-top: 1px solid #e3eaf2;
+  background: #fff;
+  color: #687d92;
+  font-size: 13px;
+}
+
+@media (hover: hover) {
+  .home-story-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 22px 48px #102e5514;
+  }
+
+  .home-premium-primary,
+  .home-premium-secondary {
+    transition: transform .25s ease, box-shadow .25s ease;
+  }
+
+  .home-premium-primary:hover,
+  .home-premium-secondary:hover {
+    transform: translateY(-2px);
+  }
+}
+
+@media (max-width: 900px) {
+  .home-provider-section { grid-template-columns: 1fr; }
+  .home-provider-visual { width: 100%; max-width: 560px; }
+}
+
+@media (max-width: 700px) {
+  .home-story-grid { grid-template-columns: 1fr; }
+  .home-story-card { min-height: 0; }
+  .home-section-heading { text-align: left; }
+  .home-story-section,
+  .home-provider-section { padding: 66px 22px; }
+  .home-provider-actions { align-items: stretch; flex-direction: column; }
+  .home-provider-actions .home-premium-primary { width: 100%; text-align: center; }
+  .home-provider-visual { padding: 18px; }
+  .home-premium-footer { align-items: flex-start; flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:has(.home-premium) { scroll-behavior: smooth; }
+  .home-premium-copy,
+  .home-premium-showcase {
+    animation: home-enter .65s both;
+  }
+  .home-premium-showcase { animation-delay: .1s; }
+
+  @keyframes home-enter {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-story-card,
+  .home-discover-link span,
+  .home-premium-primary,
+  .home-premium-secondary { transition: none; }
+}
