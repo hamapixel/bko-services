@@ -86,6 +86,7 @@ class ProviderSubscriptionSerializer(serializers.ModelSerializer):
             "starts_at",
             "ends_at",
             "cancelled_at",
+            "free_trial_used_at",
             "history",
         )
         read_only_fields = fields
