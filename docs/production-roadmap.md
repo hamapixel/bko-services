@@ -20,7 +20,9 @@ L'obtention des comptes marchands Wave Business et Orange Money Web Payment au M
 | 26 — Préproduction | Domaine de test HTTPS, vraie livraison SMS, Web Push, installation iPhone/Android, essais et abonnements, paiement Wave sous contrat marchand. | Tests sur appareils réels, webhook signé, expiration et renouvellement constatés ; incident simulé. |
 | 27 — Ouverture | Relecture de la PR, intégration, sauvegarde, migration, déploiement contrôlé, surveillance et support. | Parcours de bout en bout réussi sur le domaine final et plan de retour arrière documenté. |
 
-Le contrôle local `manage.py check --deploy` signale actuellement l'absence de HSTS et de redirection HTTPS au niveau Django (ceux-ci peuvent être assurés par le reverse proxy si configurés et vérifiés), plus la clé volontairement faible utilisée pour l'audit. `STATIC_ROOT` et un serveur WSGI de production restent à configurer. La suite locale passe **128 tests, dont 2 ignorés parce qu'ils exigent PostgreSQL** : elle ne remplace pas la CI PostgreSQL.
+Pour l'étape 23, les commandes PostgreSQL sur Windows et les contrôles manuels mobiles figurent dans [etape-23-qualite.md](etape-23-qualite.md). Le test API client → prestataire → avis et la correction d'un écart de nom d'index sont sur la branche ; l'étape reste ouverte tant que la suite complète n'a pas été exécutée sur PostgreSQL.
+
+Le contrôle local `manage.py check --deploy` signale actuellement l'absence de HSTS et de redirection HTTPS au niveau Django (ceux-ci peuvent être assurés par le reverse proxy si configurés et vérifiés), plus la clé volontairement faible utilisée pour l'audit. `STATIC_ROOT` et un serveur WSGI de production restent à configurer. La suite locale passe **130 tests, dont 2 ignorés parce qu'ils exigent PostgreSQL** : elle ne remplace pas la CI PostgreSQL.
 
 ## Schéma de déploiement conseillé pour la première version
 
