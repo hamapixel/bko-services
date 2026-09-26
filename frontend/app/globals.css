@@ -125,6 +125,113 @@ h1 { margin: 0; max-width: 540px; font-size: clamp(32px, 7vw, 56px); line-height
   line-height: 1.4;
 }
 
+.pwa-install-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+  background: rgb(10 32 58 / 62%);
+  backdrop-filter: blur(5px);
+}
+
+.pwa-install-dialog {
+  position: relative;
+  width: min(100%, 390px);
+  max-height: 100%;
+  overflow: auto;
+  padding: 34px 27px 26px;
+  border: 1px solid #dce6f0;
+  border-radius: 26px;
+  background: #fff;
+  box-shadow: 0 28px 85px rgb(7 31 58 / 28%);
+  text-align: center;
+}
+
+.pwa-install-icon {
+  display: block;
+  margin: 0 auto 18px;
+  border-radius: 15px;
+}
+
+.pwa-install-eyebrow {
+  margin: 0 0 9px;
+  color: #bb5421;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .14em;
+}
+
+.pwa-install-dialog h2 {
+  margin: 0;
+  color: #102e55;
+  font-size: clamp(22px, 5vw, 27px);
+  line-height: 1.18;
+  letter-spacing: -.03em;
+}
+
+.pwa-install-dialog p:not(.pwa-install-eyebrow) {
+  margin: 13px 0 0;
+  color: #52657e;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.pwa-install-dialog .pwa-install-hint {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f3f7fc;
+  text-align: left;
+}
+
+.pwa-install-primary,
+.pwa-install-later {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pwa-install-primary {
+  margin-top: 23px;
+  border: 0;
+  background: #102e55;
+  color: #fff;
+}
+
+.pwa-install-later {
+  margin-top: 8px;
+  border: 0;
+  background: transparent;
+  color: #445b79;
+}
+
+.pwa-install-primary:focus-visible,
+.pwa-install-later:focus-visible,
+.pwa-install-close:focus-visible {
+  outline: 3px solid #f27932;
+  outline-offset: 2px;
+}
+
+.pwa-install-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #52657e;
+  font-size: 25px;
+  cursor: pointer;
+}
+
 @media (max-width: 520px) {
   .pwa-status {
     right: 12px;
