@@ -77,4 +77,4 @@ Chaque étape suit le cycle : explication → commandes → fichiers complets �
 
 ## À venir
 
-Tests renforcés sur PostgreSQL, CI, configuration serveur, préproduction puis déploiement. Voir la [feuille de route de production](docs/production-roadmap.md) et les [exigences d'architecture](docs/architecture.md).
+L'étape 23 de qualité est en cours : [commandes PostgreSQL et parcours de vérification](docs/etape-23-qualite.md). Ensuite : CI, configuration serveur, préproduction puis déploiement. Voir la [feuille de route de production](docs/production-roadmap.md) et les [exigences d'architecture](docs/architecture.md).
