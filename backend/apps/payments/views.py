@@ -54,9 +54,9 @@ class PaymentListCreateView(ListAPIView):
         ).select_related("plan", "subscription")
 
     def post(self, request):
-        if settings.PAYMENT_PROVIDER.upper() == "WAVE":
+        if settings.PAYMENT_PROVIDER.upper() not in {"GENERIC", "TEST"}:
             return Response(
-                {"detail": "Utilisez le parcours de paiement Wave."},
+                {"detail": "Utilisez le parcours officiel du fournisseur de paiement."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         reject_extra_fields(request.data, set(PaymentCreateSerializer().fields))
@@ -144,7 +144,7 @@ class PaymentWebhookView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        if settings.PAYMENT_PROVIDER.upper() == "WAVE":
+        if settings.PAYMENT_PROVIDER.upper() not in {"GENERIC", "TEST"}:
             return Response({"detail": "Webhook générique indisponible."}, status=503)
         raw_body = request.body
         try:
