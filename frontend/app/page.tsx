@@ -14,9 +14,14 @@ export default function Home() {
           </div>
 
           <div className="home-premium-nav">
-            <Link href="/prestataire/devenir">Devenir prestataire</Link>
             <Link className="home-premium-login" href="/connexion">
-              Se connecter
+              Connexion client
+            </Link>
+            <Link className="home-premium-provider-login" href="/prestataire/connexion">
+              Connexion prestataire
+            </Link>
+            <Link className="home-premium-become" href="/prestataire/devenir">
+              Créer compte prestataire
             </Link>
           </div>
         </header>
