@@ -65,4 +65,7 @@ class PasswordResetCode(models.Model):
     consumed_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        indexes = [models.Index(fields=["user", "created_at"])]
+        indexes = [models.Index(
+            fields=["user", "created_at"],
+            name="accounts_pa_user_id_29e1d1_idx",
+        )]
