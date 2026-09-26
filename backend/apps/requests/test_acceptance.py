@@ -85,7 +85,7 @@ class AcceptanceTests(TestCase):
     def prepare_offers(self):
         providers = [self.create_provider(), self.create_provider()]
         service_request = self.create_request()
-        self.assertEqual(dispatch_request(service_request.pk, self.admin_user), 2)
+        self.assertEqual(ServiceOffer.objects.filter(service_request=service_request).count(), 2)
         offers = list(ServiceOffer.objects.filter(service_request=service_request).order_by("created_at", "id"))
         return service_request, providers, offers
 
@@ -144,6 +144,26 @@ class AcceptanceTests(TestCase):
         response = api.post(f"/api/v1/providers/offers/{offers[0].pk}/accept/")
 
         self.assertEqual(response.status_code, 404)
+
+    def test_offer_cannot_be_accepted_after_provider_reaches_plan_capacity(self):
+        _, providers, offers = self.prepare_offers()
+        self.plan.max_active_jobs = 1
+        self.plan.save(update_fields=["max_active_jobs"])
+        occupied = ServiceRequest.objects.create(
+            client=self.client_user, trade=self.trade, neighborhood=self.area,
+            assigned_provider=providers[0], status=ServiceRequest.Status.IN_PROGRESS,
+            title="Autre intervention", description="Détails", address_detail="Adresse",
+        )
+        api = APIClient()
+        api.force_login(providers[0].user)
+        self.assertEqual(api.get("/api/v1/providers/offers/").json()["count"], 0)
+        response = api.post(f"/api/v1/providers/offers/{offers[0].pk}/accept/")
+        self.assertEqual(response.status_code, 400)
+        offers[0].refresh_from_db()
+        self.assertEqual(offers[0].status, ServiceOffer.Status.PENDING)
+        occupied.status = ServiceRequest.Status.PROVIDER_COMPLETED
+        occupied.save(update_fields=["status"])
+        self.assertEqual(api.get("/api/v1/providers/offers/").json()["count"], 1)
 
     def test_second_provider_cannot_win_after_first_acceptance(self):
         service_request, providers, offers = self.prepare_offers()

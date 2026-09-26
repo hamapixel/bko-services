@@ -14,9 +14,14 @@ export default function Home() {
           </div>
 
           <div className="home-premium-nav">
-            <Link href="/prestataire/devenir">Devenir prestataire</Link>
             <Link className="home-premium-login" href="/connexion">
-              Se connecter
+              Connexion client
+            </Link>
+            <Link className="home-premium-provider-login" href="/prestataire/connexion">
+              Connexion prestataire
+            </Link>
+            <Link className="home-premium-become" href="/prestataire/devenir">
+              Créer compte prestataire
             </Link>
           </div>
         </header>
@@ -45,8 +50,9 @@ export default function Home() {
             <div className="home-premium-trust">
               <span><strong>✓</strong> Prestataires vérifiés</span>
               <span><strong>✓</strong> Suivi clair</span>
-              <span><strong>✓</strong> Paiement et données sécurisés</span>
+              <span><strong>✓</strong> Coordonnées protégées</span>
             </div>
+            <a className="home-discover-link" href="#fonctionnement">Découvrir comment ça marche <span aria-hidden="true">↓</span></a>
           </div>
 
           <div className="home-premium-showcase" aria-hidden="true">
@@ -79,14 +85,14 @@ export default function Home() {
                 </div>
                 <div className="home-status-line"><span /></div>
                 <div className="home-provider-mini">
-                  <span>MK</span>
+                  <span>✓</span>
                   <div>
-                    <strong>Moussa K.</strong>
-                    <small>Prestataire vérifié</small>
+                    <strong>Prestataire attribué</strong>
+                    <small>Profil vérifié</small>
                   </div>
-                  <b>4.9 ★</b>
                 </div>
               </div>
+              <span className="home-preview-label">Aperçu illustratif</span>
             </div>
 
             <div className="home-float-card home-float-verified">
@@ -130,6 +136,57 @@ export default function Home() {
             </div>
           </article>
         </div>
+
+        <section className="home-story-section" id="fonctionnement" aria-labelledby="home-story-title">
+          <div className="home-section-heading">
+            <span className="home-section-kicker">SIMPLE À CHAQUE ÉTAPE</span>
+            <h2 id="home-story-title">Du besoin à l’intervention, tout reste clair.</h2>
+            <p>Une demande précise aide à trouver un professionnel qui exerce le bon métier et dessert votre quartier.</p>
+          </div>
+          <div className="home-story-grid">
+            <article className="home-story-card">
+              <span className="home-story-symbol" aria-hidden="true">01</span>
+              <h3>Décrivez le problème</h3>
+              <p>Choisissez le métier, le quartier et la priorité. Vous pouvez suivre votre demande depuis votre espace.</p>
+            </article>
+            <article className="home-story-card">
+              <span className="home-story-symbol" aria-hidden="true">02</span>
+              <h3>Recevez une proposition</h3>
+              <p>Les prestataires éligibles de votre zone peuvent recevoir l’offre. Vos coordonnées restent privées avant l’attribution.</p>
+            </article>
+            <article className="home-story-card">
+              <span className="home-story-symbol" aria-hidden="true">03</span>
+              <h3>Suivez et donnez votre avis</h3>
+              <p>Consultez l’avancement de l’intervention, confirmez la fin du travail et évaluez le prestataire.</p>
+            </article>
+          </div>
+        </section>
+
+        <section className="home-provider-section" aria-labelledby="home-provider-title">
+          <div>
+            <span className="home-section-kicker">VOUS ÊTES PROFESSIONNEL ?</span>
+            <h2 id="home-provider-title">Vos compétences, près des clients de votre quartier.</h2>
+            <p>Créez votre profil, indiquez vos métiers et les quartiers desservis. Après vérification, un abonnement actif vous permet de recevoir les offres qui vous correspondent.</p>
+            <div className="home-provider-actions">
+              <Link className="home-premium-primary" href="/prestataire/devenir">Créer mon compte prestataire</Link>
+              <Link className="home-provider-text-link" href="/prestataire/connexion">Déjà inscrit ? Se connecter <span aria-hidden="true">↗</span></Link>
+            </div>
+          </div>
+          <div className="home-provider-visual" aria-hidden="true">
+            <div className="home-provider-visual-top"><span>✓</span> Espace prestataire</div>
+            <div className="home-provider-visual-main">
+              <small>VOTRE ACTIVITÉ</small>
+              <strong>Des offres adaptées à votre métier.</strong>
+              <span>Métiers · Quartiers · Disponibilité</span>
+            </div>
+            <div className="home-provider-visual-foot"><span /> Un espace pour suivre vos interventions</div>
+          </div>
+        </section>
+
+        <footer className="home-premium-footer">
+          <span>BKO Services · Bamako</span>
+          <Link href="/connexion">Accéder à mon espace client <span aria-hidden="true">↗</span></Link>
+        </footer>
       </section>
     </main>
   );

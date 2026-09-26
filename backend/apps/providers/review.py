@@ -35,7 +35,7 @@ def review_provider(profile_id, reviewer, decision):
         if not profile.trades.filter(is_active=True, category__is_active=True).exists():
             raise ValidationError("Un métier actif est obligatoire.")
         if not profile.service_areas.filter(
-            is_active=True, commune__is_active=True, commune__city__is_active=True
+            is_active=True, commune__is_active=True, commune__city__is_active=True, commune__city__region__is_active=True
         ).exists():
             raise ValidationError("Un quartier actif est obligatoire.")
         profile.status = ProviderProfile.Status.VERIFIED

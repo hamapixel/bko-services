@@ -4,8 +4,8 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny
 
-from .models import City, Commune, Neighborhood
-from .serializers import CitySerializer, CommuneSerializer, NeighborhoodSerializer
+from .models import City, Commune, Neighborhood, Region
+from .serializers import CitySerializer, CommuneSerializer, NeighborhoodSerializer, RegionSerializer
 
 
 def optional_uuid(request, key):
@@ -18,10 +18,20 @@ def optional_uuid(request, key):
         raise ValidationError({key: "Identifiant UUID invalide."})
 
 
+class RegionListView(ListAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = RegionSerializer
+    queryset = Region.objects.filter(is_active=True, cities__is_active=True).distinct()
+
+
 class CityListView(ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = CitySerializer
-    queryset = City.objects.filter(is_active=True)
+
+    def get_queryset(self):
+        queryset = City.objects.filter(is_active=True, region__is_active=True)
+        region_id = optional_uuid(self.request, "region")
+        return queryset.filter(region_id=region_id) if region_id else queryset
 
 
 class CommuneListView(ListAPIView):
@@ -29,7 +39,7 @@ class CommuneListView(ListAPIView):
     serializer_class = CommuneSerializer
 
     def get_queryset(self):
-        queryset = Commune.objects.filter(is_active=True, city__is_active=True)
+        queryset = Commune.objects.filter(is_active=True, city__is_active=True, city__region__is_active=True)
         city_id = optional_uuid(self.request, "city")
         return queryset.filter(city_id=city_id) if city_id else queryset
 
@@ -39,6 +49,6 @@ class NeighborhoodListView(ListAPIView):
     serializer_class = NeighborhoodSerializer
 
     def get_queryset(self):
-        queryset = Neighborhood.objects.filter(is_active=True, commune__is_active=True, commune__city__is_active=True)
+        queryset = Neighborhood.objects.filter(is_active=True, commune__is_active=True, commune__city__is_active=True, commune__city__region__is_active=True)
         commune_id = optional_uuid(self.request, "commune")
         return queryset.filter(commune_id=commune_id) if commune_id else queryset

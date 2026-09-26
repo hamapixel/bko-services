@@ -75,6 +75,9 @@ export default function ClientShell({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sessionError, setSessionError] = useState("");
+  const [logoutBusy, setLogoutBusy] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
+  const userId = user?.id;
 
   const loadUser = useCallback(async () => {
     const profile = await apiGet<PublicUser>("/api/v1/auth/me/");
@@ -111,6 +114,46 @@ export default function ClientShell({ children }: { children: ReactNode }) {
     };
   }, [router]);
 
+  useEffect(() => {
+    if (!userId) return;
+    let active = true;
+    let checking = false;
+
+    async function verifySession() {
+      if (!active || checking) return;
+      checking = true;
+      try {
+        const account = await apiGet<PublicUser>("/api/v1/auth/me/");
+        if (active && (account.id !== userId || account.role !== "CLIENT")) {
+          setUser(null);
+          router.replace("/connexion");
+        }
+      } catch (caught) {
+        if (active && caught instanceof ApiReadError && (caught.status === 401 || caught.status === 403)) {
+          setUser(null);
+          router.replace("/connexion");
+        }
+      } finally {
+        checking = false;
+      }
+    }
+
+    function onVisibilityChange() {
+      if (document.visibilityState === "visible") void verifySession();
+    }
+
+    window.addEventListener("focus", verifySession);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    const interval = window.setInterval(verifySession, 60_000);
+    void verifySession();
+    return () => {
+      active = false;
+      window.removeEventListener("focus", verifySession);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.clearInterval(interval);
+    };
+  }, [pathname, router, userId]);
+
   const contextValue = useMemo(
     () =>
       user
@@ -123,11 +166,17 @@ export default function ClientShell({ children }: { children: ReactNode }) {
   );
 
   async function logout() {
+    if (logoutBusy) return;
+    setLogoutBusy(true);
+    setLogoutError("");
     try {
       await apiMutation<void>("/api/v1/auth/logout/", "POST", {});
-    } finally {
+      setUser(null);
       router.replace("/connexion");
       router.refresh();
+    } catch (caught) {
+      setLogoutError(caught instanceof Error ? caught.message : "Déconnexion impossible. Réessayez.");
+      setLogoutBusy(false);
     }
   }
 
@@ -173,7 +222,7 @@ export default function ClientShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ClientSessionContext.Provider value={contextValue}>
+    <ClientSessionContext.Provider key={user.id} value={contextValue}>
       <div className="client-app">
         <aside className={`client-sidebar ${menuOpen ? "is-open" : ""}`}>
           <div className="client-sidebar-head">
@@ -230,9 +279,10 @@ export default function ClientShell({ children }: { children: ReactNode }) {
               className="text-button"
               type="button"
               onClick={logout}
+              disabled={logoutBusy}
               aria-label="Se déconnecter"
             >
-              Quitter
+              Se déconnecter
             </button>
           </div>
         </aside>
@@ -260,6 +310,10 @@ export default function ClientShell({ children }: { children: ReactNode }) {
               <strong>BKO Services</strong>
               <small>Le bon professionnel, au bon moment.</small>
             </div>
+            <button className="shell-logout-button" type="button" onClick={logout} disabled={logoutBusy} aria-label="Se déconnecter">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+              <span>Déconnexion</span>
+            </button>
             <Link className="client-mini-avatar" href="/client/profil" aria-label="Ouvrir mon profil">
               {user.has_avatar && user.avatar_url ? (
                 <img src={user.avatar_url} alt="" />
@@ -268,6 +322,8 @@ export default function ClientShell({ children }: { children: ReactNode }) {
               )}
             </Link>
           </header>
+
+          {logoutError && <div className="shell-logout-error" role="alert">{logoutError}</div>}
 
           {!user.phone_verified_at && (
             <div className="verification-banner">
@@ -283,13 +339,14 @@ export default function ClientShell({ children }: { children: ReactNode }) {
         </div>
 
         <nav className="client-bottom-nav" aria-label="Navigation mobile">
-          {NAVIGATION.slice(0, 4).map((item) => {
+          {NAVIGATION.map((item) => {
             const active = navIsActive(pathname, item.href);
             return (
               <Link
                 className={active ? "bottom-nav-link active" : "bottom-nav-link"}
                 href={item.href}
                 key={item.href}
+                aria-current={active ? "page" : undefined}
               >
                 <span aria-hidden="true">{item.icon}</span>
                 <small>{item.label === "Nouvelle demande" ? "Nouvelle" : item.label}</small>

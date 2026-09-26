@@ -17,6 +17,10 @@ class SubscriptionPlan(models.Model):
     duration_days = models.PositiveSmallIntegerField(validators=[MinValueValidator(1)])
     can_receive_requests = models.BooleanField(default=True)
     can_receive_urgent_requests = models.BooleanField(default=False)
+    # NULL means no limit on simultaneous interventions.
+    max_active_jobs = models.PositiveSmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1)]
+    )
     is_active = models.BooleanField(default=True)
     display_order = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -30,6 +34,8 @@ class SubscriptionPlan(models.Model):
 
     def clean(self):
         super().clean()
+        if self.max_active_jobs is not None and self.max_active_jobs < 1:
+            raise ValidationError({"max_active_jobs": "La limite doit être d'au moins 1."})
         if self.can_receive_urgent_requests and not self.can_receive_requests:
             raise ValidationError(
                 {
@@ -75,6 +81,7 @@ class ProviderSubscription(models.Model):
         related_name="subscriptions_activated",
     )
     cancelled_at = models.DateTimeField(blank=True, null=True)
+    free_trial_used_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

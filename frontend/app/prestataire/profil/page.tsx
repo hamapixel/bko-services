@@ -34,7 +34,7 @@ export default function ProviderProfilePage() {
       await refreshProfile();
       setMessage(
         result.is_available
-          ? "Vous êtes maintenant disponible pour de nouvelles offres."
+          ? "Vous êtes disponible. Un abonnement actif reste nécessaire pour recevoir des offres."
           : "Vous êtes maintenant indisponible pour les nouvelles offres.",
       );
     } catch (caught) {
@@ -142,7 +142,7 @@ export default function ProviderProfilePage() {
               <strong>{profile.is_available ? "Disponible" : "Indisponible"}</strong>
               <small>
                 {profile.is_available
-                  ? "Vous pouvez recevoir de nouvelles propositions."
+                  ? "Un abonnement actif est aussi nécessaire pour recevoir des offres."
                   : "Les nouvelles offres sont temporairement suspendues."}
               </small>
             </div>

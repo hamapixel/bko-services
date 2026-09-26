@@ -4,7 +4,7 @@
 
 Lancement à Bamako. V1 : inscription, catégories, commune/quartier, création d'une demande, sélection d'un professionnel vérifié et disponible, notification, acceptation, suivi, confirmation et avis. Le mode urgent fait partie du parcours de demande. Les abonnements, paiements et fonctions avancées sont ajoutés dans les étapes prévues après validation du parcours principal.
 
-**Décisions d'architecture :** dépôt `hamapixel/bko-services` ; monorepo comprenant un backend Django/DRF et **une seule** application Next.js/TypeScript avec des espaces séparés selon le rôle. PostgreSQL est la source de vérité. Redis et Celery traitent les tâches asynchrones. Fuseau métier `Africa/Bamako` ; instants conservés en UTC en base. API versionnée sous `/api/v1/`. Identifiants publics UUID. Une seule ville initiale, mais villes, communes et quartiers restent administrables.
+**Décisions d'architecture :** dépôt `hamapixel/bko-services` ; monorepo comprenant un backend Django/DRF et **une seule** application Next.js/TypeScript avec des espaces séparés selon le rôle. PostgreSQL est la source de vérité. Redis et Celery sont prévus pour les tâches asynchrones, mais pas encore intégrés. Fuseau métier `Africa/Bamako` ; instants conservés en UTC en base. API versionnée sous `/api/v1/`. Identifiants publics UUID. Une seule ville initiale, mais villes, communes et quartiers restent administrables.
 
 ## 2. Schéma fonctionnel
 
@@ -101,6 +101,8 @@ Les applications sont créées au fur et à mesure des étapes. Des services mé
 | 20–22 | Espaces client, prestataire et administration responsive |
 | 23–25 | Tests, CI GitHub Actions et Docker |
 | 26–27 | Préproduction multi-appareils, corrections, production et restauration testée |
+
+Les critères de passage et le schéma d'hébergement actuel figurent dans [production-roadmap.md](production-roadmap.md).
 
 L'authentification de l'étape 4 inclura la logique OTP et un transport de développement sûr ; l'envoi SMS professionnel, son journal et ses limites seront finalisés à l'étape 15. Le push de l'étape 14 nécessitera un service worker minimal ; l'étape 19 complétera l'installation, le cache et la gestion hors connexion. Ces dépendances seront testées à l'étape où elles apparaissent.
 

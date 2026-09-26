@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
+from .matching import dispatch_new_request
 from .models import RequestStatusHistory, ServiceRequest
 
 
@@ -12,7 +13,9 @@ def create_service_request(user_id, *, trade, neighborhood, title, description, 
         raise PermissionDenied("Un compte client avec téléphone vérifié est nécessaire.")
     if not trade.is_active or not trade.category.is_active:
         raise ValidationError({"trade": "Ce métier n'est plus disponible."})
-    if not neighborhood.is_active or not neighborhood.commune.is_active or not neighborhood.commune.city.is_active:
+    if (not neighborhood.is_active or not neighborhood.commune.is_active
+            or not neighborhood.commune.city.is_active
+            or not neighborhood.commune.city.region or not neighborhood.commune.city.region.is_active):
         raise ValidationError({"neighborhood": "Ce quartier n'est plus disponible."})
 
     service_request = ServiceRequest.objects.create(
@@ -30,4 +33,6 @@ def create_service_request(user_id, *, trade, neighborhood, title, description, 
         previous_status="",
         new_status=ServiceRequest.Status.CREATED,
     )
+    dispatch_new_request(service_request.pk, user)
+    service_request.refresh_from_db()
     return service_request

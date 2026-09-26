@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
@@ -352,6 +353,52 @@ class PaymentTests(TestCase):
         self.assertEqual(existing.ends_at, old_end + timedelta(days=30))
         self.assertEqual(existing.history.count(), 1)
 
+    def test_expired_subscription_requires_new_confirmed_payment(self):
+        now = timezone.now()
+        existing = ProviderSubscription.objects.create(
+            provider=self.provider,
+            plan=self.plan,
+            starts_at=now - timedelta(days=31),
+            ends_at=now - timedelta(days=1),
+            activated_by=self.admin,
+        )
+        api = APIClient()
+        api.force_login(self.provider.user)
+        self.assertEqual(
+            api.get("/api/v1/subscriptions/me/").json()["subscription"]["status"],
+            "EXPIRED",
+        )
+
+        created = self.create_payment(key="expired-renew-0001")
+        self.assertEqual(created.status_code, 201)
+        payment = PaymentTransaction.objects.get()
+        self.assertEqual(payment.purpose, PaymentTransaction.Purpose.ACTIVATE)
+        # Browser redirects and status reads never extend an expired subscription.
+        for result in ("retour", "erreur"):
+            detail = api.get(
+                "/api/v1/payments/transactions/" + str(payment.pk) + "/",
+                {"paiement": result},
+            )
+            self.assertEqual(detail.json()["status"], "PENDING")
+            self.assertEqual(
+                api.get("/api/v1/subscriptions/me/").json()["subscription"]["status"],
+                "EXPIRED",
+            )
+
+        before = timezone.now()
+        confirmed, _ = self.signed_webhook(
+            payment, provider_transaction_id="provider-txn-expired-renew"
+        )
+        self.assertEqual(confirmed.status_code, 200)
+        existing.refresh_from_db()
+        self.assertEqual(existing.status, ProviderSubscription.Status.ACTIVE)
+        self.assertGreaterEqual(existing.starts_at, before)
+        self.assertEqual(existing.ends_at, existing.starts_at + timedelta(days=30))
+        self.assertEqual(
+            api.get("/api/v1/subscriptions/me/").json()["subscription"]["status"],
+            "ACTIVE",
+        )
+
     def test_payment_uses_price_and_duration_snapshots_after_plan_change(self):
         self.create_payment(key="snapshot-key-0001")
         payment = PaymentTransaction.objects.get()
@@ -485,3 +532,117 @@ class PaymentTests(TestCase):
             admin.get("/api/v1/payments/admin/transactions/?status=UNKNOWN").status_code,
             400,
         )
+
+    @override_settings(
+        WAVE_API_KEY="wave-test-key",
+        WAVE_WEBHOOK_SECRET="wave-test-webhook",
+        PAYMENT_RETURN_ORIGIN="https://bko.example",
+    )
+    @patch("apps.payments.wave._wave_request")
+    def test_wave_checkout_requires_signed_matching_payment_before_activation(self, wave_request):
+        api = APIClient()
+        api.force_login(self.provider.user)
+
+        # Wave echoes the server-created reference, never a browser-supplied amount.
+        def wave_reply(method, path, payload=None):
+            if method == "GET":
+                return {"result": []}
+            self.assertEqual(payload["amount"], "5000")
+            return_url = (
+                "https://bko.example/prestataire/abonnement?transaction="
+                + str(PaymentTransaction.objects.get().pk)
+            )
+            self.assertEqual(payload["success_url"], return_url + "&paiement=retour")
+            self.assertEqual(payload["error_url"], return_url + "&paiement=erreur")
+            return {
+                "id": "cos-test-123",
+                "amount": payload["amount"],
+                "currency": payload["currency"],
+                "client_reference": payload["client_reference"],
+                "wave_launch_url": "https://pay.wave.com/c/cos-test-123",
+            }
+
+        wave_request.side_effect = wave_reply
+        args = {"plan_id": str(self.plan.pk), "idempotency_key": "wave-test-0001"}
+        created = api.post("/api/v1/payments/wave/checkout/", args, format="json")
+        self.assertEqual(created.status_code, 200)
+        self.assertEqual(created.json()["payment_provider"], "WAVE")
+        self.assertEqual(created.json()["checkout_url"], "https://pay.wave.com/c/cos-test-123")
+        self.assertEqual(
+            api.post("/api/v1/payments/wave/checkout/", args, format="json").status_code,
+            200,
+        )
+        self.assertEqual(wave_request.call_count, 2)
+        payment = PaymentTransaction.objects.get()
+        self.assertFalse(ProviderSubscription.objects.filter(provider=self.provider).exists())
+        # The browser can open or forge either return URL: both are read-only.
+        for result in ("retour", "erreur"):
+            response = api.get(
+                "/api/v1/payments/transactions/" + str(payment.pk) + "/",
+                {"paiement": result, "transaction": str(payment.pk)},
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["status"], "PENDING")
+            self.assertFalse(ProviderSubscription.objects.filter(provider=self.provider).exists())
+        generic, _ = self.signed_webhook(payment)
+        self.assertEqual(generic.status_code, 400)
+        self.assertFalse(ProviderSubscription.objects.filter(provider=self.provider).exists())
+
+        payload = {
+            "id": "EV-test-1", "type": "checkout.session.completed",
+            "data": {
+                "id": payment.checkout_session_id,
+                "client_reference": payment.merchant_reference,
+                "transaction_id": "wave-txn-123",
+                "payment_status": "succeeded", "checkout_status": "complete",
+                "amount": "5000", "currency": "XOF",
+            },
+        }
+
+        def send(data, *, secret="wave-test-webhook", session_id=None):
+            body = json.loads(json.dumps(data))
+            if session_id:
+                body["data"]["id"] = session_id
+            raw = json.dumps(body, separators=(",", ":")).encode("utf-8")
+            timestamp = str(int(timezone.now().timestamp()))
+            signature = hmac.new(
+                secret.encode("utf-8"), timestamp.encode("ascii") + raw, hashlib.sha256
+            ).hexdigest()
+            return APIClient().generic(
+                "POST", "/api/v1/payments/webhooks/wave/", raw,
+                content_type="application/json",
+                HTTP_WAVE_SIGNATURE=f"t={timestamp},v1={signature}",
+            )
+
+        self.assertEqual(send(payload, secret="wrong-secret").status_code, 401)
+        self.assertEqual(send(payload, session_id="cos-other-session").status_code, 400)
+        mismatch = json.loads(json.dumps(payload))
+        mismatch["data"]["amount"] = "100"
+        self.assertEqual(send(mismatch).status_code, 400)
+        self.assertFalse(ProviderSubscription.objects.filter(provider=self.provider).exists())
+        self.assertEqual(send(payload).status_code, 200)
+        self.assertEqual(send(payload).status_code, 200)
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, PaymentTransaction.Status.SUCCEEDED)
+        self.assertEqual(ProviderSubscription.objects.filter(provider=self.provider).count(), 1)
+
+    def test_wave_is_unavailable_until_merchant_credentials_are_configured(self):
+        api = APIClient()
+        api.force_login(self.provider.user)
+        self.assertFalse(api.get("/api/v1/payments/methods/").json()["wave"])
+        response = api.post(
+            "/api/v1/payments/wave/checkout/",
+            {"plan_id": str(self.plan.pk), "idempotency_key": "wave-disabled-01"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(PaymentTransaction.objects.count(), 0)
+
+    @override_settings(
+        WAVE_API_KEY="wave-test-key", WAVE_WEBHOOK_SECRET="wave-test-webhook",
+        PAYMENT_RETURN_ORIGIN="http://localhost:3000",
+    )
+    def test_wave_requires_a_public_https_return_origin(self):
+        api = APIClient()
+        api.force_login(self.provider.user)
+        self.assertFalse(api.get("/api/v1/payments/methods/").json()["wave"])

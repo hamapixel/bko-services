@@ -61,14 +61,14 @@ class ServiceRequestTests(TestCase):
         self.assertEqual(response.status_code, 201)
         body = response.json()
         self.assertEqual(body["priority"], "URGENT")
-        self.assertEqual(body["status"], "CREATED")
+        self.assertEqual(body["status"], "SEARCHING")
         self.assertEqual(body["status_history"][0]["previous_status"], "")
         self.assertEqual(body["status_history"][0]["new_status"], "CREATED")
         self.assertNotIn("client", body)
         self.assertNotIn("phone", str(body))
         service_request = ServiceRequest.objects.get()
         self.assertEqual(service_request.client, self.client_user)
-        self.assertEqual(RequestStatusHistory.objects.count(), 1)
+        self.assertEqual(RequestStatusHistory.objects.count(), 2)
         self.assertEqual(self.client.get("/api/v1/requests/").json()["count"], 1)
         admin_user = get_user_model().objects.create_superuser(
             phone="+22312345670", password="Strong-admin-2026!"
@@ -141,7 +141,7 @@ class ServiceRequestTests(TestCase):
         admin = APIClient()
         admin.force_login(admin_user)
 
-        listing = admin.get("/api/v1/admin/requests/?status=CREATED&priority=URGENT")
+        listing = admin.get("/api/v1/admin/requests/?status=SEARCHING&priority=URGENT")
         self.assertEqual(listing.status_code, 200)
         self.assertEqual(listing.json()["count"], 1)
         row = listing.json()["results"][0]

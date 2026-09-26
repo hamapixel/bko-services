@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
@@ -9,14 +10,69 @@ from apps.locations.models import City, Commune, Neighborhood
 from apps.providers.models import ProviderProfile
 from apps.subscriptions.models import ProviderSubscription, SubscriptionPlan
 from apps.requests.acceptance import accept_offer
-from apps.requests.matching import dispatch_request
 from apps.requests.models import ServiceOffer, ServiceRequest
 from apps.requests.services import create_service_request
 from apps.requests.workflow import confirm_client_completion, transition_provider_intervention
 from apps.reviews.services import create_review
 
-from .models import Notification
-from .services import create_notification
+from .models import Notification, PushSubscription
+from .services import create_notification, register_push_subscription, send_push_for_notification
+
+
+class PushEndpointSecurityTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            phone="+22369999000", password="Strong-password-2026!"
+        )
+        self.other = get_user_model().objects.create_user(
+            phone="+22369999001", password="Strong-password-2026!"
+        )
+        self.keys = {"p256dh": "test-public-key", "auth": "test-secret"}
+
+    def test_rejects_local_urls_and_accepts_known_push_service(self):
+        api = APIClient()
+        api.force_login(self.user)
+        for endpoint in (
+            "http://127.0.0.1/push",
+            "https://127.0.0.1/push",
+            "https://fcm.googleapis.com.evil.example/push",
+            "https://fcm.googleapis.com:8443/push",
+            "https://attacker@fcm.googleapis.com/push",
+        ):
+            response = api.post(
+                "/api/v1/notifications/push/subscriptions/",
+                {"endpoint": endpoint, "keys": self.keys},
+                format="json",
+            )
+            self.assertEqual(response.status_code, 400)
+        self.assertFalse(PushSubscription.objects.exists())
+
+        endpoint = "https://fcm.googleapis.com/fcm/send/opaque-token"
+        created = api.post(
+            "/api/v1/notifications/push/subscriptions/",
+            {"endpoint": endpoint, "keys": self.keys}, format="json",
+        )
+        self.assertEqual(created.status_code, 201)
+        self.assertEqual(PushSubscription.objects.get(endpoint=endpoint).user_id, self.user.pk)
+
+    @patch("apps.notifications.services.web_push_configured", return_value=True)
+    @patch("apps.notifications.services.webpush")
+    def test_existing_unsafe_endpoint_is_never_contacted(self, send, configured):
+        subscription = PushSubscription.objects.create(
+            user=self.user,
+            endpoint="https://127.0.0.1/private",
+            **self.keys,
+        )
+        notification = Notification.objects.create(
+            recipient=self.user,
+            kind=Notification.Kind.OFFER_RECEIVED,
+            title="Offre",
+            message="Notification privée",
+        )
+        self.assertEqual(send_push_for_notification(notification.pk), 0)
+        send.assert_not_called()
+        subscription.refresh_from_db()
+        self.assertFalse(subscription.is_active)
 
 
 class NotificationCenterTests(TestCase):
@@ -26,11 +82,6 @@ class NotificationCenterTests(TestCase):
             password="Strong-password-2026!",
             phone_verified_at=timezone.now(),
         )
-        self.admin_user = get_user_model().objects.create_superuser(
-            phone="+22360000001",
-            password="Strong-admin-2026!",
-        )
-
         city = City.objects.get(name="Bamako")
         commune = Commune.objects.create(city=city, name="Commune notifications")
         self.area = Neighborhood.objects.create(commune=commune, name="Quartier notifications")
@@ -86,8 +137,8 @@ class NotificationCenterTests(TestCase):
         )
         return profile
 
-    def dispatch_two_offers(self):
-        self.assertEqual(dispatch_request(self.service_request.pk, self.admin_user), 2)
+    def assert_two_offers_created(self):
+        self.assertEqual(ServiceOffer.objects.filter(service_request=self.service_request).count(), 2)
 
     def accept_provider1(self):
         offer = ServiceOffer.objects.get(
@@ -98,7 +149,7 @@ class NotificationCenterTests(TestCase):
         self.service_request.refresh_from_db()
 
     def test_notifications_are_private_and_can_be_marked_read(self):
-        self.dispatch_two_offers()
+        self.assert_two_offers_created()
 
         own = APIClient()
         own.force_login(self.provider1.user)
@@ -134,7 +185,7 @@ class NotificationCenterTests(TestCase):
         self.assertEqual(APIClient().get("/api/v1/notifications/").status_code, 403)
 
     def test_read_all_only_marks_current_users_notifications(self):
-        self.dispatch_two_offers()
+        self.assert_two_offers_created()
         create_notification(
             recipient_id=self.provider1.user_id,
             kind=Notification.Kind.CLIENT_CONFIRMED,
@@ -164,7 +215,7 @@ class NotificationCenterTests(TestCase):
         )
 
     def test_complete_business_flow_creates_expected_notifications(self):
-        self.dispatch_two_offers()
+        self.assert_two_offers_created()
 
         self.assertEqual(
             list(
@@ -259,7 +310,7 @@ class NotificationCenterTests(TestCase):
         )
 
     def test_invalid_transition_does_not_create_progress_notification(self):
-        self.dispatch_two_offers()
+        self.assert_two_offers_created()
         self.accept_provider1()
 
         api = APIClient()
@@ -305,7 +356,7 @@ class NotificationCenterTests(TestCase):
         )
 
     def test_unread_query_returns_only_unread_notifications(self):
-        self.dispatch_two_offers()
+        self.assert_two_offers_created()
         notification = Notification.objects.get(
             recipient=self.provider1.user,
             kind=Notification.Kind.OFFER_RECEIVED,

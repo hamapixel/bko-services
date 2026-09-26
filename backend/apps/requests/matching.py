@@ -22,7 +22,16 @@ def can_dispatch_requests(user):
 def dispatch_request(request_id, actor):
     if not can_dispatch_requests(actor):
         raise PermissionDenied("Recherche réservée aux administrateurs habilités.")
+    return _match_request(request_id, actor)
 
+
+@transaction.atomic
+def dispatch_new_request(request_id, client):
+    """Find eligible providers immediately after a verified client creates a request."""
+    return _match_request(request_id, client)
+
+
+def _match_request(request_id, actor):
     service_request = ServiceRequest.objects.select_for_update().get(pk=request_id)
     if service_request.status not in (ServiceRequest.Status.CREATED, ServiceRequest.Status.SEARCHING):
         raise ValidationError("Cette demande n'est pas en attente de recherche.")
@@ -32,7 +41,9 @@ def dispatch_request(request_id, actor):
     neighborhood = service_request.neighborhood
     if not trade.is_active or not trade.category.is_active:
         raise ValidationError("Le métier de la demande est désactivé.")
-    if not neighborhood.is_active or not neighborhood.commune.is_active or not neighborhood.commune.city.is_active:
+    if (not neighborhood.is_active or not neighborhood.commune.is_active
+            or not neighborhood.commune.city.is_active
+            or not neighborhood.commune.city.region or not neighborhood.commune.city.region.is_active):
         raise ValidationError("Le quartier de la demande est désactivé.")
 
     if service_request.status == ServiceRequest.Status.CREATED:

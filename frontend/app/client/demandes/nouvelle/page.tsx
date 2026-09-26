@@ -1,18 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useClientSession } from "@/components/client/client-shell";
 import {
-  apiGet,
+  apiGetAll,
   apiMutation,
-  type ApiPage,
   type Category,
   type City,
   type Commune,
   type Neighborhood,
+  type Region,
   type ServiceRequest,
   type Trade,
 } from "@/lib/client-api";
@@ -28,12 +28,14 @@ import { OfflineActionError } from "@/lib/safe-api";
 
 type FormState = RequestDraftPayload & {
   category: string;
+  region: string;
   city: string;
   commune: string;
 };
 
 const EMPTY_FORM: FormState = {
   category: "",
+  region: "",
   trade: "",
   city: "",
   commune: "",
@@ -55,6 +57,7 @@ export default function NewClientRequestPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [trades, setTrades] = useState<Trade[]>([]);
   const [cities, setCities] = useState<City[]>([]);
+  const [regions, setRegions] = useState<Region[]>([]);
   const [communes, setCommunes] = useState<Commune[]>([]);
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
   const [draft, setDraft] = useState<RequestDraft | null>(null);
@@ -62,6 +65,7 @@ export default function NewClientRequestPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const sending = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -71,19 +75,26 @@ export default function NewClientRequestPage() {
         : null;
 
     Promise.all([
-      apiGet<ApiPage<Category>>("/api/v1/catalog/categories/"),
-      apiGet<ApiPage<City>>("/api/v1/locations/cities/"),
-      draftId ? getRequestDraft(draftId) : Promise.resolve(null),
+      apiGetAll<Category>("/api/v1/catalog/categories/"),
+      apiGetAll<Region>("/api/v1/locations/regions/"),
+      draftId ? getRequestDraft(draftId, user.id) : Promise.resolve(null),
     ])
-      .then(([categoryPage, cityPage, localDraft]) => {
+      .then(([categoryItems, regionItems, localDraft]) => {
         if (!active) return;
-        setCategories(categoryPage.results);
-        setCities(cityPage.results);
+        setCategories(categoryItems);
+        setRegions(regionItems);
         setDraft(localDraft);
+
+        if (draftId && !localDraft) {
+          setError("Ce brouillon n’est pas disponible pour votre compte sur cet appareil.");
+        }
 
         if (localDraft) {
           setForm({
             category: localDraft.context?.category ?? "",
+            region: localDraft.context?.region ?? regionItems.find(
+              (region) => region.name.toLowerCase() === "district de bamako",
+            )?.id ?? "",
             trade: localDraft.payload.trade,
             city: localDraft.context?.city ?? "",
             commune: localDraft.context?.commune ?? "",
@@ -94,11 +105,11 @@ export default function NewClientRequestPage() {
             priority: localDraft.payload.priority,
           });
         } else {
-          const bamako = cityPage.results.find(
-            (city) => city.name.toLowerCase() === "bamako",
+          const bamakoDistrict = regionItems.find(
+            (region) => region.name.toLowerCase() === "district de bamako",
           );
-          if (bamako) {
-            setForm((current) => ({ ...current, city: bamako.id }));
+          if (bamakoDistrict) {
+            setForm((current) => ({ ...current, region: bamakoDistrict.id }));
           }
         }
       })
@@ -112,18 +123,35 @@ export default function NewClientRequestPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [user.id]);
+
+  useEffect(() => {
+    if (!form.region) return;
+    let active = true;
+    apiGetAll<City>(`/api/v1/locations/cities/?region=${encodeURIComponent(form.region)}`)
+      .then((items) => {
+        if (!active) return;
+        setCities(items);
+        setForm((current) => {
+          if (current.region !== form.region || current.city) return current;
+          const bamako = items.find((city) => city.name.toLowerCase() === "bamako");
+          return bamako ? { ...current, city: bamako.id } : current;
+        });
+      })
+      .catch((caught) => { if (active) setError(errorMessage(caught)); });
+    return () => { active = false; };
+  }, [form.region]);
 
   useEffect(() => {
     if (!form.category) {
       return;
     }
     let active = true;
-    apiGet<ApiPage<Trade>>(
+    apiGetAll<Trade>(
       `/api/v1/catalog/trades/?category=${encodeURIComponent(form.category)}`,
     )
-      .then((page) => {
-        if (active) setTrades(page.results);
+      .then((items) => {
+        if (active) setTrades(items);
       })
       .catch((caught) => {
         if (active) setError(errorMessage(caught));
@@ -138,11 +166,11 @@ export default function NewClientRequestPage() {
       return;
     }
     let active = true;
-    apiGet<ApiPage<Commune>>(
+    apiGetAll<Commune>(
       `/api/v1/locations/communes/?city=${encodeURIComponent(form.city)}`,
     )
-      .then((page) => {
-        if (active) setCommunes(page.results);
+      .then((items) => {
+        if (active) setCommunes(items);
       })
       .catch((caught) => {
         if (active) setError(errorMessage(caught));
@@ -157,11 +185,11 @@ export default function NewClientRequestPage() {
       return;
     }
     let active = true;
-    apiGet<ApiPage<Neighborhood>>(
+    apiGetAll<Neighborhood>(
       `/api/v1/locations/neighborhoods/?commune=${encodeURIComponent(form.commune)}`,
     )
-      .then((page) => {
-        if (active) setNeighborhoods(page.results);
+      .then((items) => {
+        if (active) setNeighborhoods(items);
       })
       .catch((caught) => {
         if (active) setError(errorMessage(caught));
@@ -187,6 +215,11 @@ export default function NewClientRequestPage() {
     setForm((current) => {
       const next = { ...current, [key]: value };
       if (key === "category") next.trade = "";
+      if (key === "region") {
+        next.city = "";
+        next.commune = "";
+        next.neighborhood = "";
+      }
       if (key === "city") {
         next.commune = "";
         next.neighborhood = "";
@@ -197,6 +230,11 @@ export default function NewClientRequestPage() {
 
     if (key === "category") {
       setTrades([]);
+    }
+    if (key === "region") {
+      setCities([]);
+      setCommunes([]);
+      setNeighborhoods([]);
     }
     if (key === "city") {
       setCommunes([]);
@@ -224,15 +262,14 @@ export default function NewClientRequestPage() {
   }
 
   async function saveDraftOnly() {
-    if (!validate()) return;
-
     setBusy(true);
     setError("");
     try {
       const base =
         draft ??
-        createRequestDraft(payload, {
+        createRequestDraft(payload, user.id, {
           category: form.category,
+          region: form.region,
           city: form.city,
           commune: form.commune,
         });
@@ -241,10 +278,11 @@ export default function NewClientRequestPage() {
         payload,
         context: {
           category: form.category,
+          region: form.region,
           city: form.city,
           commune: form.commune,
         },
-      });
+      }, user.id);
       setDraft(saved);
       setMessage("Brouillon enregistré sur cet appareil — non envoyé.");
       window.history.replaceState(
@@ -261,6 +299,7 @@ export default function NewClientRequestPage() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (sending.current) return;
     if (!validate()) return;
 
     if (!user.phone_verified_at) {
@@ -268,6 +307,7 @@ export default function NewClientRequestPage() {
       return;
     }
 
+    sending.current = true;
     setBusy(true);
     setError("");
     setMessage("");
@@ -280,9 +320,13 @@ export default function NewClientRequestPage() {
       );
 
       if (draft) {
-        await deleteRequestDraft(draft.id);
+        // A local cleanup failure cannot turn a successful server creation into a retry.
+        try {
+          await deleteRequestDraft(draft.id, user.id);
+        } catch {
+          // The saved request remains authoritative; an old local draft is harmless.
+        }
       }
-
       router.push(`/client/demandes/${created.id}`);
       router.refresh();
     } catch (caught) {
@@ -290,8 +334,9 @@ export default function NewClientRequestPage() {
         try {
           const base =
             draft ??
-            createRequestDraft(payload, {
+            createRequestDraft(payload, user.id, {
               category: form.category,
+              region: form.region,
               city: form.city,
               commune: form.commune,
             });
@@ -300,10 +345,11 @@ export default function NewClientRequestPage() {
             payload,
             context: {
               category: form.category,
+              region: form.region,
               city: form.city,
               commune: form.commune,
             },
-          });
+          }, user.id);
           setDraft(saved);
           setMessage(
             "Connexion absente : demande conservée comme brouillon non envoyé.",
@@ -320,6 +366,7 @@ export default function NewClientRequestPage() {
         setError(errorMessage(caught));
       }
     } finally {
+      sending.current = false;
       setBusy(false);
     }
   }
@@ -341,6 +388,14 @@ export default function NewClientRequestPage() {
       </section>
 
       <form className="request-form-card" onSubmit={submit}>
+        <div className="request-form-intro">
+          <span className="request-form-eyebrow">Votre demande, étape par étape</span>
+          <h2>Décrivez votre besoin</h2>
+          <p>Choisissez le métier, indiquez le quartier, puis décrivez le problème. Vous pouvez enregistrer un brouillon à tout moment.</p>
+          <div className="request-form-steps" aria-label="Étapes du formulaire">
+            <span>01 · Service</span><span>02 · Lieu</span><span>03 · Détails</span><span>04 · Priorité</span>
+          </div>
+        </div>
         {draft && (
           <div className="draft-banner">
             <strong>Brouillon local</strong>
@@ -395,10 +450,20 @@ export default function NewClientRequestPage() {
           <div className="form-section-content">
             <h2>Lieu de l’intervention</h2>
             <p>Sélectionnez votre zone puis précisez l’adresse.</p>
-            <div className="form-grid three">
+            <div className="form-grid two">
+              <label className="field">
+                <span>Région / district *</span>
+                <select required value={form.region} onChange={(event) => update("region", event.target.value)}>
+                  <option value="">Choisir</option>
+                  {regions.map((region) => (
+                    <option value={region.id} key={region.id}>{region.name}</option>
+                  ))}
+                </select>
+              </label>
               <label className="field">
                 <span>Ville *</span>
                 <select
+                  disabled={!form.region}
                   required
                   value={form.city}
                   onChange={(event) => update("city", event.target.value)}
@@ -474,6 +539,7 @@ export default function NewClientRequestPage() {
                   value={form.title}
                   onChange={(event) => update("title", event.target.value)}
                 />
+                <small className="field-count">{form.title.length}/150 caractères</small>
               </label>
               <label className="field">
                 <span>Description *</span>
@@ -485,6 +551,7 @@ export default function NewClientRequestPage() {
                   value={form.description}
                   onChange={(event) => update("description", event.target.value)}
                 />
+                <small className="field-count">{form.description.length}/2000 caractères</small>
               </label>
             </div>
           </div>

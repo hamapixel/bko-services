@@ -9,12 +9,14 @@ export type RequestDraftPayload = {
 
 export type RequestDraftContext = {
   category?: string;
+  region?: string;
   city?: string;
   commune?: string;
 };
 
 export type RequestDraft = {
   id: string;
+  ownerId: string;
   kind: "SERVICE_REQUEST";
   state: "LOCAL_DRAFT";
   payload: RequestDraftPayload;
@@ -64,12 +66,14 @@ function transactionDone(transaction: IDBTransaction): Promise<void> {
 
 export function createRequestDraft(
   payload: RequestDraftPayload,
+  ownerId: string,
   context?: RequestDraftContext,
 ): RequestDraft {
   const now = new Date().toISOString();
 
   return {
     id: crypto.randomUUID(),
+    ownerId,
     kind: "SERVICE_REQUEST",
     state: "LOCAL_DRAFT",
     payload,
@@ -81,7 +85,11 @@ export function createRequestDraft(
 
 export async function saveRequestDraft(
   draft: RequestDraft,
+  ownerId: string,
 ): Promise<RequestDraft> {
+  if (draft.ownerId !== ownerId) {
+    throw new Error("Ce brouillon appartient à un autre compte.");
+  }
   const database = await openDatabase();
   const updated: RequestDraft = {
     ...draft,
@@ -96,7 +104,7 @@ export async function saveRequestDraft(
   return updated;
 }
 
-export async function listRequestDrafts(): Promise<RequestDraft[]> {
+export async function listRequestDrafts(ownerId: string): Promise<RequestDraft[]> {
   const database = await openDatabase();
 
   const drafts = await new Promise<RequestDraft[]>((resolve, reject) => {
@@ -105,9 +113,9 @@ export async function listRequestDrafts(): Promise<RequestDraft[]> {
 
     request.onsuccess = () => {
       resolve(
-        (request.result as RequestDraft[]).sort((left, right) =>
-          right.updatedAt.localeCompare(left.updatedAt),
-        ),
+        (request.result as RequestDraft[])
+          .filter((draft) => draft.ownerId === ownerId)
+          .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)),
       );
     };
     request.onerror = () =>
@@ -120,6 +128,7 @@ export async function listRequestDrafts(): Promise<RequestDraft[]> {
 
 export async function getRequestDraft(
   id: string,
+  ownerId: string,
 ): Promise<RequestDraft | null> {
   const database = await openDatabase();
 
@@ -127,8 +136,10 @@ export async function getRequestDraft(
     const transaction = database.transaction(STORE_NAME, "readonly");
     const request = transaction.objectStore(STORE_NAME).get(id);
 
-    request.onsuccess = () =>
-      resolve((request.result as RequestDraft | undefined) ?? null);
+    request.onsuccess = () => {
+      const draft = request.result as RequestDraft | undefined;
+      resolve(draft?.ownerId === ownerId ? draft : null);
+    };
     request.onerror = () =>
       reject(request.error ?? new Error("Impossible de lire le brouillon."));
   });
@@ -137,7 +148,8 @@ export async function getRequestDraft(
   return draft;
 }
 
-export async function deleteRequestDraft(id: string): Promise<void> {
+export async function deleteRequestDraft(id: string, ownerId: string): Promise<void> {
+  if (!(await getRequestDraft(id, ownerId))) return;
   const database = await openDatabase();
   const transaction = database.transaction(STORE_NAME, "readwrite");
   transaction.objectStore(STORE_NAME).delete(id);

@@ -13,6 +13,7 @@ import {
   type City,
   type Commune,
   type Neighborhood,
+  type Region,
   type PublicUser,
   type Trade,
 } from "@/lib/client-api";
@@ -94,6 +95,8 @@ export default function BecomeProviderPage() {
   const [categoryId, setCategoryId] = useState("");
   const [trades, setTrades] = useState<Trade[]>([]);
   const [cities, setCities] = useState<City[]>([]);
+  const [regions, setRegions] = useState<Region[]>([]);
+  const [regionId, setRegionId] = useState("");
   const [cityId, setCityId] = useState("");
   const [communes, setCommunes] = useState<Commune[]>([]);
   const [communeId, setCommuneId] = useState("");
@@ -134,6 +137,7 @@ export default function BecomeProviderPage() {
       if (caught instanceof ApiReadError && caught.status === 404) {
         setApplication(null);
         setEditingApplication(false);
+        setLoadingOptions(true);
         setStage("application");
         return;
       }
@@ -168,22 +172,20 @@ export default function BecomeProviderPage() {
     if (stage !== "application") return;
 
     let active = true;
-    setLoadingOptions(true);
-
     Promise.all([
       apiGetAll<Category>("/api/v1/catalog/categories/"),
-      apiGetAll<City>("/api/v1/locations/cities/"),
+      apiGetAll<Region>("/api/v1/locations/regions/"),
     ])
-      .then(([categoryItems, cityItems]) => {
+      .then(([categoryItems, regionItems]) => {
         if (!active) return;
         setCategories(categoryItems);
-        setCities(cityItems);
+        setRegions(regionItems);
 
-        const bamako = cityItems.find(
-          (city) => city.name.toLowerCase() === "bamako",
+        const bamakoDistrict = regionItems.find(
+          (region) => region.name.toLowerCase() === "district de bamako",
         );
-        if (bamako) {
-          setCityId((current) => current || bamako.id);
+        if (bamakoDistrict) {
+          setRegionId((current) => current || bamakoDistrict.id);
         }
       })
       .catch((caught) => {
@@ -199,10 +201,24 @@ export default function BecomeProviderPage() {
   }, [stage]);
 
   useEffect(() => {
-    if (stage !== "application" || !categoryId) {
-      setTrades([]);
-      return;
-    }
+    if (stage !== "application" || !regionId) return;
+    let active = true;
+    apiGetAll<City>(
+      "/api/v1/locations/cities/?region=" + encodeURIComponent(regionId),
+    )
+      .then((items) => {
+        if (!active) return;
+        setCities(items);
+        setCityId((current) => current || items.find(
+          (city) => city.name.toLowerCase() === "bamako",
+        )?.id || "");
+      })
+      .catch((caught) => { if (active) setError(messageFromError(caught)); });
+    return () => { active = false; };
+  }, [regionId, stage]);
+
+  useEffect(() => {
+    if (stage !== "application" || !categoryId) return;
 
     let active = true;
     apiGetAll<Trade>(
@@ -221,10 +237,7 @@ export default function BecomeProviderPage() {
   }, [categoryId, stage]);
 
   useEffect(() => {
-    if (stage !== "application" || !cityId) {
-      setCommunes([]);
-      return;
-    }
+    if (stage !== "application" || !cityId) return;
 
     let active = true;
     apiGetAll<Commune>(
@@ -243,10 +256,7 @@ export default function BecomeProviderPage() {
   }, [cityId, stage]);
 
   useEffect(() => {
-    if (stage !== "application" || !communeId) {
-      setNeighborhoods([]);
-      return;
-    }
+    if (stage !== "application" || !communeId) return;
 
     let active = true;
     apiGetAll<Neighborhood>(
@@ -488,6 +498,7 @@ export default function BecomeProviderPage() {
       ),
     );
     setEditingApplication(true);
+    setLoadingOptions(true);
     setError("");
     setInfo("");
     setStage("application");
@@ -897,7 +908,10 @@ export default function BecomeProviderPage() {
                     <select
                       disabled={loadingOptions}
                       value={categoryId}
-                      onChange={(event) => setCategoryId(event.target.value)}
+                      onChange={(event) => {
+                        setCategoryId(event.target.value);
+                        setTrades([]);
+                      }}
                     >
                       <option value="">Choisir une catégorie</option>
                       {categories.map((category) => (
@@ -980,12 +994,34 @@ export default function BecomeProviderPage() {
 
                   <div className="form-grid two">
                     <label className="field">
+                      <span>Région / district</span>
+                      <select
+                        value={regionId}
+                        onChange={(event) => {
+                          setRegionId(event.target.value);
+                          setCities([]);
+                          setCityId("");
+                          setCommunes([]);
+                          setCommuneId("");
+                          setNeighborhoods([]);
+                        }}
+                      >
+                        <option value="">Choisir une région ou un district</option>
+                        {regions.map((region) => (
+                          <option key={region.id} value={region.id}>{region.name}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field">
                       <span>Ville</span>
                       <select
+                        disabled={!regionId}
                         value={cityId}
                         onChange={(event) => {
                           setCityId(event.target.value);
+                          setCommunes([]);
                           setCommuneId("");
+                          setNeighborhoods([]);
                         }}
                       >
                         <option value="">Choisir une ville</option>
@@ -1002,7 +1038,10 @@ export default function BecomeProviderPage() {
                       <select
                         disabled={!cityId}
                         value={communeId}
-                        onChange={(event) => setCommuneId(event.target.value)}
+                        onChange={(event) => {
+                          setCommuneId(event.target.value);
+                          setNeighborhoods([]);
+                        }}
                       >
                         <option value="">Choisir une commune</option>
                         {communes.map((commune) => (

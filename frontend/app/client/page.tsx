@@ -33,7 +33,7 @@ export default function ClientDashboardPage() {
       apiGet<ApiPage<ServiceRequest>>(
         "/api/v1/requests/?status=CLIENT_CONFIRMED",
       ),
-      listRequestDrafts().catch(() => []),
+      listRequestDrafts(user.id).catch(() => []),
     ])
       .then(([allPage, waitingPage, completedPage, drafts]) => {
         if (!active) return;
@@ -58,7 +58,7 @@ export default function ClientDashboardPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [user.id]);
 
   const firstName = user.first_name || "Bienvenue";
 

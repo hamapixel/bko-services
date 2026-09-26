@@ -73,6 +73,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(!isLoginPage);
   const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState("");
+  const [logoutBusy, setLogoutBusy] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
+  const userId = user?.id;
+  const hasOverview = overview !== null;
 
   const refreshOverview = useCallback(async () => {
     const next = await apiGet<AdminOverview>("/api/v1/admin/overview/");
@@ -122,6 +126,57 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     };
   }, [isLoginPage, router]);
 
+  useEffect(() => {
+    if (isLoginPage || !userId || !hasOverview) return;
+
+    let active = true;
+    let checking = false;
+
+    async function verifySession() {
+      if (!active || checking) return;
+      checking = true;
+      try {
+        const account = await apiGet<PublicUser>("/api/v1/auth/me/");
+        if (!active) return;
+        if (account.id !== userId) {
+          setUser(null);
+          setOverview(null);
+          router.replace("/admin/connexion");
+          return;
+        }
+        const nextOverview = await apiGet<AdminOverview>("/api/v1/admin/overview/");
+        if (active) setOverview(nextOverview);
+      } catch (caught) {
+        if (
+          active && caught instanceof ApiReadError &&
+          (caught.status === 401 || caught.status === 403)
+        ) {
+          setUser(null);
+          setOverview(null);
+          router.replace("/admin/connexion");
+        }
+      } finally {
+        checking = false;
+      }
+    }
+
+    function onVisibilityChange() {
+      if (document.visibilityState === "visible") void verifySession();
+    }
+
+    window.addEventListener("focus", verifySession);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    const interval = window.setInterval(verifySession, 60_000);
+    void verifySession();
+
+    return () => {
+      active = false;
+      window.removeEventListener("focus", verifySession);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.clearInterval(interval);
+    };
+  }, [hasOverview, isLoginPage, pathname, router, userId]);
+
   const contextValue = useMemo(
     () =>
       user && overview
@@ -136,11 +191,18 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   );
 
   async function logout() {
+    if (logoutBusy) return;
+    setLogoutBusy(true);
+    setLogoutError("");
     try {
       await apiMutation<void>("/api/v1/auth/logout/", "POST", {});
-    } finally {
+      setUser(null);
+      setOverview(null);
       router.replace("/admin/connexion");
       router.refresh();
+    } catch (caught) {
+      setLogoutError(caught instanceof Error ? caught.message : "Déconnexion impossible. Réessayez.");
+      setLogoutBusy(false);
     }
   }
 
@@ -237,8 +299,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               </strong>
               <small>{user.phone}</small>
             </span>
-            <button className="text-button" type="button" onClick={logout}>
-              Quitter
+            <button className="text-button" type="button" onClick={logout} disabled={logoutBusy}>
+              Se déconnecter
             </button>
           </div>
         </aside>
@@ -267,6 +329,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               <small>Supervision et opérations habilitées.</small>
             </div>
             <span className="admin-role-badge">{user.role}</span>
+            <button className="shell-logout-button" type="button" onClick={logout} disabled={logoutBusy} aria-label="Se déconnecter">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+              <span>Déconnexion</span>
+            </button>
             <Link className="admin-topbar-avatar" href="/admin/profil" aria-label="Ouvrir mon profil">
               {user.has_avatar && user.avatar_url ? (
                 <img src={user.avatar_url} alt="" />
@@ -276,11 +342,13 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             </Link>
           </header>
 
+          {logoutError && <div className="shell-logout-error" role="alert">{logoutError}</div>}
+
           <div className="admin-content">{children}</div>
         </div>
 
         <nav className="admin-bottom-nav" aria-label="Navigation mobile">
-          {visibleItems.slice(0, 4).map((item) => (
+          {visibleItems.filter((item) => ["/admin", "/admin/prestataires", "/admin/demandes", "/admin/abonnements", "/admin/profil"].includes(item.href)).map((item) => (
             <Link
               className={
                 navIsActive(pathname, item.href)
@@ -289,6 +357,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               }
               href={item.href}
               key={item.href}
+              aria-current={navIsActive(pathname, item.href) ? "page" : undefined}
             >
               <span aria-hidden="true">{item.icon}</span>
               <small>{item.label}</small>
