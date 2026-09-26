@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 22 — espace administration responsive validé localement**. Dashboard permission-aware, prestataires, demandes, plaintes, abonnements, paiements et utilisateurs sont branchés sur les API Django sécurisées.
+> Statut : **étapes 0 à 22 développées ; préparation de production en cours**. Les espaces sont branchés sur les API Django. La feuille de route et les prérequis de mise en ligne sont détaillés dans [docs/production-roadmap.md](docs/production-roadmap.md).
 
 ## Principes
 
@@ -19,7 +19,7 @@
 | API | Django + Django REST Framework | Authentification, droits d'accès, règles métier, administration et API `/api/v1/` |
 | Données | PostgreSQL | Données relationnelles, contraintes et attribution atomique |
 | Application web | Une application Next.js + TypeScript | Pages publiques et espaces client, prestataire et administrateur ; PWA responsive |
-| Tâches | Celery + Redis | Notifications, SMS, rappels et expirations hors des requêtes HTTP |
+| Tâches (cible) | Celery + Redis, à mettre en place | Notifications, SMS, rappels et expirations hors des requêtes HTTP |
 | Notifications | Centre interne + Web Push ; SMS via adaptateur | Alertes et vérification du téléphone, avec suivi des envois |
 | Fichiers | Stockage privé pour documents sensibles | Validation des images, accès contrôlé et sauvegardes |
 
@@ -75,4 +75,4 @@ Chaque étape suit le cycle : explication → commandes → fichiers complets �
 
 ## À venir
 
-Tests renforcés, CI, Docker et déploiement. Les exigences avant production figurent dans [docs/architecture.md](docs/architecture.md).
+Tests renforcés sur PostgreSQL, CI, configuration serveur, préproduction puis déploiement. Voir la [feuille de route de production](docs/production-roadmap.md) et les [exigences d'architecture](docs/architecture.md).
