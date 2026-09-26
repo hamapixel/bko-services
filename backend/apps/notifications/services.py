@@ -1,16 +1,35 @@
 import json
 import logging
+from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from pywebpush import WebPushException, webpush
-from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
 from .models import Notification, PushSubscription
 
 
 logger = logging.getLogger(__name__)
+
+
+def is_allowed_push_endpoint(endpoint):
+    """Only browser push services may receive server-side notification requests."""
+    try:
+        parsed = urlsplit(endpoint)
+        host = parsed.hostname or ""
+        port = parsed.port
+    except ValueError:
+        return False
+    if (parsed.scheme != "https" or port not in (None, 443)
+            or parsed.username or parsed.password or parsed.fragment or not parsed.path):
+        return False
+    return (
+        host in {"fcm.googleapis.com", "android.googleapis.com", "updates.push.services.mozilla.com"}
+        or host.endswith(".push.apple.com")
+        or host.endswith(".notify.windows.com")
+    )
 
 
 def web_push_configured():
@@ -72,6 +91,10 @@ def send_push_for_notification(notification_id):
         user_id=notification.recipient_id,
         is_active=True,
     ):
+        if not is_allowed_push_endpoint(subscription.endpoint):
+            subscription.is_active = False
+            subscription.save(update_fields=["is_active", "updated_at"])
+            continue
         subscription_info = {
             "endpoint": subscription.endpoint,
             "keys": {
@@ -112,6 +135,8 @@ def send_push_for_notification(notification_id):
 def register_push_subscription(user, *, endpoint, keys):
     if not user.is_authenticated or not user.is_active:
         raise PermissionDenied("Un compte actif est nécessaire.")
+    if not is_allowed_push_endpoint(endpoint):
+        raise ValidationError({"endpoint": "Service de notifications non autorisé."})
 
     subscription = (
         PushSubscription.objects.select_for_update()
@@ -126,6 +151,8 @@ def register_push_subscription(user, *, endpoint, keys):
             auth=keys["auth"],
         )
 
+    # A browser can reuse one endpoint after another user logs in. Transfer it
+    # so notifications for the previous account no longer reach that browser.
     user_changed = subscription.user_id != user.pk
     subscription.user = user
     subscription.p256dh = keys["p256dh"]
