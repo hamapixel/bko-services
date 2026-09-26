@@ -4414,10 +4414,6 @@ textarea:disabled {
     padding: 14px 16px;
   }
 
-  .home-premium-nav a:first-child {
-    display: none;
-  }
-
   .home-premium-copy {
     padding: 34px 18px 28px;
   }
@@ -6562,5 +6558,80 @@ textarea:disabled {
   .provider-bottom-link small,
   .admin-bottom-link small {
     font-size: 8px;
+  }
+}
+
+/* Keep both client and provider entry points visible on the public home. */
+.home-premium-nav a {
+  white-space: nowrap;
+  transition: background .2s ease, border-color .2s ease;
+}
+
+.home-premium-nav a:focus-visible {
+  outline: 3px solid #f27932;
+  outline-offset: 2px;
+}
+
+.home-premium-provider-login {
+  border: 1px solid #d1dce8;
+  background: #f5f9fd;
+}
+
+.home-premium-become {
+  border: 1px solid #f3d3bb;
+  background: #fff2e8;
+  color: #a84717 !important;
+}
+
+.home-premium-nav a:hover {
+  background: #eaf2fa;
+}
+
+.home-premium-nav .home-premium-become:hover {
+  background: #ffe4d1;
+}
+
+@media (max-width: 900px) {
+  .home-premium-topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    padding: calc(16px + env(safe-area-inset-top)) 18px 18px;
+  }
+
+  .home-premium-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .home-premium-nav a {
+    min-width: 0;
+    min-height: 46px;
+    padding: 8px;
+    font-size: 12px;
+    line-height: 1.25;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .home-premium-login {
+    grid-column: 1 / -1;
+  }
+
+  .home-premium-become,
+  .home-premium-provider-login {
+    border-radius: 14px;
+  }
+}
+
+@media (max-width: 360px) {
+  .home-premium-topbar {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .home-premium-nav a {
+    font-size: 11px;
   }
 }
