@@ -75,7 +75,9 @@ def accept_offer(offer_id, user):
     request_id = _offer_request_id_for_user(offer_id, user)
 
     service_request = (
-        ServiceRequest.objects.select_for_update()
+        # The neighborhood is nullable until an administrator verifies a new
+        # region. PostgreSQL cannot lock the nullable side of this join.
+        ServiceRequest.objects.select_for_update(of=("self",))
         .select_related(
             "trade__category",
             "neighborhood__commune__city",
