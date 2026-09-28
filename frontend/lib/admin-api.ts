@@ -32,6 +32,7 @@ export type AdminOverview = {
   providers_pending: number;
   providers_verified: number;
   requests_active: number;
+  requests_waiting: number;
   complaints_open: number;
   payments_pending: number;
   payments_unfulfilled: number;

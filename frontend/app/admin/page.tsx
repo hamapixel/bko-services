@@ -11,6 +11,7 @@ export default function AdminDashboardPage() {
     ["Utilisateurs", overview.users_total, "Comptes enregistrés", "/admin/utilisateurs", overview.capabilities.users, "●"],
     ["Prestataires à valider", overview.providers_pending, "Dossiers en attente", "/admin/prestataires", overview.capabilities.providers, "✓"],
     ["Demandes actives", overview.requests_active, "Parcours non terminés", "/admin/demandes", overview.capabilities.requests, "≡"],
+    ["Demandes sans offre", overview.requests_waiting, "À rechercher dès qu’un prestataire est prêt", "/admin/demandes?filter=waiting", overview.capabilities.requests, "↻"],
     ["Plaintes ouvertes", overview.complaints_open, "Ouvertes ou en examen", "/admin/plaintes", overview.capabilities.complaints, "!"],
     ["Paiements en attente", overview.payments_pending, "Transactions non terminales", "/admin/paiements", overview.capabilities.payments, "₣"],
     ["Paiements à finaliser", overview.payments_unfulfilled, "Payés mais non appliqués", "/admin/paiements", overview.capabilities.payments, "↻"],

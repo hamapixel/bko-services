@@ -232,6 +232,10 @@ class AdminOverviewView(APIView):
                 "requests_active": ServiceRequest.objects.filter(
                     status__in=active_request_statuses
                 ).count(),
+                "requests_waiting": ServiceRequest.objects.filter(
+                    status=ServiceRequest.Status.SEARCHING,
+                    offers__isnull=True,
+                ).count() if can_view_requests else 0,
                 "complaints_open": Complaint.objects.filter(
                     status__in=[
                         Complaint.Status.OPEN,

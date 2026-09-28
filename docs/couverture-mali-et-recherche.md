@@ -1,0 +1,13 @@
+# Couverture du Mali et recherche automatique
+
+La page d'accueil propose une recherche instantanée dans les **métiers actifs** du catalogue : la saisie ignore les accents et propose jusqu'à six métiers correspondants. Après choix, le formulaire de demande reprend ce métier, y compris après une connexion ou une inscription client. La recherche n'affiche pas les coordonnées ni les profils privés des prestataires.
+
+La migration `locations.0006_mali_regions` ajoute les 19 régions du Mali en plus du District de Bamako déjà existant. Elle n'invente aucune ville, commune ou quartier. Les API publiques ne proposent une région que si elle contient au moins une chaîne **ville → commune → quartier** active. Pour ouvrir Kayes, Kidal ou une autre région : créer ou vérifier ces lieux dans `/django-admin/`, les activer, puis créer des profils de prestataires dont les métiers et quartiers desservis correspondent. Le choix géographique côté client et prestataire ne privilégie plus Bamako automatiquement.
+
+Une demande est comparée immédiatement après son envoi aux prestataires vérifiés, disponibles, actifs, abonnés et joignables, qui exercent le métier demandé **et** desservent précisément le quartier choisi. Une demande normale reçoit une offre privée ; une urgence peut en recevoir cinq au maximum. Sans candidat, elle reste en recherche, une notification interne est créée pour les administrateurs habilités, et le bandeau d'administration affiche les demandes sans offre (actualisé toutes les 15 secondes quand l'onglet est visible).
+
+Le système réessaie les demandes en attente après la mise à disposition d'un prestataire, l'activation ou le renouvellement d'un abonnement et la fin d'une intervention qui libère sa capacité. La confirmation de paiement reste exclusivement gérée par le webhook vérifié ; une simple page de retour n'active aucun abonnement. Les demandes déjà en recherche avant cette version sont visibles dans l'administration et peuvent être relancées manuellement. Cette relance automatique dépend des événements applicatifs : elle n'est pas un traitement périodique indépendant. Pour une grande file d'attente, déplacer ces reprises vers un worker avec une supervision et des tentatives différées.
+
+La page publique de [PrestZen](https://app.prestzen.com/) a inspiré la recherche immédiate d'un service. BKO Services conserve son parcours de demande et d'offre privée, avec vérification du prestataire, contrôle du quartier et abonnement.
+
+Références pour la nomenclature territoriale : [ministère de l'Administration territoriale](https://matd.gouv.ml/) et [statut particulier du District de Bamako](https://matd.gouv.ml/uploads/topics/17110167706065.pdf). Vérifier les subdivisions exactes avant toute ouverture d'une nouvelle zone.

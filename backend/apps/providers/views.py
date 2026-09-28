@@ -12,6 +12,7 @@ from rest_framework.views import APIView
 
 from .models import ProviderProfile
 from .serializers import ApplicationSerializer, AvailabilitySerializer, OwnProviderSerializer, PublicProviderSerializer
+from apps.requests.matching import schedule_waiting_request_retry
 
 
 def reject_extra_fields(data, allowed):
@@ -88,8 +89,11 @@ class AvailabilityView(APIView):
                 is_active=True, commune__is_active=True, commune__city__is_active=True, commune__city__region__is_active=True
             ).exists():
                 raise ValidationError({"detail": "Un métier et un quartier actifs sont nécessaires."})
+        became_available = serializer.validated_data["is_available"] and not profile.is_available
         profile.is_available = serializer.validated_data["is_available"]
         profile.save(update_fields=["is_available", "updated_at"])
+        if became_available:
+            schedule_waiting_request_retry(profile.pk)
         return Response({"is_available": profile.is_available})
 
 

@@ -1,10 +1,12 @@
 # Feuille de route vers la production
 
-État au 26 septembre 2026. Cette page décrit le dépôt actuel, pas un environnement déjà déployé. La branche `fix/regions-auto-matching` est publiée dans la PR #22 ; le déploiement public doit utiliser une version relue et intégrée à la branche de livraison.
+État au 28 septembre 2026. Cette page décrit le dépôt actuel, pas un environnement déjà déployé. La branche `fix/regions-auto-matching` est publiée dans une PR ; le déploiement public doit utiliser une version relue et intégrée à la branche de livraison.
 
 ## Ce qui fonctionne déjà
 
 L'application comprend les parcours client, prestataire et administration, les lieux et métiers, les demandes et offres privées, le suivi, les avis, les plaintes, les abonnements et l'essai unique. Le backend possède une intégration Wave Checkout avec activation par webhook signé et idempotent. La PWA, les brouillons locaux et le Web Push sont présents. L'adaptateur SMS Twilio existe.
+
+La recherche instantanée sur les métiers, les notifications internes et le compteur admin des demandes sans offre, la relance du matching lors des événements prestataire et les 19 régions administrables sont détaillés dans [couverture-mali-et-recherche.md](couverture-mali-et-recherche.md). Les subdivisions des nouvelles régions restent à renseigner avant leur ouverture aux utilisateurs.
 
 Ces fonctionnalités ne prouvent pas encore qu'un paiement, un SMS ou une notification fonctionne avec un compte marchand réel en production. Orange Money n'est pas intégré. Le README historique mentionne Celery et Redis comme architecture cible : aucun worker Celery, Redis ou configuration Docker n'est actuellement présent dans le dépôt. La CI sur PostgreSQL et le build frontend ont réussi sur la PR ; une règle active pour `main` exige les deux contrôles.
 
@@ -14,7 +16,7 @@ L'obtention des comptes marchands Wave Business et Orange Money Web Payment au M
 
 | Étape | Travail | Preuve attendue |
 | --- | --- | --- |
-| 23 — Qualité | Suite PostgreSQL terminée : 130 tests OK, dont concurrence et parcours client → prestataire → avis. Contrôles mobiles et accessibilité à terminer. | Résultats des essais mobiles consignés ; tests PostgreSQL déjà validés localement. |
+| 23 — Qualité | Suite PostgreSQL de base validée ; tests ajoutés pour le matching automatique et les régions. Contrôles mobiles et accessibilité à terminer. | Résultats des essais mobiles consignés ; relancer la suite complète sur PostgreSQL après cette mise à jour. |
 | 24 — Automatisation | CI sur PostgreSQL et frontend validée sur la PR ; règle `main` active et deux contrôles requis. | Les deux jobs passent sur la PR et sont requis pour mettre à jour `main`. |
 | 25 — Préparation serveur | Paramètres Django de production, serveur WSGI, fichiers statiques, reverse proxy HTTPS, stockage durable des avatars, sauvegardes et journaux ; décider si Redis/worker est nécessaire aux notifications et aux limites de débit entre processus. | `check --deploy` examiné, services relancés automatiquement, sauvegarde et restauration testées. |
 | 26 — Préproduction | Domaine de test HTTPS, vraie livraison SMS, Web Push, installation iPhone/Android, essais et abonnements, paiement Wave sous contrat marchand. | Tests sur appareils réels, webhook signé, expiration et renouvellement constatés ; incident simulé. |
@@ -22,7 +24,7 @@ L'obtention des comptes marchands Wave Business et Orange Money Web Payment au M
 
 Pour l'étape 23, les commandes PostgreSQL sur Windows et les contrôles manuels mobiles figurent dans [etape-23-qualite.md](etape-23-qualite.md). Le 26 septembre, la suite complète a réussi sur PostgreSQL 18.4 : **130 tests OK, aucun ignoré**. Il reste à consigner les essais mobiles et d'accessibilité. Le workflow PostgreSQL de l'étape 24 et la configuration des contrôles requis sont décrits dans [etape-24-ci.md](etape-24-ci.md).
 
-Le contrôle local `manage.py check --deploy` signale actuellement l'absence de HSTS et de redirection HTTPS au niveau Django (ceux-ci peuvent être assurés par le reverse proxy si configurés et vérifiés), plus la clé volontairement faible utilisée pour l'audit. `STATIC_ROOT` et un serveur WSGI de production restent à configurer. La suite SQLite passe **130 tests, dont 2 ignorés** ; la suite PostgreSQL passe **130 tests sans test ignoré**. Ces résultats locaux ne remplacent pas l'exécution GitHub Actions sur la PR.
+Le contrôle local `manage.py check --deploy` signale actuellement l'absence de HSTS et de redirection HTTPS au niveau Django (ceux-ci peuvent être assurés par le reverse proxy si configurés et vérifiés), plus la clé volontairement faible utilisée pour l'audit. `STATIC_ROOT` et un serveur WSGI de production restent à configurer. Après la présente modification, la suite SQLite passe **134 tests, dont 2 ignorés** (réservés à PostgreSQL). L'ancien résultat PostgreSQL de 130 tests doit être renouvelé sur la nouvelle version. Ces résultats locaux ne remplacent pas l'exécution GitHub Actions sur la PR.
 
 ## Schéma de déploiement conseillé pour la première version
 

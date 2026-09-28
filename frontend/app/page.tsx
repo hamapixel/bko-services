@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ServiceSearch from "@/components/home/service-search";
 
 export default function Home() {
   return (
@@ -9,7 +10,7 @@ export default function Home() {
             <span className="home-premium-mark" aria-hidden="true">B</span>
             <span>
               <strong>BKO Services</strong>
-              <small>Bamako</small>
+              <small>Mali</small>
             </span>
           </div>
 
@@ -28,7 +29,7 @@ export default function Home() {
 
         <div className="home-premium-grid">
           <div className="home-premium-copy">
-            <span className="home-premium-badge">Services de proximité à Bamako</span>
+            <span className="home-premium-badge">Services de proximité dans les zones ouvertes du Mali</span>
             <h1>
               Trouvez le bon professionnel.
               <span> Rapidement.</span>
@@ -37,6 +38,8 @@ export default function Home() {
               Décrivez votre besoin, recevez un prestataire vérifié et suivez
               chaque étape de l’intervention depuis votre téléphone.
             </p>
+
+            <ServiceSearch />
 
             <div className="home-premium-actions">
               <Link className="home-premium-primary" href="/connexion">
@@ -184,7 +187,7 @@ export default function Home() {
         </section>
 
         <footer className="home-premium-footer">
-          <span>BKO Services · Bamako</span>
+          <span>BKO Services · Mali</span>
           <Link href="/connexion">Accéder à mon espace client <span aria-hidden="true">↗</span></Link>
         </footer>
       </section>

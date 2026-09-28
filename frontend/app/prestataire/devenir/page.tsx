@@ -181,12 +181,6 @@ export default function BecomeProviderPage() {
         setCategories(categoryItems);
         setRegions(regionItems);
 
-        const bamakoDistrict = regionItems.find(
-          (region) => region.name.toLowerCase() === "district de bamako",
-        );
-        if (bamakoDistrict) {
-          setRegionId((current) => current || bamakoDistrict.id);
-        }
       })
       .catch((caught) => {
         if (active) setError(messageFromError(caught));
@@ -209,9 +203,6 @@ export default function BecomeProviderPage() {
       .then((items) => {
         if (!active) return;
         setCities(items);
-        setCityId((current) => current || items.find(
-          (city) => city.name.toLowerCase() === "bamako",
-        )?.id || "");
       })
       .catch((caught) => { if (active) setError(messageFromError(caught)); });
     return () => { active = false; };

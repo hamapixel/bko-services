@@ -7,7 +7,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "BKO Services",
-  description: "Le bon professionnel, au bon moment à Bamako.",
+  description: "Le bon professionnel, au bon moment dans les zones desservies du Mali.",
   applicationName: "BKO Services",
   manifest: "/manifest.webmanifest",
   icons: {

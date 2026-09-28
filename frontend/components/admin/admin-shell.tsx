@@ -133,7 +133,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     let checking = false;
 
     async function verifySession() {
-      if (!active || checking) return;
+      if (!active || checking || document.visibilityState === "hidden") return;
       checking = true;
       try {
         const account = await apiGet<PublicUser>("/api/v1/auth/me/");
@@ -166,7 +166,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
     window.addEventListener("focus", verifySession);
     document.addEventListener("visibilitychange", onVisibilityChange);
-    const interval = window.setInterval(verifySession, 60_000);
+    const interval = window.setInterval(verifySession, 15_000);
     void verifySession();
 
     return () => {
@@ -343,6 +343,13 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           </header>
 
           {logoutError && <div className="shell-logout-error" role="alert">{logoutError}</div>}
+
+          {overview.capabilities.requests && overview.requests_waiting > 0 && (
+            <div className="admin-waiting-alert" role="status">
+              <strong>{overview.requests_waiting} demande{overview.requests_waiting > 1 ? "s" : ""} sans offre</strong>
+              <Link href="/admin/demandes?filter=waiting">Voir les demandes à matcher</Link>
+            </div>
+          )}
 
           <div className="admin-content">{children}</div>
         </div>

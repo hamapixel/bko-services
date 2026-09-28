@@ -20,6 +20,12 @@ ACTIVE_INTERVENTION_STATUSES = (
 )
 
 
+def _schedule_waiting_request_retry(provider_id):
+    from apps.requests.matching import schedule_waiting_request_retry
+
+    schedule_waiting_request_retry(provider_id)
+
+
 def can_manage_subscriptions(user):
     return bool(
         user
@@ -223,6 +229,7 @@ def activate_subscription(provider_id, actor, *, plan_id, note=""):
         action=SubscriptionHistory.Action.ACTIVATED,
         note=note,
     )
+    _schedule_waiting_request_retry(provider.pk)
     return subscription
 
 
@@ -289,6 +296,7 @@ def renew_subscription(subscription_id, actor, *, plan_id=None, note=""):
         action=SubscriptionHistory.Action.RENEWED,
         note=note,
     )
+    _schedule_waiting_request_retry(subscription.provider_id)
     return subscription
 
 
@@ -408,4 +416,5 @@ def apply_paid_subscription(
         action=action,
         note=f"Paiement confirmé {payment_reference}",
     )
+    _schedule_waiting_request_retry(provider.pk)
     return subscription

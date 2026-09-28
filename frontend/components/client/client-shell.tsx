@@ -68,6 +68,13 @@ function initials(user: PublicUser) {
     .join("");
 }
 
+function clientLoginPath() {
+  const trade = new URLSearchParams(window.location.search).get("trade");
+  return trade && /^[0-9a-f-]{36}$/i.test(trade) && window.location.pathname === "/client/demandes/nouvelle"
+    ? `/connexion?trade=${encodeURIComponent(trade)}`
+    : "/connexion";
+}
+
 export default function ClientShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -96,7 +103,7 @@ export default function ClientShell({ children }: { children: ReactNode }) {
       .catch((error: unknown) => {
         if (!active) return;
         if (error instanceof ApiReadError && (error.status === 401 || error.status === 403)) {
-          router.replace("/connexion");
+          router.replace(clientLoginPath());
           return;
         }
         setSessionError(
@@ -126,12 +133,12 @@ export default function ClientShell({ children }: { children: ReactNode }) {
         const account = await apiGet<PublicUser>("/api/v1/auth/me/");
         if (active && (account.id !== userId || account.role !== "CLIENT")) {
           setUser(null);
-          router.replace("/connexion");
+          router.replace(clientLoginPath());
         }
       } catch (caught) {
         if (active && caught instanceof ApiReadError && (caught.status === 401 || caught.status === 403)) {
           setUser(null);
-          router.replace("/connexion");
+          router.replace(clientLoginPath());
         }
       } finally {
         checking = false;

@@ -9,8 +9,10 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.catalog.models import Category, Trade
-from apps.locations.models import City, Commune, Neighborhood
+from apps.locations.models import City, Commune, Neighborhood, Region
+from apps.notifications.models import Notification
 from apps.providers.models import ProviderProfile
+from apps.subscriptions.services import activate_subscription
 from apps.subscriptions.models import ProviderSubscription, SubscriptionPlan
 
 from .matching import dispatch_request
@@ -198,6 +200,10 @@ class MatchingTests(TestCase):
         service_request.refresh_from_db()
         self.assertEqual(service_request.status, ServiceRequest.Status.SEARCHING)
         self.assertEqual(service_request.status_history.count(), 2)
+        self.assertEqual(Notification.objects.filter(
+            recipient=self.admin_user, service_request=service_request,
+            kind=Notification.Kind.REQUEST_UNMATCHED,
+        ).count(), 1)
         self.provider()
         admin_client = APIClient()
         admin_client.force_login(self.admin_user)
@@ -210,6 +216,64 @@ class MatchingTests(TestCase):
         self.assertEqual(service_request.status, ServiceRequest.Status.OFFERED)
         self.assertEqual(service_request.status_history.count(), 3)
         self.assertEqual(ServiceOffer.objects.count(), 1)
+        self.assertFalse(Notification.objects.filter(
+            recipient=self.admin_user, service_request=service_request,
+            kind=Notification.Kind.REQUEST_UNMATCHED, read_at__isnull=True,
+        ).exists())
+
+    def test_waiting_request_is_sent_when_provider_becomes_available(self):
+        profile = self.provider(available=False)
+        service_request = create_service_request(
+            self.client_user.pk, trade=self.trade, neighborhood=self.area,
+            title="Fuite", description="Fuite à réparer", address_detail="Près de la pharmacie",
+            priority="NORMAL",
+        )
+        self.assertEqual(service_request.status, ServiceRequest.Status.SEARCHING)
+        api = APIClient()
+        api.force_login(profile.user)
+        with self.captureOnCommitCallbacks(execute=True):
+            response = api.patch("/api/v1/providers/availability/", {"is_available": True}, format="json")
+        self.assertEqual(response.status_code, 200)
+        service_request.refresh_from_db()
+        self.assertEqual(service_request.status, ServiceRequest.Status.OFFERED)
+        self.assertEqual(service_request.offers.get().provider, profile)
+
+    def test_waiting_request_is_sent_after_subscription_activation(self):
+        profile = self.provider(subscribed=False)
+        service_request = create_service_request(
+            self.client_user.pk, trade=self.trade, neighborhood=self.area,
+            title="Fuite", description="Fuite à réparer", address_detail="Près de la pharmacie",
+            priority="NORMAL",
+        )
+        with self.captureOnCommitCallbacks(execute=True):
+            activate_subscription(profile.pk, self.admin_user, plan_id=self.plan.pk)
+        service_request.refresh_from_db()
+        self.assertEqual(service_request.status, ServiceRequest.Status.OFFERED)
+        self.assertEqual(service_request.offers.get().provider, profile)
+
+    def test_matching_uses_exact_quartier_outside_bamako(self):
+        kayes = Region.objects.get(name="Kayes")
+        kidal = Region.objects.get(name="Kidal")
+        kayes_area = Neighborhood.objects.create(
+            commune=Commune.objects.create(city=City.objects.create(name="Kayes", region=kayes), name="Commune Kayes"),
+            name="Quartier Kayes",
+        )
+        kidal_area = Neighborhood.objects.create(
+            commune=Commune.objects.create(city=City.objects.create(name="Kidal", region=kidal), name="Commune Kidal"),
+            name="Quartier Kidal",
+        )
+        kayes_provider = self.provider(area=False)
+        kayes_provider.service_areas.add(kayes_area)
+        kidal_provider = self.provider(area=False)
+        kidal_provider.service_areas.add(kidal_area)
+        for area, provider in ((kayes_area, kayes_provider), (kidal_area, kidal_provider)):
+            request = create_service_request(
+                self.client_user.pk, trade=self.trade, neighborhood=area,
+                title="Intervention", description="Une réparation", address_detail="Adresse privée",
+                priority="NORMAL",
+            )
+            self.assertEqual(request.status, ServiceRequest.Status.OFFERED)
+            self.assertEqual(request.offers.get().provider, provider)
 
     def test_offer_failure_rolls_back_status_and_history(self):
         service_request = self.request()

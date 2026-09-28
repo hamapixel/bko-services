@@ -1,5 +1,8 @@
+from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
+from django.db.models import Q
+from django.utils import timezone
 
 from apps.notifications.models import Notification
 from apps.notifications.services import create_notification
@@ -31,11 +34,64 @@ def dispatch_new_request(request_id, client):
     return _match_request(request_id, client)
 
 
-def _match_request(request_id, actor):
+def retry_waiting_requests_for_provider(provider_id):
+    """Recheck compatible waiting requests when a provider becomes eligible."""
+    profile = ProviderProfile.objects.get(pk=provider_id)
+    if not profile.is_available or profile.status != ProviderProfile.Status.VERIFIED:
+        return 0
+    trade_ids = profile.trades.filter(is_active=True, category__is_active=True).values("pk")
+    area_ids = profile.service_areas.filter(
+        is_active=True, commune__is_active=True, commune__city__is_active=True,
+        commune__city__region__is_active=True,
+    ).values("pk")
+    waiting = list(ServiceRequest.objects.filter(
+        status=ServiceRequest.Status.SEARCHING,
+        trade_id__in=trade_ids,
+        neighborhood_id__in=area_ids,
+        offers__isnull=True,
+    ).order_by("created_at", "pk").values_list("pk", "client_id"))
+    matched = 0
+    for request_id, client_id in waiting:
+        with transaction.atomic():
+            matched += _match_request(
+                request_id,
+                get_user_model().objects.get(pk=client_id),
+                skip_if_already_matched=True,
+            )
+    return matched
+
+
+def schedule_waiting_request_retry(provider_id):
+    # Payment and availability changes must commit before the entitlement is checked.
+    transaction.on_commit(
+        lambda: retry_waiting_requests_for_provider(provider_id), robust=True,
+    )
+
+
+def _notify_admins_no_match(service_request):
+    users = get_user_model().objects.filter(is_active=True, is_staff=True).filter(
+        Q(is_superuser=True) | Q(role="ADMIN")
+    )
+    for user in users:
+        if user.is_superuser or user.has_perm("requests.view_servicerequest"):
+            create_notification(
+                recipient_id=user.pk,
+                kind=Notification.Kind.REQUEST_UNMATCHED,
+                title="Demande sans prestataire",
+                message="Une demande attend un prestataire compatible. Vérifiez les demandes à matcher.",
+                service_request=service_request,
+            )
+
+
+def _match_request(request_id, actor, *, skip_if_already_matched=False):
     service_request = ServiceRequest.objects.select_for_update().get(pk=request_id)
     if service_request.status not in (ServiceRequest.Status.CREATED, ServiceRequest.Status.SEARCHING):
+        if skip_if_already_matched:
+            return 0
         raise ValidationError("Cette demande n'est pas en attente de recherche.")
     if service_request.offers.exists():
+        if skip_if_already_matched:
+            return 0
         raise ValidationError("Des offres existent déjà pour cette demande.")
     trade = service_request.trade
     neighborhood = service_request.neighborhood
@@ -90,4 +146,11 @@ def _match_request(request_id, actor):
             previous_status=ServiceRequest.Status.SEARCHING,
             new_status=ServiceRequest.Status.OFFERED,
         )
+        Notification.objects.filter(
+            service_request=service_request,
+            kind=Notification.Kind.REQUEST_UNMATCHED,
+            read_at__isnull=True,
+        ).update(read_at=timezone.now())
+    else:
+        _notify_admins_no_match(service_request)
     return len(selected)

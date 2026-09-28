@@ -36,6 +36,16 @@ class LocationTests(TestCase):
         self.assertEqual(self.client.get("/api/v1/locations/cities/?region=bad").status_code, 400)
         self.assertEqual(self.client.post("/api/v1/locations/cities/", {"name": "Fake"}).status_code, 405)
 
+    def test_regions_without_complete_service_areas_remain_hidden(self):
+        regions = self.client.get("/api/v1/locations/regions/").json()["results"]
+        self.assertEqual([region["name"] for region in regions], ["District de Bamako"])
+        kayes = Region.objects.get(name="Kayes")
+        city = City.objects.create(name="Kayes", region=kayes)
+        self.assertEqual(self.client.get("/api/v1/locations/regions/").json()["count"], 1)
+        commune = Commune.objects.create(name="Commune Kayes", city=city)
+        Neighborhood.objects.create(name="Quartier Kayes", commune=commune)
+        self.assertEqual(self.client.get("/api/v1/locations/regions/").json()["count"], 2)
+
     def test_disabling_parent_hides_descendants(self):
         self.neighborhood.is_active = False
         self.neighborhood.save(update_fields=["is_active"])

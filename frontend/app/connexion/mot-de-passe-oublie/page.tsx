@@ -95,7 +95,7 @@ export default function ForgotPasswordPage() {
           <span className="login-brand-mark" aria-hidden="true">B</span>
           <span>
             <strong>BKO Services</strong>
-            <small>Bamako</small>
+            <small>Mali</small>
           </span>
         </div>
 

@@ -21,7 +21,11 @@ def optional_uuid(request, key):
 class RegionListView(ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = RegionSerializer
-    queryset = Region.objects.filter(is_active=True, cities__is_active=True).distinct()
+    queryset = Region.objects.filter(
+        is_active=True, cities__is_active=True,
+        cities__communes__is_active=True,
+        cities__communes__neighborhoods__is_active=True,
+    ).distinct()
 
 
 class CityListView(ListAPIView):
@@ -29,7 +33,10 @@ class CityListView(ListAPIView):
     serializer_class = CitySerializer
 
     def get_queryset(self):
-        queryset = City.objects.filter(is_active=True, region__is_active=True)
+        queryset = City.objects.filter(
+            is_active=True, region__is_active=True,
+            communes__is_active=True, communes__neighborhoods__is_active=True,
+        ).distinct()
         region_id = optional_uuid(self.request, "region")
         return queryset.filter(region_id=region_id) if region_id else queryset
 
@@ -39,7 +46,10 @@ class CommuneListView(ListAPIView):
     serializer_class = CommuneSerializer
 
     def get_queryset(self):
-        queryset = Commune.objects.filter(is_active=True, city__is_active=True, city__region__is_active=True)
+        queryset = Commune.objects.filter(
+            is_active=True, city__is_active=True, city__region__is_active=True,
+            neighborhoods__is_active=True,
+        ).distinct()
         city_id = optional_uuid(self.request, "city")
         return queryset.filter(city_id=city_id) if city_id else queryset
 

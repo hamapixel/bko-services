@@ -1,6 +1,6 @@
 # BKO Services
 
-**Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
+**Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels dans les zones ouvertes au Mali. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
 > Statut : **étapes 0 à 22 développées ; préparation de production en cours**. Les espaces sont branchés sur les API Django. La feuille de route et les prérequis de mise en ligne sont détaillés dans [docs/production-roadmap.md](docs/production-roadmap.md).
 
@@ -55,9 +55,9 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 
 ## Localisation et envoi des demandes
 
-Le choix suit désormais **région ou district → ville → commune → quartier**. Pour le périmètre actuel, le District de Bamako contient la ville de Bamako et les communes/quartiers déjà chargés. Les autres régions et villes peuvent être ajoutées depuis l'administration avant d'être proposées aux clients. Une migration rattache la ville de Bamako déjà présente à son district ; les villes créées manuellement doivent être rattachées à une région ou un district.
+Le choix suit **région ou district → ville → commune → quartier**. Le District de Bamako possède déjà des villes, communes et quartiers. Les 19 régions sont enregistrées en base, mais une région ne devient sélectionnable qu'après l'ajout de villes, communes et quartiers actifs et vérifiés dans l'administration. Une migration rattache la ville de Bamako déjà présente à son district. Voir [la couverture et la recherche](docs/couverture-mali-et-recherche.md).
 
-Lorsqu'un client vérifié envoie une demande, le serveur lance immédiatement la recherche et crée une offre privée pour un prestataire compatible (jusqu'à cinq pour une urgence). La correspondance nécessite le **même métier et le même quartier desservi** ; le prestataire doit être approuvé, disponible, actif, avoir son téléphone vérifié et un abonnement autorisant ce type de demande. Sans candidat, la demande reste « Recherche en cours » et l'administrateur peut relancer le matching depuis `/admin/demandes` lorsque le prestataire est prêt. Les demandes créées avant cette modification nécessitent également cette relance manuelle.
+Lorsqu'un client vérifié envoie une demande, le serveur lance immédiatement la recherche et crée une offre privée pour un prestataire compatible (jusqu'à cinq pour une urgence). La correspondance nécessite le **même métier et le même quartier desservi** ; le prestataire doit être approuvé, disponible, actif, avoir son téléphone vérifié et un abonnement autorisant ce type de demande. Sans candidat, la demande reste « Recherche en cours » ; les administrateurs sont avertis et voient le compteur des demandes sans offre. La recherche reprend automatiquement lorsqu'un prestataire compatible devient disponible, obtient ou renouvelle un abonnement, ou termine une intervention qui libère une place. La relance manuelle reste possible depuis `/admin/demandes` pour les demandes historiques et les cas particuliers.
 
 ## Démarrage sur Windows
 

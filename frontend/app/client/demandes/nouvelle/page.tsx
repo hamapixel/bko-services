@@ -73,13 +73,17 @@ export default function NewClientRequestPage() {
       typeof window !== "undefined"
         ? new URLSearchParams(window.location.search).get("draft")
         : null;
+    const tradeId = new URLSearchParams(window.location.search).get("trade");
 
     Promise.all([
       apiGetAll<Category>("/api/v1/catalog/categories/"),
       apiGetAll<Region>("/api/v1/locations/regions/"),
       draftId ? getRequestDraft(draftId, user.id) : Promise.resolve(null),
+      tradeId && /^[0-9a-f-]{36}$/i.test(tradeId)
+        ? apiGetAll<Trade>("/api/v1/catalog/trades/")
+        : Promise.resolve([] as Trade[]),
     ])
-      .then(([categoryItems, regionItems, localDraft]) => {
+      .then(([categoryItems, regionItems, localDraft, tradeItems]) => {
         if (!active) return;
         setCategories(categoryItems);
         setRegions(regionItems);
@@ -92,9 +96,7 @@ export default function NewClientRequestPage() {
         if (localDraft) {
           setForm({
             category: localDraft.context?.category ?? "",
-            region: localDraft.context?.region ?? regionItems.find(
-              (region) => region.name.toLowerCase() === "district de bamako",
-            )?.id ?? "",
+            region: localDraft.context?.region ?? "",
             trade: localDraft.payload.trade,
             city: localDraft.context?.city ?? "",
             commune: localDraft.context?.commune ?? "",
@@ -105,12 +107,10 @@ export default function NewClientRequestPage() {
             priority: localDraft.payload.priority,
           });
         } else {
-          const bamakoDistrict = regionItems.find(
-            (region) => region.name.toLowerCase() === "district de bamako",
-          );
-          if (bamakoDistrict) {
-            setForm((current) => ({ ...current, region: bamakoDistrict.id }));
-          }
+          const selected = tradeItems.find((trade) => trade.id === tradeId);
+          if (selected) setForm((current) => ({
+            ...current, category: selected.category, trade: selected.id,
+          }));
         }
       })
       .catch((caught) => {
@@ -132,11 +132,6 @@ export default function NewClientRequestPage() {
       .then((items) => {
         if (!active) return;
         setCities(items);
-        setForm((current) => {
-          if (current.region !== form.region || current.city) return current;
-          const bamako = items.find((city) => city.name.toLowerCase() === "bamako");
-          return bamako ? { ...current, city: bamako.id } : current;
-        });
       })
       .catch((caught) => { if (active) setError(errorMessage(caught)); });
     return () => { active = false; };

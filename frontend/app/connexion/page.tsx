@@ -41,7 +41,10 @@ export default function ConnexionPage() {
       throw new Error("Ce compte n’est pas un compte client.");
     }
 
-    router.replace("/client");
+    const trade = new URLSearchParams(window.location.search).get("trade");
+    router.replace(trade && /^[0-9a-f-]{36}$/i.test(trade)
+      ? `/client/demandes/nouvelle?trade=${encodeURIComponent(trade)}`
+      : "/client");
     router.refresh();
   }
 
@@ -90,7 +93,7 @@ export default function ConnexionPage() {
           <span className="login-brand-mark" aria-hidden="true">B</span>
           <span>
             <strong>BKO Services</strong>
-            <small>Bamako</small>
+            <small>Mali</small>
           </span>
         </div>
 
@@ -108,7 +111,7 @@ export default function ConnexionPage() {
           </div>
         </div>
 
-        <p className="login-visual-foot">BKO Services · Bamako</p>
+        <p className="login-visual-foot">BKO Services · Mali</p>
       </section>
 
       <section className="login-card-zone">
