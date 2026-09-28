@@ -6,7 +6,7 @@
 
 L'application comprend les parcours client, prestataire et administration, les lieux et métiers, les demandes et offres privées, le suivi, les avis, les plaintes, les abonnements et l'essai unique. Le backend possède une intégration Wave Checkout avec activation par webhook signé et idempotent. La PWA, les brouillons locaux et le Web Push sont présents. L'adaptateur SMS Twilio existe.
 
-Ces fonctionnalités ne prouvent pas encore qu'un paiement, un SMS ou une notification fonctionne avec un compte marchand réel en production. Orange Money n'est pas intégré. Le README historique mentionne Celery et Redis comme architecture cible : aucun worker Celery, Redis ou configuration Docker/CI n'est actuellement présent dans le dépôt.
+Ces fonctionnalités ne prouvent pas encore qu'un paiement, un SMS ou une notification fonctionne avec un compte marchand réel en production. Orange Money n'est pas intégré. Le README historique mentionne Celery et Redis comme architecture cible : aucun worker Celery, Redis ou configuration Docker n'est actuellement présent dans le dépôt. Un workflow de CI est sur la branche, en attente de validation par GitHub Actions.
 
 L'obtention des comptes marchands Wave Business et Orange Money Web Payment au Mali peut démarrer maintenant, en parallèle des étapes 23–24. Si les deux moyens de paiement sont requis au lancement, l'adaptateur Orange et les essais marchands des deux parcours doivent être terminés **avant** l'étape 25 de préparation serveur. Procédure et critères : [paiements-marchands.md](paiements-marchands.md).
 
@@ -15,14 +15,14 @@ L'obtention des comptes marchands Wave Business et Orange Money Web Payment au M
 | Étape | Travail | Preuve attendue |
 | --- | --- | --- |
 | 23 — Qualité | Suite PostgreSQL terminée : 130 tests OK, dont concurrence et parcours client → prestataire → avis. Contrôles mobiles et accessibilité à terminer. | Résultats des essais mobiles consignés ; tests PostgreSQL déjà validés localement. |
-| 24 — Automatisation | GitHub Actions pour Django/PostgreSQL, TypeScript, ESLint, build Next.js et vérification des migrations ; protection de la branche de livraison. | Une PR qui échoue aux contrôles ne peut pas être intégrée. |
+| 24 — Automatisation | Workflow GitHub Actions ajouté pour Django/PostgreSQL, TypeScript, ESLint, build Next.js et migrations ; exécution sur la PR puis protection de `main` à vérifier. | Les deux contrôles passent sur la PR et une PR qui échoue ne peut pas être intégrée. |
 | 25 — Préparation serveur | Paramètres Django de production, serveur WSGI, fichiers statiques, reverse proxy HTTPS, stockage durable des avatars, sauvegardes et journaux ; décider si Redis/worker est nécessaire aux notifications et aux limites de débit entre processus. | `check --deploy` examiné, services relancés automatiquement, sauvegarde et restauration testées. |
 | 26 — Préproduction | Domaine de test HTTPS, vraie livraison SMS, Web Push, installation iPhone/Android, essais et abonnements, paiement Wave sous contrat marchand. | Tests sur appareils réels, webhook signé, expiration et renouvellement constatés ; incident simulé. |
 | 27 — Ouverture | Relecture de la PR, intégration, sauvegarde, migration, déploiement contrôlé, surveillance et support. | Parcours de bout en bout réussi sur le domaine final et plan de retour arrière documenté. |
 
-Pour l'étape 23, les commandes PostgreSQL sur Windows et les contrôles manuels mobiles figurent dans [etape-23-qualite.md](etape-23-qualite.md). Le 26 septembre, la suite complète a réussi sur PostgreSQL 18.4 : **130 tests OK, aucun ignoré**. Il reste à consigner les essais mobiles et d'accessibilité. La CI sur PostgreSQL est le travail de l'étape 24.
+Pour l'étape 23, les commandes PostgreSQL sur Windows et les contrôles manuels mobiles figurent dans [etape-23-qualite.md](etape-23-qualite.md). Le 26 septembre, la suite complète a réussi sur PostgreSQL 18.4 : **130 tests OK, aucun ignoré**. Il reste à consigner les essais mobiles et d'accessibilité. Le workflow PostgreSQL de l'étape 24 et la configuration des contrôles requis sont décrits dans [etape-24-ci.md](etape-24-ci.md).
 
-Le contrôle local `manage.py check --deploy` signale actuellement l'absence de HSTS et de redirection HTTPS au niveau Django (ceux-ci peuvent être assurés par le reverse proxy si configurés et vérifiés), plus la clé volontairement faible utilisée pour l'audit. `STATIC_ROOT` et un serveur WSGI de production restent à configurer. La suite SQLite passe **130 tests, dont 2 ignorés** ; la suite PostgreSQL passe **130 tests sans test ignoré**. Ces résultats locaux ne remplacent pas la CI prévue à l'étape 24.
+Le contrôle local `manage.py check --deploy` signale actuellement l'absence de HSTS et de redirection HTTPS au niveau Django (ceux-ci peuvent être assurés par le reverse proxy si configurés et vérifiés), plus la clé volontairement faible utilisée pour l'audit. `STATIC_ROOT` et un serveur WSGI de production restent à configurer. La suite SQLite passe **130 tests, dont 2 ignorés** ; la suite PostgreSQL passe **130 tests sans test ignoré**. Ces résultats locaux ne remplacent pas l'exécution GitHub Actions sur la PR.
 
 ## Schéma de déploiement conseillé pour la première version
 
