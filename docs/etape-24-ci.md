@@ -8,6 +8,6 @@ Le workflow [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) s'exécute
 
 Le 28 septembre 2026, [l'exécution CI n° 3](https://github.com/hamapixel/bko-services/actions/runs/36401790926) sur la PR #22 a réussi : les jobs **Backend PostgreSQL** et **Frontend lint and build** sont tous deux verts. Les tests PostgreSQL locaux du 26 septembre étaient aussi verts (130 tests, aucun ignoré). Si une exécution future échoue, corriger sa cause puis vérifier un nouveau passage.
 
-Pour empêcher une fusion en cas d'échec, activer dans les paramètres GitHub de `main` une règle demandant une pull request et les contrôles **Backend PostgreSQL** et **Frontend lint and build**. Ces noms sont visibles dans la PR après leur premier passage. La règle de protection n'est pas encore configurée.
+Le 28 septembre, l'administration du dépôt a créé la règle GitHub `main` : son statut est **Active**, elle cible la branche par défaut `main` (1 cible) et liste les contrôles requis **Backend PostgreSQL** et **Frontend lint and build**. Le réglage « Require a pull request before merging » doit rester coché avec zéro approbation obligatoire si le dépôt est géré seul. Le texte copié de GitHub ne montre pas l'état des cases à cocher ; vérifier ce dernier réglage visuellement dans la règle.
 
 Les essais visuels et d'accessibilité sur téléphone et tablette restent à consigner au titre de l'étape 23. L'étape 25 concernera la configuration serveur et les secrets réels.
