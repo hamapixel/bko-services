@@ -77,4 +77,4 @@ Chaque étape suit le cycle : explication → commandes → fichiers complets �
 
 ## À venir
 
-L'étape 23 de qualité a validé **130 tests sur PostgreSQL**, sans test ignoré ; les essais mobiles et d'accessibilité restent à consigner : [commandes et résultats](docs/etape-23-qualite.md). Le [workflow CI](docs/etape-24-ci.md) vérifie Django sur PostgreSQL et le frontend sur les PR ; sa première exécution reste à confirmer. Ensuite : configuration serveur, préproduction puis déploiement. Voir la [feuille de route de production](docs/production-roadmap.md) et les [exigences d'architecture](docs/architecture.md).
+L'étape 23 de qualité a validé **130 tests sur PostgreSQL**, sans test ignoré ; les essais mobiles et d'accessibilité restent à consigner : [commandes et résultats](docs/etape-23-qualite.md). Le [workflow CI](docs/etape-24-ci.md) a réussi ses contrôles backend PostgreSQL et frontend sur la PR ; la protection de `main` reste à configurer. Ensuite : configuration serveur, préproduction puis déploiement. Voir la [feuille de route de production](docs/production-roadmap.md) et les [exigences d'architecture](docs/architecture.md).
