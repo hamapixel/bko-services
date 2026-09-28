@@ -95,6 +95,7 @@ export default function BecomeProviderPage() {
   const [categoryId, setCategoryId] = useState("");
   const [trades, setTrades] = useState<Trade[]>([]);
   const [cities, setCities] = useState<City[]>([]);
+  const [citiesLoaded, setCitiesLoaded] = useState(false);
   const [regions, setRegions] = useState<Region[]>([]);
   const [regionId, setRegionId] = useState("");
   const [cityId, setCityId] = useState("");
@@ -180,7 +181,6 @@ export default function BecomeProviderPage() {
         if (!active) return;
         setCategories(categoryItems);
         setRegions(regionItems);
-
       })
       .catch((caught) => {
         if (active) setError(messageFromError(caught));
@@ -203,6 +203,7 @@ export default function BecomeProviderPage() {
       .then((items) => {
         if (!active) return;
         setCities(items);
+        setCitiesLoaded(true);
       })
       .catch((caught) => { if (active) setError(messageFromError(caught)); });
     return () => { active = false; };
@@ -991,6 +992,7 @@ export default function BecomeProviderPage() {
                         onChange={(event) => {
                           setRegionId(event.target.value);
                           setCities([]);
+                          setCitiesLoaded(false);
                           setCityId("");
                           setCommunes([]);
                           setCommuneId("");
@@ -1022,6 +1024,9 @@ export default function BecomeProviderPage() {
                           </option>
                         ))}
                       </select>
+                      {regionId && citiesLoaded && cities.length === 0 && (
+                        <small role="status">Cette région est enregistrée, mais aucune ville avec commune et quartier n’y est encore ouverte pour les candidatures.</small>
+                      )}
                     </label>
 
                     <label className="field">

@@ -57,6 +57,7 @@ export default function NewClientRequestPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [trades, setTrades] = useState<Trade[]>([]);
   const [cities, setCities] = useState<City[]>([]);
+  const [citiesLoaded, setCitiesLoaded] = useState(false);
   const [regions, setRegions] = useState<Region[]>([]);
   const [communes, setCommunes] = useState<Commune[]>([]);
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
@@ -132,6 +133,7 @@ export default function NewClientRequestPage() {
       .then((items) => {
         if (!active) return;
         setCities(items);
+        setCitiesLoaded(true);
       })
       .catch((caught) => { if (active) setError(errorMessage(caught)); });
     return () => { active = false; };
@@ -228,6 +230,7 @@ export default function NewClientRequestPage() {
     }
     if (key === "region") {
       setCities([]);
+      setCitiesLoaded(false);
       setCommunes([]);
       setNeighborhoods([]);
     }
@@ -470,6 +473,9 @@ export default function NewClientRequestPage() {
                     </option>
                   ))}
                 </select>
+                {form.region && citiesLoaded && cities.length === 0 && (
+                  <small role="status">Cette région est enregistrée, mais aucune ville avec commune et quartier n’y est encore ouverte. Choisissez une autre région pour envoyer votre demande.</small>
+                )}
               </label>
               <label className="field">
                 <span>Commune *</span>

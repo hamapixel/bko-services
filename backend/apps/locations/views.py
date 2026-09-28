@@ -21,11 +21,7 @@ def optional_uuid(request, key):
 class RegionListView(ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = RegionSerializer
-    queryset = Region.objects.filter(
-        is_active=True, cities__is_active=True,
-        cities__communes__is_active=True,
-        cities__communes__neighborhoods__is_active=True,
-    ).distinct()
+    queryset = Region.objects.filter(is_active=True)
 
 
 class CityListView(ListAPIView):

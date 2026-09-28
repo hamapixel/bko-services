@@ -22,7 +22,7 @@ class LocationTests(TestCase):
         self.assertEqual(cities.status_code, 200)
         self.assertEqual(cities.json()["count"], 2)
         regions = self.client.get("/api/v1/locations/regions/")
-        self.assertEqual(regions.json()["count"], 2)
+        self.assertEqual(regions.json()["count"], 21)
         self.assertEqual(
             self.client.get(f"/api/v1/locations/cities/?region={self.bamako.region_id}").json()["count"], 1
         )
@@ -36,15 +36,20 @@ class LocationTests(TestCase):
         self.assertEqual(self.client.get("/api/v1/locations/cities/?region=bad").status_code, 400)
         self.assertEqual(self.client.post("/api/v1/locations/cities/", {"name": "Fake"}).status_code, 405)
 
-    def test_regions_without_complete_service_areas_remain_hidden(self):
+    def test_regions_are_visible_before_their_service_areas_are_ready(self):
         regions = self.client.get("/api/v1/locations/regions/").json()["results"]
-        self.assertEqual([region["name"] for region in regions], ["District de Bamako"])
+        self.assertEqual(len(regions), 20)
+        self.assertIn("Kayes", [region["name"] for region in regions])
         kayes = Region.objects.get(name="Kayes")
+        self.assertEqual(self.client.get(f"/api/v1/locations/cities/?region={kayes.pk}").json()["count"], 0)
         city = City.objects.create(name="Kayes", region=kayes)
-        self.assertEqual(self.client.get("/api/v1/locations/regions/").json()["count"], 1)
+        self.assertEqual(self.client.get(f"/api/v1/locations/cities/?region={kayes.pk}").json()["count"], 0)
         commune = Commune.objects.create(name="Commune Kayes", city=city)
         Neighborhood.objects.create(name="Quartier Kayes", commune=commune)
-        self.assertEqual(self.client.get("/api/v1/locations/regions/").json()["count"], 2)
+        self.assertEqual(self.client.get(f"/api/v1/locations/cities/?region={kayes.pk}").json()["count"], 1)
+        kayes.is_active = False
+        kayes.save(update_fields=["is_active"])
+        self.assertNotIn("Kayes", [region["name"] for region in self.client.get("/api/v1/locations/regions/").json()["results"]])
 
     def test_disabling_parent_hides_descendants(self):
         self.neighborhood.is_active = False
