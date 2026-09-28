@@ -4358,6 +4358,83 @@ textarea:disabled {
   bottom: 19%;
 }
 
+.client-shortcuts {
+  border: 1px solid #dde6ef;
+  border-radius: 22px;
+  padding: clamp(18px, 2.4vw, 28px);
+  background: #fff;
+  box-shadow: 0 14px 38px #102e5508;
+}
+
+.client-shortcuts .section-heading {
+  margin-bottom: 18px;
+}
+
+.client-shortcut-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.client-shortcut-card {
+  display: grid;
+  min-width: 0;
+  min-height: 150px;
+  align-content: space-between;
+  gap: 10px;
+  border: 1px solid #dde6ef;
+  border-radius: 17px;
+  padding: 18px;
+  background: #f8fbff;
+  color: #11375d;
+  text-decoration: none;
+  transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+
+.client-shortcut-card:hover,
+.client-shortcut-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: #ef945c;
+  outline: none;
+  box-shadow: 0 10px 25px #102e5514;
+}
+
+.client-shortcut-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 13px;
+  background: #eaf2fa;
+  color: #17456f;
+  font-size: 20px;
+}
+
+.client-shortcut-card strong {
+  overflow-wrap: anywhere;
+  font-size: 15px;
+}
+
+.client-shortcut-card small {
+  color: #5d7189;
+  font-size: 12px;
+}
+
+.client-shortcut-more {
+  background: #fff6f0;
+}
+
+.client-shortcut-more .client-shortcut-icon {
+  background: #ffe6d5;
+  color: #b64c13;
+}
+
+.client-shortcuts-message {
+  margin: 0;
+  color: #5d7189;
+  line-height: 1.6;
+}
+
 .client-metric-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -4461,6 +4538,10 @@ textarea:disabled {
   }
 
   .client-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .client-shortcut-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -4573,6 +4654,11 @@ textarea:disabled {
 
   .client-dashboard-premium {
     gap: 14px;
+  }
+
+  .client-shortcut-card {
+    min-height: 142px;
+    padding: 14px;
   }
 
   .client-welcome-card {

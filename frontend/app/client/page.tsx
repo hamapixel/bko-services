@@ -7,10 +7,37 @@ import RequestCard from "@/components/client/request-card";
 import { useClientSession } from "@/components/client/client-shell";
 import {
   apiGet,
+  apiGetAll,
   type ApiPage,
   type ServiceRequest,
+  type Trade,
 } from "@/lib/client-api";
 import { listRequestDrafts } from "@/lib/offline-drafts";
+
+function normalizeName(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function featuredTrades(trades: Trade[]) {
+  const chosen: Trade[] = [];
+  for (const name of ["electr", "plomb", "climat"]) {
+    const trade = trades.find((item) => normalizeName(item.name).includes(name) && !chosen.includes(item));
+    if (trade) chosen.push(trade);
+  }
+  for (const trade of trades) {
+    if (chosen.length === 3) break;
+    if (!chosen.includes(trade)) chosen.push(trade);
+  }
+  return chosen;
+}
+
+function tradeIcon(name: string) {
+  const normalized = normalizeName(name);
+  if (normalized.includes("electr")) return "⚡";
+  if (normalized.includes("plomb")) return "🔧";
+  if (normalized.includes("climat") || normalized.includes("froid")) return "❄";
+  return "✦";
+}
 
 export default function ClientDashboardPage() {
   const { user } = useClientSession();
@@ -21,6 +48,9 @@ export default function ClientDashboardPage() {
   const [draftCount, setDraftCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [trades, setTrades] = useState<Trade[]>([]);
+  const [tradesLoading, setTradesLoading] = useState(true);
+  const [tradesError, setTradesError] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -59,6 +89,15 @@ export default function ClientDashboardPage() {
       active = false;
     };
   }, [user.id]);
+
+  useEffect(() => {
+    let active = true;
+    apiGetAll<Trade>("/api/v1/catalog/trades/")
+      .then((items) => { if (active) setTrades(featuredTrades(items)); })
+      .catch(() => { if (active) setTradesError(true); })
+      .finally(() => { if (active) setTradesLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   const firstName = user.first_name || "Bienvenue";
 
@@ -108,6 +147,36 @@ export default function ClientDashboardPage() {
           </Link>
         </section>
       )}
+
+      <section className="client-shortcuts" aria-labelledby="client-shortcuts-title">
+        <div className="section-heading">
+          <div>
+            <p className="page-kicker">Accès rapide</p>
+            <h2 id="client-shortcuts-title">Choisissez votre métier</h2>
+          </div>
+          <Link className="text-link" href="/client/demandes/nouvelle">Tous les métiers →</Link>
+        </div>
+        {tradesLoading ? (
+          <p className="client-shortcuts-message" role="status">Chargement des métiers…</p>
+        ) : tradesError || trades.length === 0 ? (
+          <p className="client-shortcuts-message">Les raccourcis ne sont pas disponibles. Vous pouvez toujours <Link href="/client/demandes/nouvelle">créer une demande</Link>.</p>
+        ) : (
+          <div className="client-shortcut-grid">
+            {trades.map((trade) => (
+              <Link className="client-shortcut-card" href={`/client/demandes/nouvelle?trade=${trade.id}`} key={trade.id}>
+                <span className="client-shortcut-icon" aria-hidden="true">{tradeIcon(trade.name)}</span>
+                <strong>{trade.name}</strong>
+                <small>Faire une demande <span aria-hidden="true">↗</span></small>
+              </Link>
+            ))}
+            <Link className="client-shortcut-card client-shortcut-more" href="/client/demandes/nouvelle">
+              <span className="client-shortcut-icon" aria-hidden="true">＋</span>
+              <strong>Voir tous les métiers</strong>
+              <small>Choisir un autre service <span aria-hidden="true">↗</span></small>
+            </Link>
+          </div>
+        )}
+      </section>
 
       <section className="client-metric-grid" aria-label="Résumé">
         <article className="client-metric-card">
