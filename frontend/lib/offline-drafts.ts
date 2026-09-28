@@ -1,6 +1,10 @@
 export type RequestDraftPayload = {
   trade: string;
   neighborhood: string;
+  requested_region?: string;
+  requested_city?: string;
+  requested_commune?: string;
+  requested_neighborhood?: string;
   title: string;
   description: string;
   address_detail: string;

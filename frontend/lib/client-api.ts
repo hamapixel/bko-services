@@ -58,6 +58,7 @@ export type Neighborhood = {
 
 export type RequestStatus =
   | "CREATED"
+  | "LOCATION_PENDING"
   | "SEARCHING"
   | "OFFERED"
   | "ACCEPTED"
@@ -79,9 +80,11 @@ export type ServiceRequest = {
   id: string;
   trade: string;
   trade_name: string;
-  neighborhood: string;
+  neighborhood: string | null;
   neighborhood_name: string;
   commune_name: string;
+  region_name: string;
+  requested_city: string;
   title: string;
   description: string;
   address_detail: string;
@@ -215,6 +218,7 @@ export async function apiFormMutation<T>(
 
 export const STATUS_LABELS: Record<RequestStatus, string> = {
   CREATED: "Enregistrée",
+  LOCATION_PENDING: "Zone à vérifier",
   SEARCHING: "Recherche en cours",
   OFFERED: "Proposée aux prestataires",
   ACCEPTED: "Prestataire trouvé",
@@ -238,7 +242,7 @@ export function statusTone(status: RequestStatus) {
   if (status === "CLIENT_CONFIRMED") return "success";
   if (status === "CANCELLED" || status === "DISPUTED") return "danger";
   if (status === "PROVIDER_COMPLETED") return "warning";
-  if (status === "CREATED" || status === "SEARCHING" || status === "OFFERED") {
+  if (status === "CREATED" || status === "LOCATION_PENDING" || status === "SEARCHING" || status === "OFFERED") {
     return "neutral";
   }
   return "active";

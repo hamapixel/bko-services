@@ -100,6 +100,8 @@ def _match_request(request_id, actor, *, skip_if_already_matched=False):
         raise ValidationError("Des offres existent déjà pour cette demande.")
     trade = service_request.trade
     neighborhood = service_request.neighborhood
+    if neighborhood is None:
+        raise ValidationError("La zone doit être vérifiée avant de rechercher des prestataires.")
     if not trade.is_active or not trade.category.is_active:
         raise ValidationError("Le métier de la demande est désactivé.")
     if (not neighborhood.is_active or not neighborhood.commune.is_active

@@ -130,7 +130,7 @@ export default function ClientRequestDetailPage() {
             ← Mes demandes
           </Link>
           <p className="page-kicker">
-            {request.trade_name} · {request.commune_name}
+            {request.trade_name} · {request.commune_name} · {request.region_name}
           </p>
           <h1>{request.title}</h1>
           <div className="detail-badges">
@@ -146,6 +146,12 @@ export default function ClientRequestDetailPage() {
 
       {message && <div className="form-success">{message}</div>}
       {error && <div className="inline-error">{error}</div>}
+      {request.status === "LOCATION_PENDING" && (
+        <div className="security-note" role="status">
+          <strong>Votre zone doit être vérifiée</strong>
+          <p>Votre demande est enregistrée. L’administration vérifie {request.requested_city}, {request.commune_name}, {request.neighborhood_name} avant d’envoyer des offres aux prestataires. Aucun professionnel n’a encore reçu votre demande.</p>
+        </div>
+      )}
 
       <div className="detail-grid">
         <div className="detail-main">

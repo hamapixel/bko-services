@@ -15,7 +15,7 @@ type Filter = "ALL" | "ACTIVE" | "DONE" | "URGENT";
 const FILTER_PATHS: Record<Filter, string> = {
   ALL: "/api/v1/requests/",
   ACTIVE:
-    "/api/v1/requests/?status=CREATED,SEARCHING,OFFERED,ACCEPTED,EN_ROUTE,ARRIVED,IN_PROGRESS,PROVIDER_COMPLETED,DISPUTED",
+    "/api/v1/requests/?status=CREATED,LOCATION_PENDING,SEARCHING,OFFERED,ACCEPTED,EN_ROUTE,ARRIVED,IN_PROGRESS,PROVIDER_COMPLETED,DISPUTED",
   DONE: "/api/v1/requests/?status=CLIENT_CONFIRMED",
   URGENT: "/api/v1/requests/?priority=URGENT",
 };

@@ -12,6 +12,7 @@ import {
   type AdminRequestDetail,
 } from "@/lib/admin-api";
 import { STATUS_LABELS, statusTone } from "@/lib/client-api";
+import { apiGetAll, type City, type Commune, type Neighborhood } from "@/lib/client-api";
 
 type DispatchResponse = {
   offers_created: number;
@@ -26,6 +27,12 @@ export default function AdminRequestDetailPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [cities, setCities] = useState<City[]>([]);
+  const [communes, setCommunes] = useState<Commune[]>([]);
+  const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
+  const [cityId, setCityId] = useState("");
+  const [communeId, setCommuneId] = useState("");
+  const [neighborhoodId, setNeighborhoodId] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -46,6 +53,52 @@ export default function AdminRequestDetailPage() {
       active = false;
     };
   }, [params.id]);
+
+  useEffect(() => {
+    if (!item?.requested_region_id || item.status !== "LOCATION_PENDING") return;
+    let active = true;
+    apiGetAll<City>(`/api/v1/locations/cities/?region=${encodeURIComponent(item.requested_region_id)}`)
+      .then((data) => { if (active) setCities(data); })
+      .catch((caught) => { if (active) setError(caught instanceof Error ? caught.message : "Zones indisponibles."); });
+    return () => { active = false; };
+  }, [item?.requested_region_id, item?.status]);
+
+  async function loadCities() {
+    if (!item?.requested_region_id) return;
+    try {
+      setCities(await apiGetAll<City>(`/api/v1/locations/cities/?region=${encodeURIComponent(item.requested_region_id)}`));
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Zones indisponibles."); }
+  }
+
+  async function selectCity(value: string) {
+    setCityId(value); setCommuneId(""); setNeighborhoodId(""); setCommunes([]); setNeighborhoods([]);
+    if (value) {
+      try { setCommunes(await apiGetAll<Commune>(`/api/v1/locations/communes/?city=${encodeURIComponent(value)}`)); }
+      catch (caught) { setError(caught instanceof Error ? caught.message : "Communes indisponibles."); }
+    }
+  }
+
+  async function selectCommune(value: string) {
+    setCommuneId(value); setNeighborhoodId(""); setNeighborhoods([]);
+    if (value) {
+      try { setNeighborhoods(await apiGetAll<Neighborhood>(`/api/v1/locations/neighborhoods/?commune=${encodeURIComponent(value)}`)); }
+      catch (caught) { setError(caught instanceof Error ? caught.message : "Quartiers indisponibles."); }
+    }
+  }
+
+  async function resolveLocation() {
+    if (!item || !neighborhoodId) return;
+    setBusy(true); setError(""); setMessage("");
+    try {
+      const resolved = await apiMutation<AdminRequestDetail>(
+        `/api/v1/admin/requests/${item.id}/resolve-location/`, "POST", { neighborhood: neighborhoodId },
+      );
+      setItem(resolved);
+      setMessage(resolved.offers.length ? "Zone validée ; offres envoyées aux prestataires compatibles." : "Zone validée ; aucun prestataire compatible pour le moment.");
+      await refreshOverview();
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Validation impossible."); }
+    finally { setBusy(false); }
+  }
 
   async function dispatch() {
     if (!item) return;
@@ -128,6 +181,21 @@ export default function AdminRequestDetailPage() {
 
       {message && <div className="form-success">{message}</div>}
       {error && <div className="inline-error">{error}</div>}
+      {item.status === "LOCATION_PENDING" && (
+        <section className="detail-card">
+          <h2>Vérifier la zone demandée</h2>
+          <p>Le client a indiqué : {item.requested_city}, {item.commune_name}, {item.neighborhood_name} ({item.region_name}). Vérifiez les lieux et créez-les dans l’administration des lieux si nécessaire. Aucune offre n’a été envoyée.</p>
+          {overview.capabilities.dispatch_requests && (
+            <div className="form-stack">
+              <button className="button-secondary" type="button" onClick={() => void loadCities()}>Actualiser les lieux</button>
+              <label className="field"><span>Ville vérifiée</span><select value={cityId} onChange={(event) => void selectCity(event.target.value)}><option value="">Choisir</option>{cities.map((city) => <option key={city.id} value={city.id}>{city.name}</option>)}</select></label>
+              <label className="field"><span>Commune vérifiée</span><select disabled={!cityId} value={communeId} onChange={(event) => void selectCommune(event.target.value)}><option value="">Choisir</option>{communes.map((commune) => <option key={commune.id} value={commune.id}>{commune.name}</option>)}</select></label>
+              <label className="field"><span>Quartier vérifié</span><select disabled={!communeId} value={neighborhoodId} onChange={(event) => setNeighborhoodId(event.target.value)}><option value="">Choisir</option>{neighborhoods.map((area) => <option key={area.id} value={area.id}>{area.name}</option>)}</select></label>
+              <button className="button-primary" type="button" disabled={busy || !neighborhoodId} onClick={() => void resolveLocation()}>Valider la zone et rechercher</button>
+            </div>
+          )}
+        </section>
+      )}
 
       <div className="detail-grid">
         <div className="detail-main">
@@ -137,7 +205,7 @@ export default function AdminRequestDetailPage() {
               <div><dt>Client</dt><dd>{item.client_phone}</dd></div>
               <div>
                 <dt>Zone</dt>
-                <dd>{item.neighborhood_name}, {item.commune_name}</dd>
+                <dd>{item.neighborhood_name}, {item.commune_name} · {item.requested_city || item.region_name}</dd>
               </div>
               <div><dt>Adresse</dt><dd>{item.address_detail}</dd></div>
               <div><dt>Créée le</dt><dd>{formatDate(item.created_at)}</dd></div>

@@ -9,6 +9,7 @@ class Notification(models.Model):
     class Kind(models.TextChoices):
         OFFER_RECEIVED = "OFFER_RECEIVED", "Nouvelle offre"
         REQUEST_UNMATCHED = "REQUEST_UNMATCHED", "Demande sans prestataire"
+        REQUEST_LOCATION_PENDING = "REQUEST_LOCATION_PENDING", "Zone à vérifier"
         REQUEST_ACCEPTED = "REQUEST_ACCEPTED", "Demande attribuée"
         OFFER_CANCELLED = "OFFER_CANCELLED", "Offre annulée"
         PROVIDER_EN_ROUTE = "PROVIDER_EN_ROUTE", "Prestataire en route"

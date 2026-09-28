@@ -16,9 +16,9 @@ type Filter = "ALL" | "ACTIVE" | "CREATED" | "WAITING" | "DISPUTED" | "DONE";
 const FILTER_PATHS: Record<Filter, string> = {
   ALL: "/api/v1/admin/requests/",
   ACTIVE:
-    "/api/v1/admin/requests/?status=CREATED,SEARCHING,OFFERED,ACCEPTED,EN_ROUTE,ARRIVED,IN_PROGRESS,PROVIDER_COMPLETED,DISPUTED",
-  CREATED: "/api/v1/admin/requests/?status=CREATED,SEARCHING",
-  WAITING: "/api/v1/admin/requests/?status=SEARCHING",
+    "/api/v1/admin/requests/?status=CREATED,LOCATION_PENDING,SEARCHING,OFFERED,ACCEPTED,EN_ROUTE,ARRIVED,IN_PROGRESS,PROVIDER_COMPLETED,DISPUTED",
+  CREATED: "/api/v1/admin/requests/?status=CREATED,LOCATION_PENDING,SEARCHING",
+  WAITING: "/api/v1/admin/requests/?status=LOCATION_PENDING,SEARCHING",
   DISPUTED: "/api/v1/admin/requests/?status=DISPUTED",
   DONE: "/api/v1/admin/requests/?status=CLIENT_CONFIRMED,CANCELLED",
 };
@@ -172,7 +172,7 @@ export default function AdminRequestsPage() {
           >
             <div>
               <span className="request-meta">
-                {item.trade_name} · {item.commune_name}
+                {item.trade_name} · {item.commune_name} · {item.region_name}
               </span>
               <h3>{item.neighborhood_name}</h3>
               <p>

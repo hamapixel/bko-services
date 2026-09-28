@@ -36,7 +36,8 @@ class ServiceRequestAdmin(admin.ModelAdmin):
     search_fields = ("id", "title", "client__phone")
     list_select_related = ("client",)
     readonly_fields = (
-        "id", "client", "trade", "neighborhood", "title", "description", "address_detail",
+        "id", "client", "trade", "neighborhood", "requested_region", "requested_city",
+        "requested_commune", "requested_neighborhood", "title", "description", "address_detail",
         "priority", "status", "created_at", "updated_at",
     )
     inlines = (StatusHistoryInline, ServiceOfferInline)

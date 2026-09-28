@@ -88,6 +88,7 @@ export type AdminRequestRow = {
   trade_name: string;
   neighborhood_name: string;
   commune_name: string;
+  region_name: string;
   priority: "NORMAL" | "URGENT";
   status: RequestStatus;
   client_id: string;
@@ -98,6 +99,8 @@ export type AdminRequestRow = {
 };
 
 export type AdminRequestDetail = AdminRequestRow & {
+  requested_region_id: string | null;
+  requested_city: string;
   client_phone: string;
   title: string;
   description: string;

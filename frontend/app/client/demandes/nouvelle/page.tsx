@@ -40,6 +40,10 @@ const EMPTY_FORM: FormState = {
   city: "",
   commune: "",
   neighborhood: "",
+  requested_region: "",
+  requested_city: "",
+  requested_commune: "",
+  requested_neighborhood: "",
   title: "",
   description: "",
   address_detail: "",
@@ -102,6 +106,10 @@ export default function NewClientRequestPage() {
             city: localDraft.context?.city ?? "",
             commune: localDraft.context?.commune ?? "",
             neighborhood: localDraft.payload.neighborhood,
+            requested_region: localDraft.payload.requested_region ?? "",
+            requested_city: localDraft.payload.requested_city ?? "",
+            requested_commune: localDraft.payload.requested_commune ?? "",
+            requested_neighborhood: localDraft.payload.requested_neighborhood ?? "",
             title: localDraft.payload.title,
             description: localDraft.payload.description,
             address_detail: localDraft.payload.address_detail,
@@ -196,16 +204,23 @@ export default function NewClientRequestPage() {
     };
   }, [form.commune]);
 
+  const manualArea = Boolean(form.region && citiesLoaded && cities.length === 0);
   const payload = useMemo<RequestDraftPayload>(
     () => ({
       trade: form.trade,
       neighborhood: form.neighborhood,
+      ...(manualArea ? {
+        requested_region: form.region,
+        requested_city: form.requested_city?.trim(),
+        requested_commune: form.requested_commune?.trim(),
+        requested_neighborhood: form.requested_neighborhood?.trim(),
+      } : {}),
       title: form.title.trim(),
       description: form.description.trim(),
       address_detail: form.address_detail.trim(),
       priority: form.priority,
     }),
-    [form],
+    [form, manualArea],
   );
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -216,6 +231,10 @@ export default function NewClientRequestPage() {
         next.city = "";
         next.commune = "";
         next.neighborhood = "";
+        next.requested_region = "";
+        next.requested_city = "";
+        next.requested_commune = "";
+        next.requested_neighborhood = "";
       }
       if (key === "city") {
         next.commune = "";
@@ -248,7 +267,9 @@ export default function NewClientRequestPage() {
   function validate() {
     if (
       !payload.trade ||
-      !payload.neighborhood ||
+      (manualArea
+        ? !payload.requested_city || !payload.requested_commune || !payload.requested_neighborhood
+        : !payload.neighborhood) ||
       !payload.title ||
       !payload.description ||
       !payload.address_detail
@@ -314,7 +335,17 @@ export default function NewClientRequestPage() {
       const created = await apiMutation<ServiceRequest>(
         "/api/v1/requests/",
         "POST",
-        payload,
+        manualArea ? {
+          trade: payload.trade,
+          requested_region: payload.requested_region,
+          requested_city: payload.requested_city,
+          requested_commune: payload.requested_commune,
+          requested_neighborhood: payload.requested_neighborhood,
+          title: payload.title,
+          description: payload.description,
+          address_detail: payload.address_detail,
+          priority: payload.priority,
+        } : payload,
       );
 
       if (draft) {
@@ -447,7 +478,7 @@ export default function NewClientRequestPage() {
           <div className="form-section-number">2</div>
           <div className="form-section-content">
             <h2>Lieu de l’intervention</h2>
-            <p>Sélectionnez votre zone puis précisez l’adresse.</p>
+            <p>Choisissez votre zone ou indiquez votre ville, commune et quartier si la région n’est pas encore ouverte.</p>
             <div className="form-grid two">
               <label className="field">
                 <span>Région / district *</span>
@@ -461,8 +492,8 @@ export default function NewClientRequestPage() {
               <label className="field">
                 <span>Ville *</span>
                 <select
-                  disabled={!form.region}
-                  required
+                  disabled={!form.region || manualArea}
+                  required={!manualArea}
                   value={form.city}
                   onChange={(event) => update("city", event.target.value)}
                 >
@@ -474,10 +505,10 @@ export default function NewClientRequestPage() {
                   ))}
                 </select>
                 {form.region && citiesLoaded && cities.length === 0 && (
-                  <small role="status">Cette région est enregistrée, mais aucune ville avec commune et quartier n’y est encore ouverte. Choisissez une autre région pour envoyer votre demande.</small>
+                  <small role="status">Cette région n’a pas encore de quartier vérifié. Indiquez votre ville, commune et quartier ci-dessous ; la zone sera vérifiée avant l’envoi d’offres aux prestataires.</small>
                 )}
               </label>
-              <label className="field">
+              {!manualArea && <label className="field">
                 <span>Commune *</span>
                 <select
                   disabled={!form.city}
@@ -492,8 +523,8 @@ export default function NewClientRequestPage() {
                     </option>
                   ))}
                 </select>
-              </label>
-              <label className="field">
+              </label>}
+              {!manualArea && <label className="field">
                 <span>Quartier *</span>
                 <select
                   disabled={!form.commune}
@@ -508,7 +539,20 @@ export default function NewClientRequestPage() {
                     </option>
                   ))}
                 </select>
-              </label>
+              </label>}
+              {manualArea && (
+                <>
+                  <label className="field"><span>Ville ou localité *</span>
+                    <input required maxLength={120} autoComplete="address-level2" value={form.requested_city ?? ""} onChange={(event) => update("requested_city", event.target.value)} placeholder="Ex. Kayes" />
+                  </label>
+                  <label className="field"><span>Commune *</span>
+                    <input required maxLength={120} value={form.requested_commune ?? ""} onChange={(event) => update("requested_commune", event.target.value)} placeholder="Nom de votre commune" />
+                  </label>
+                  <label className="field"><span>Quartier ou village *</span>
+                    <input required maxLength={120} value={form.requested_neighborhood ?? ""} onChange={(event) => update("requested_neighborhood", event.target.value)} placeholder="Nom de votre quartier ou village" />
+                  </label>
+                </>
+              )}
             </div>
             <label className="field">
               <span>Adresse / repère précis *</span>

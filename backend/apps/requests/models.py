@@ -5,7 +5,7 @@ from django.db import models
 from django.db.models import Q
 
 from apps.catalog.models import Trade
-from apps.locations.models import Neighborhood
+from apps.locations.models import Neighborhood, Region
 
 
 class ServiceRequest(models.Model):
@@ -15,6 +15,7 @@ class ServiceRequest(models.Model):
 
     class Status(models.TextChoices):
         CREATED = "CREATED", "Enregistrée"
+        LOCATION_PENDING = "LOCATION_PENDING", "Zone à vérifier"
         SEARCHING = "SEARCHING", "Recherche en cours"
         OFFERED = "OFFERED", "Proposée"
         ACCEPTED = "ACCEPTED", "Acceptée"
@@ -29,7 +30,11 @@ class ServiceRequest(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     client = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="service_requests")
     trade = models.ForeignKey(Trade, on_delete=models.PROTECT, related_name="service_requests")
-    neighborhood = models.ForeignKey(Neighborhood, on_delete=models.PROTECT, related_name="service_requests")
+    neighborhood = models.ForeignKey(Neighborhood, on_delete=models.PROTECT, related_name="service_requests", null=True, blank=True)
+    requested_region = models.ForeignKey(Region, on_delete=models.PROTECT, null=True, blank=True)
+    requested_city = models.CharField(max_length=120, blank=True)
+    requested_commune = models.CharField(max_length=120, blank=True)
+    requested_neighborhood = models.CharField(max_length=120, blank=True)
     assigned_provider = models.ForeignKey(
         "providers.ProviderProfile",
         on_delete=models.PROTECT,
@@ -66,7 +71,7 @@ class RequestStatusHistory(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["service_request"],
-                condition=Q(previous_status="", new_status="CREATED"),
+                condition=Q(previous_status=""),
                 name="requests_one_initial_history",
             )
         ]
