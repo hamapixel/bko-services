@@ -47,6 +47,7 @@ export type ProviderOffer = {
   neighborhood_name: string;
   commune_name: string;
   priority: "NORMAL" | "URGENT";
+  outside_declared_quartiers: boolean;
   status: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED" | "CANCELLED";
   created_at: string;
 };

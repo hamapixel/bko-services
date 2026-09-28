@@ -92,8 +92,8 @@ class MatchingTests(TestCase):
         occupied.status = ServiceRequest.Status.PROVIDER_COMPLETED
         occupied.save(update_fields=["status"])
         next_request = self.request()
-        self.assertEqual(dispatch_request(next_request.pk, self.admin_user), 1)
-        self.assertEqual(next_request.offers.get().provider, busy)
+        self.assertEqual(dispatch_request(next_request.pk, self.admin_user), 2)
+        self.assertIn(busy, [offer.provider for offer in next_request.offers.all()])
 
     def provider(self, *, available=True, verified=True, phone_verified=True, trade=True, area=True, subscribed=True):
         phone = f"+2231{self.next_phone:07d}"
@@ -142,8 +142,11 @@ class MatchingTests(TestCase):
         with self.assertRaises(ValidationError):
             dispatch_request(service_request.pk, self.admin_user)
 
+        selected_provider_ids = set(service_request.offers.values_list("provider_id", flat=True))
+        own_provider = next(profile for profile in profiles if profile.pk in selected_provider_ids)
+        not_selected_provider = next(profile for profile in profiles if profile.pk not in selected_provider_ids)
         own_client = APIClient()
-        own_client.force_login(profiles[0].user)
+        own_client.force_login(own_provider.user)
         offer = own_client.get("/api/v1/providers/offers/").json()["results"][0]
         self.assertEqual(offer["trade_id"], str(self.trade.pk))
         self.assertEqual(offer["neighborhood_id"], str(self.area.pk))
@@ -153,7 +156,7 @@ class MatchingTests(TestCase):
         self.assertEqual(own_client.get(f"/api/v1/providers/offers/{offer['id']}/").status_code, 200)
 
         not_selected = APIClient()
-        not_selected.force_login(profiles[5].user)
+        not_selected.force_login(not_selected_provider.user)
         self.assertEqual(not_selected.get("/api/v1/providers/offers/").json()["count"], 0)
         self.assertEqual(not_selected.get(f"/api/v1/providers/offers/{offer['id']}/").status_code, 404)
         self.assertEqual(APIClient().get(f"/api/v1/providers/offers/{offer['id']}/").status_code, 403)
@@ -183,6 +186,61 @@ class MatchingTests(TestCase):
         own_client = APIClient()
         own_client.force_login(selected.user)
         self.assertEqual(own_client.get("/api/v1/providers/offers/").json()["count"], 0)
+
+    def test_normal_request_prioritizes_exact_quartier_then_same_commune(self):
+        neighboring_area = Neighborhood.objects.create(
+            commune=self.area.commune, name="Quartier voisin",
+        )
+        other_commune = Commune.objects.create(city=self.area.commune.city, name="Autre commune")
+        distant_area = Neighborhood.objects.create(commune=other_commune, name="Quartier distant")
+        exact = self.provider()
+        neighbors = [self.provider(area=False) for _ in range(3)]
+        for profile in neighbors:
+            profile.service_areas.add(neighboring_area)
+        distant = self.provider(area=False)
+        distant.service_areas.add(distant_area)
+        wrong_trade = self.provider(area=False, trade=False)
+        wrong_trade.service_areas.add(neighboring_area)
+
+        service_request = create_service_request(
+            self.client_user.pk, trade=self.trade, neighborhood=self.area,
+            title="Fuite", description="Réparation", address_detail="Adresse privée", priority="NORMAL",
+        )
+        offered = list(service_request.offers.order_by("created_at", "id").values_list("provider_id", flat=True))
+        self.assertEqual(len(offered), 3)
+        self.assertEqual(offered[0], exact.pk)
+        self.assertEqual(set(offered[1:]), {neighbors[0].pk, neighbors[1].pk})
+        self.assertNotIn(distant.pk, offered)
+        self.assertNotIn(wrong_trade.pk, offered)
+
+    def test_waiting_request_retries_when_provider_serves_neighboring_quartier(self):
+        neighboring_area = Neighborhood.objects.create(commune=self.area.commune, name="Quartier voisin")
+        profile = self.provider(area=False, available=False)
+        profile.service_areas.add(neighboring_area)
+        service_request = create_service_request(
+            self.client_user.pk, trade=self.trade, neighborhood=self.area,
+            title="Fuite", description="Réparation", address_detail="Adresse privée", priority="NORMAL",
+        )
+        self.assertEqual(service_request.status, ServiceRequest.Status.SEARCHING)
+        api = APIClient()
+        api.force_login(profile.user)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.assertEqual(api.patch("/api/v1/providers/availability/", {"is_available": True}, format="json").status_code, 200)
+        self.assertEqual(service_request.offers.get().provider, profile)
+
+    def test_normal_request_reserves_one_offer_for_neighboring_quartier(self):
+        neighboring_area = Neighborhood.objects.create(commune=self.area.commune, name="Quartier voisin")
+        exact = [self.provider() for _ in range(3)]
+        neighbor = self.provider(area=False)
+        neighbor.service_areas.add(neighboring_area)
+        service_request = create_service_request(
+            self.client_user.pk, trade=self.trade, neighborhood=self.area,
+            title="Fuite", description="Réparation", address_detail="Adresse privée", priority="NORMAL",
+        )
+        offered = list(service_request.offers.order_by("created_at", "id").values_list("provider_id", flat=True))
+        self.assertEqual(len(offered), 3)
+        self.assertIn(neighbor.pk, offered)
+        self.assertEqual(len(set(offered) & {profile.pk for profile in exact}), 2)
 
     def test_staff_without_dispatch_permission_cannot_create_offers(self):
         service_request = self.request()

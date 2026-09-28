@@ -63,6 +63,38 @@ export default function ProviderDashboardPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    let fetching = false;
+    async function refreshOffers() {
+      if (!active || fetching || document.visibilityState === "hidden") return;
+      fetching = true;
+      try {
+        const page = await apiGet<ApiPage<ProviderOffer>>("/api/v1/providers/offers/");
+        if (active) {
+          setOffers(page.results);
+          setOfferCount(page.count);
+        }
+      } catch {
+        // Keep the last visible state until the next refresh succeeds.
+      } finally {
+        fetching = false;
+      }
+    }
+    function onVisibilityChange() {
+      if (document.visibilityState === "visible") void refreshOffers();
+    }
+    const interval = window.setInterval(() => void refreshOffers(), 20_000);
+    window.addEventListener("focus", onVisibilityChange);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onVisibilityChange);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, []);
+
   return (
     <main className="provider-dashboard-premium">
       <section className="role-welcome-card provider-welcome-card">
@@ -110,7 +142,7 @@ export default function ProviderDashboardPage() {
         <section className="dashboard-callout warning-card">
           <div>
             <strong>Votre abonnement ne permet pas encore de recevoir des demandes.</strong>
-            <p>Un abonnement actif est nécessaire pour que les demandes de votre métier et de vos quartiers apparaissent ici.</p>
+            <p>Un abonnement actif est nécessaire pour recevoir les demandes de votre métier dans vos quartiers et, selon les disponibilités, dans leur commune.</p>
           </div>
           <Link className="button-secondary" href="/prestataire/abonnement">
             Voir mon abonnement

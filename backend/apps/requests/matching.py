@@ -44,11 +44,16 @@ def retry_waiting_requests_for_provider(provider_id):
         is_active=True, commune__is_active=True, commune__city__is_active=True,
         commune__city__region__is_active=True,
     ).values("pk")
+    commune_ids = profile.service_areas.filter(
+        is_active=True, commune__is_active=True, commune__city__is_active=True,
+        commune__city__region__is_active=True,
+    ).values("commune_id")
     waiting = list(ServiceRequest.objects.filter(
         status=ServiceRequest.Status.SEARCHING,
         trade_id__in=trade_ids,
-        neighborhood_id__in=area_ids,
         offers__isnull=True,
+    ).filter(
+        Q(neighborhood_id__in=area_ids) | Q(neighborhood__commune_id__in=commune_ids)
     ).order_by("created_at", "pk").values_list("pk", "client_id"))
     matched = 0
     for request_id, client_id in waiting:
@@ -113,7 +118,7 @@ def _match_request(request_id, actor, *, skip_if_already_matched=False):
         )
 
     is_urgent = service_request.priority == ServiceRequest.Priority.URGENT
-    limit = 5 if is_urgent else 1
+    limit = 5 if is_urgent else 3
     entitled_provider_ids = eligible_provider_ids_queryset(urgent=is_urgent)
     candidates = ProviderProfile.objects.select_related("user").filter(
         pk__in=entitled_provider_ids,
@@ -123,10 +128,27 @@ def _match_request(request_id, actor, *, skip_if_already_matched=False):
         user__role="PROVIDER",
         user__phone_verified_at__isnull=False,
         trades=trade,
-        service_areas=neighborhood,
-    ).order_by("verified_at", "id")[:limit]
+    )
 
-    selected = list(candidates)
+    # The requested quartier has priority; other active quartiers in its
+    # commune are the only fallback candidates.
+    exact = list(candidates.filter(
+        service_areas=neighborhood,
+    ).order_by("verified_at", "id").distinct()[:limit])
+    neighbors = list(candidates.filter(
+        service_areas__commune_id=neighborhood.commune_id,
+        service_areas__is_active=True,
+    ).exclude(pk__in=[profile.pk for profile in exact]).order_by(
+        "verified_at", "id"
+    ).distinct()[:limit])
+
+    # Reserve one of the limited offers for another quartier in the commune,
+    # even if exact-quartier providers have not yet answered.
+    exact_slots = min(len(exact), limit - 1) if neighbors else len(exact)
+    selected = exact[:exact_slots] + neighbors[:limit - exact_slots]
+    if len(selected) < limit:
+        selected.extend(exact[exact_slots:exact_slots + limit - len(selected)])
+
     for profile in selected:
         ServiceOffer.objects.create(service_request=service_request, provider=profile)
         create_notification(

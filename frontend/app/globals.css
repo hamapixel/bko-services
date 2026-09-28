@@ -1968,6 +1968,17 @@ textarea:disabled {
   color: #66788d;
 }
 
+.provider-offer-zone-note {
+  margin: 0;
+  border: 1px solid #f5d6ba;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #fff8f0;
+  color: #8c4919;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .provider-privacy-callout {
   margin-bottom: 20px;
   border: 1px solid #d6e3f0;

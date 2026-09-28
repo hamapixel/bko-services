@@ -978,8 +978,7 @@ export default function BecomeProviderPage() {
                     <div>
                       <h3>Zones d’intervention</h3>
                       <p>
-                        Sélectionnez les quartiers où vous pouvez réellement vous
-                        déplacer.
+                        Sélectionnez les quartiers où vous intervenez en priorité. Des offres d’autres quartiers de la même commune peuvent aussi vous être proposées ; vérifiez le trajet avant de les accepter.
                       </p>
                     </div>
                   </div>

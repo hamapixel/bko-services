@@ -19,13 +19,20 @@ class ProviderOfferSerializer(serializers.ModelSerializer):
     neighborhood_name = serializers.CharField(source="service_request.neighborhood.name", read_only=True)
     commune_name = serializers.CharField(source="service_request.neighborhood.commune.name", read_only=True)
     priority = serializers.ChoiceField(source="service_request.priority", choices=ServiceRequest.Priority.choices, read_only=True)
+    outside_declared_quartiers = serializers.SerializerMethodField()
+
+    def get_outside_declared_quartiers(self, obj):
+        return not any(
+            area.pk == obj.service_request.neighborhood_id
+            for area in obj.provider.service_areas.all()
+        )
 
     class Meta:
         model = ServiceOffer
         fields = (
             "id", "request_id", "trade_id", "trade_name",
             "neighborhood_id", "neighborhood_name", "commune_name",
-            "priority", "status", "created_at",
+            "priority", "status", "created_at", "outside_declared_quartiers",
         )
         read_only_fields = fields
 
@@ -55,9 +62,10 @@ def own_pending_offers(user):
             provider_id__in=eligible_provider_ids_queryset(urgent=True),
         )
     ).select_related(
+        "provider",
         "service_request__trade",
         "service_request__neighborhood__commune",
-    )
+    ).prefetch_related("provider__service_areas")
 
 
 class ProviderOfferListView(ListAPIView):

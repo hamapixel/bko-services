@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
@@ -53,8 +54,14 @@ def _validate_provider_eligibility(provider, user, service_request):
     if not provider.trades.filter(pk=trade.pk).exists():
         raise ValidationError({"offer": "Vous n'êtes plus rattaché au métier demandé."})
 
-    if not provider.service_areas.filter(pk=neighborhood.pk).exists():
-        raise ValidationError({"offer": "Vous ne desservez plus le quartier demandé."})
+    if not provider.service_areas.filter(
+        Q(pk=neighborhood.pk) | Q(commune_id=neighborhood.commune_id),
+        is_active=True,
+        commune__is_active=True,
+        commune__city__is_active=True,
+        commune__city__region__is_active=True,
+    ).exists():
+        raise ValidationError({"offer": "Vous ne desservez plus la commune de cette demande."})
 
     is_urgent = service_request.priority == ServiceRequest.Priority.URGENT
     if not provider_has_entitlement(provider.pk, urgent=is_urgent):
