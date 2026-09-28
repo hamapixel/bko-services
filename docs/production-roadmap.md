@@ -6,7 +6,7 @@
 
 L'application comprend les parcours client, prestataire et administration, les lieux et métiers, les demandes et offres privées, le suivi, les avis, les plaintes, les abonnements et l'essai unique. Le backend possède une intégration Wave Checkout avec activation par webhook signé et idempotent. La PWA, les brouillons locaux et le Web Push sont présents. L'adaptateur SMS Twilio existe.
 
-Ces fonctionnalités ne prouvent pas encore qu'un paiement, un SMS ou une notification fonctionne avec un compte marchand réel en production. Orange Money n'est pas intégré. Le README historique mentionne Celery et Redis comme architecture cible : aucun worker Celery, Redis ou configuration Docker n'est actuellement présent dans le dépôt. Un workflow de CI est sur la branche, en attente de validation par GitHub Actions.
+Ces fonctionnalités ne prouvent pas encore qu'un paiement, un SMS ou une notification fonctionne avec un compte marchand réel en production. Orange Money n'est pas intégré. Le README historique mentionne Celery et Redis comme architecture cible : aucun worker Celery, Redis ou configuration Docker n'est actuellement présent dans le dépôt. La CI sur PostgreSQL et le build frontend ont réussi sur la PR ; la protection de `main` reste à configurer.
 
 L'obtention des comptes marchands Wave Business et Orange Money Web Payment au Mali peut démarrer maintenant, en parallèle des étapes 23–24. Si les deux moyens de paiement sont requis au lancement, l'adaptateur Orange et les essais marchands des deux parcours doivent être terminés **avant** l'étape 25 de préparation serveur. Procédure et critères : [paiements-marchands.md](paiements-marchands.md).
 
@@ -15,7 +15,7 @@ L'obtention des comptes marchands Wave Business et Orange Money Web Payment au M
 | Étape | Travail | Preuve attendue |
 | --- | --- | --- |
 | 23 — Qualité | Suite PostgreSQL terminée : 130 tests OK, dont concurrence et parcours client → prestataire → avis. Contrôles mobiles et accessibilité à terminer. | Résultats des essais mobiles consignés ; tests PostgreSQL déjà validés localement. |
-| 24 — Automatisation | Workflow GitHub Actions ajouté pour Django/PostgreSQL, TypeScript, ESLint, build Next.js et migrations ; exécution sur la PR puis protection de `main` à vérifier. | Les deux contrôles passent sur la PR et une PR qui échoue ne peut pas être intégrée. |
+| 24 — Automatisation | CI sur PostgreSQL et frontend validée sur la PR ; rendre les deux contrôles obligatoires sur `main`. | Les deux contrôles passent sur la PR ; une PR qui échoue ne peut pas être intégrée après protection de `main`. |
 | 25 — Préparation serveur | Paramètres Django de production, serveur WSGI, fichiers statiques, reverse proxy HTTPS, stockage durable des avatars, sauvegardes et journaux ; décider si Redis/worker est nécessaire aux notifications et aux limites de débit entre processus. | `check --deploy` examiné, services relancés automatiquement, sauvegarde et restauration testées. |
 | 26 — Préproduction | Domaine de test HTTPS, vraie livraison SMS, Web Push, installation iPhone/Android, essais et abonnements, paiement Wave sous contrat marchand. | Tests sur appareils réels, webhook signé, expiration et renouvellement constatés ; incident simulé. |
 | 27 — Ouverture | Relecture de la PR, intégration, sauvegarde, migration, déploiement contrôlé, surveillance et support. | Parcours de bout en bout réussi sur le domaine final et plan de retour arrière documenté. |
