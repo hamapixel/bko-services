@@ -2,17 +2,17 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels dans les zones ouvertes au Mali. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étapes 0 à 22 développées ; préparation de production en cours**. Les espaces sont branchés sur les API Django. La feuille de route et les prérequis de mise en ligne sont détaillés dans [docs/production-roadmap.md](docs/production-roadmap.md).
+> Statut au 29 septembre 2026 : **étapes 0 à 22 développées ; qualité et automatisation validées techniquement ; préparation de production en cours**. La suite complète a réussi avec **141 tests sur PostgreSQL**, sans test ignoré, et le frontend passe ESLint, TypeScript et le build Next.js. Les essais mobiles et d'accessibilité restent à consigner avant de clôturer l'étape 23. La CI de l'étape 24 est opérationnelle et protégée sur `main`.
 
 Pour ouvrir les abonnements payants avec Wave et Orange Money au Mali, voir [l'obtention des accès marchands et l'intégration](docs/paiements-marchands.md). L'accès Wave est codé mais attend un compte marchand réel ; Orange Money Web Payment nécessite encore l'accord marchand et son adaptateur dédié.
 
 ## Principes
 
-- Les clients n'accéderont qu'à leurs demandes ; les professionnels n'accéderont qu'aux offres qui leur sont adressées et aux interventions qui leur sont attribuées. Ces règles seront appliquées dans l'API et testées contre les accès par identifiant (IDOR).
-- Une demande urgente pourra être proposée à cinq professionnels compatibles au maximum. Une transaction PostgreSQL garantit qu'un seul l'accepte.
-- Les pièces d'identité et les coordonnées privées devront rester protégées. Avant attribution, l'offre transmise au professionnel contient seulement les renseignements nécessaires pour décider.
-- L'interface mobile devra rester utilisable avec une connexion instable. Une demande conservée hors connexion sera clairement marquée **non envoyée** jusqu'à confirmation du serveur.
-- Les prestataires devront être vérifiés pour recevoir des demandes. Les tarifs, catégories et quartiers seront gérés côté serveur.
+- Les clients n'accèdent qu'à leurs demandes ; les professionnels n'accèdent qu'aux offres qui leur sont adressées et aux interventions qui leur sont attribuées. Ces règles sont appliquées dans l'API et couvertes par des tests d'accès par identifiant (IDOR).
+- Une demande urgente peut être proposée à cinq professionnels compatibles au maximum. Une transaction PostgreSQL garantit qu'un seul l'accepte.
+- Les pièces d'identité et les coordonnées privées doivent rester protégées. Avant attribution, l'offre transmise au professionnel contient seulement les renseignements nécessaires pour décider.
+- L'interface mobile reste utilisable avec une connexion instable. Une demande conservée hors connexion est clairement marquée **non envoyée** jusqu'à confirmation du serveur.
+- Les prestataires doivent être vérifiés pour recevoir des demandes. Les tarifs, catégories et quartiers sont gérés côté serveur.
 
 ## Architecture retenue
 
@@ -65,7 +65,7 @@ Après avoir cloné le dépôt, consulter [l'installation du backend et du front
 
 ```powershell
 & ".\.venv\Scripts\python.exe" backend\manage.py check
-& ".\.venv\Scripts\python.exe" backend\manage.py test apps.accounts apps.locations apps.catalog apps.providers apps.requests apps.reviews apps.notifications apps.messaging apps.complaints apps.subscriptions apps.payments --settings=config.test_settings
+& ".\.venv\Scripts\python.exe" backend\manage.py test apps.accounts apps.locations apps.catalog apps.providers apps.requests apps.reviews apps.notifications apps.messaging apps.complaints apps.subscriptions apps.payments
 git status
 ```
 
@@ -73,8 +73,10 @@ Ne placez jamais de mots de passe, de clés API, de fichiers `.env` ou de pièce
 
 ## Organisation du travail
 
-Chaque étape suit le cycle : explication → commandes → fichiers complets → vérification → correction → `git status` → commit → push. Les règles de sécurité et les tests sont ajoutés avec les fonctions correspondantes. `main` porte le code stable ; les modifications sont préparées sur des branches `feature/*`.
+Chaque étape suit le cycle : explication → commandes → fichiers complets → vérification → correction → `git status` → commit → push. Les règles de sécurité et les tests sont ajoutés avec les fonctions correspondantes. `main` porte le code stable ; les modifications sont préparées sur des branches `feature/*` ou `fix/*`, puis intégrées par pull request.
 
 ## À venir
 
-L'étape 23 de qualité a validé **130 tests sur PostgreSQL**, sans test ignoré ; les essais mobiles et d'accessibilité restent à consigner : [commandes et résultats](docs/etape-23-qualite.md). Le [workflow CI](docs/etape-24-ci.md) a réussi ses contrôles backend PostgreSQL et frontend sur la PR ; une règle active pour `main` les exige. Ensuite : configuration serveur, préproduction puis déploiement. Voir la [feuille de route de production](docs/production-roadmap.md) et les [exigences d'architecture](docs/architecture.md).
+L'étape 23 a validé **141 tests sur PostgreSQL**, sans test ignoré, ainsi que **21 tests ciblés** sur les lieux, le matching, les zones non répertoriées et l'acceptation atomique. ESLint, TypeScript et le build Next.js ont également réussi. Les essais mobiles et d'accessibilité restent à consigner : [commandes et résultats](docs/etape-23-qualite.md).
+
+Le [workflow CI](docs/etape-24-ci.md) exécute les contrôles **Backend PostgreSQL** et **Frontend lint and build** ; une règle active sur `main` exige une pull request et ces deux checks avant fusion. La prochaine étape technique est la préparation serveur, puis la préproduction et le déploiement. Voir la [feuille de route de production](docs/production-roadmap.md) et les [exigences d'architecture](docs/architecture.md).

@@ -2,12 +2,29 @@
 
 Le workflow [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) s'exécute sur les pull requests, les changements sur `main` et à la demande. Les deux contrôles sont séparés : **Backend PostgreSQL** et **Frontend lint and build**.
 
-- Le backend installe les dépendances Python, vérifie Django et les migrations, puis exécute les 130 tests sur un service PostgreSQL 18 temporaire. Les valeurs de connexion et la clé Django dans le workflow sont uniquement des données de test ; aucun compte marchand, mot de passe de production ou secret GitHub n'est nécessaire.
+- Le backend installe les dépendances Python, vérifie Django et les migrations, puis exécute la suite complète sur un service PostgreSQL 18 temporaire.
 - Le frontend utilise Node.js 24 et `npm ci` à partir du lockfile, puis lance ESLint, TypeScript et le build Next.js.
 - Le jeton GitHub a seulement le droit de lire le dépôt. Les contrôles ne publient pas d'artefact et ne déploient pas l'application.
 
-Le 28 septembre 2026, [l'exécution CI n° 3](https://github.com/hamapixel/bko-services/actions/runs/36401790926) sur la PR #22 a réussi : les jobs **Backend PostgreSQL** et **Frontend lint and build** sont tous deux verts. Les tests PostgreSQL locaux du 26 septembre étaient aussi verts (130 tests, aucun ignoré). Si une exécution future échoue, corriger sa cause puis vérifier un nouveau passage.
+La référence fonctionnelle `0cc4f18` a passé les deux jobs GitHub Actions avec succès. Sur le même état fonctionnel, la suite PostgreSQL locale compte **141 tests réussis, sans test ignoré**. Toute modification ultérieure de la pull request relance la CI et doit à nouveau obtenir les deux checks verts avant intégration.
 
-Le 28 septembre, l'administration du dépôt a créé la règle GitHub `main` : son statut est **Active**, elle cible la branche par défaut `main` (1 cible) et liste les contrôles requis **Backend PostgreSQL** et **Frontend lint and build**. Le réglage « Require a pull request before merging » doit rester coché avec zéro approbation obligatoire si le dépôt est géré seul. Le texte copié de GitHub ne montre pas l'état des cases à cocher ; vérifier ce dernier réglage visuellement dans la règle.
+## Protection de `main`
 
-Les essais visuels et d'accessibilité sur téléphone et tablette restent à consigner au titre de l'étape 23. L'étape 25 concernera la configuration serveur et les secrets réels.
+Le ruleset GitHub `main` est **Active** et cible la branche par défaut. Il impose :
+
+- une pull request avant fusion ;
+- zéro approbation obligatoire pour permettre une gestion individuelle du dépôt ;
+- les checks requis **Backend PostgreSQL** et **Frontend lint and build** ;
+- l'interdiction de supprimer `main` ;
+- l'interdiction des mises à jour non fast-forward ;
+- aucun acteur de contournement configuré.
+
+Les méthodes de fusion autorisées par la règle sont merge, squash et rebase. Pour cette grosse branche d'intégration, conserver une PR explicite vers `main` permet d'avoir un historique de validation lisible et de laisser les checks requis protéger la livraison.
+
+## État de passage
+
+- CI backend PostgreSQL : opérationnelle.
+- CI frontend ESLint + TypeScript + build : opérationnelle.
+- Ruleset `main` : actif avec pull request et deux checks requis.
+- Déploiement automatique : non configuré, volontairement reporté aux étapes serveur/préproduction.
+- Prochaine étape : préparation serveur et paramètres de production, après clôture des essais mobiles/accessibilité de l'étape 23.
