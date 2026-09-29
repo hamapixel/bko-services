@@ -6,6 +6,7 @@ from apps.notifications.models import Notification
 from apps.notifications.services import create_notification
 
 from .models import RequestStatusHistory, ServiceRequest
+from .matching import schedule_waiting_request_retry
 
 
 PROVIDER_TRANSITIONS = {
@@ -47,7 +48,7 @@ def _locked_request(request_id):
     try:
         return (
             ServiceRequest.objects.select_for_update()
-            .select_related("client", "assigned_provider__user")
+            .select_related("client")
             .get(pk=request_id)
         )
     except ServiceRequest.DoesNotExist as exc:
@@ -112,6 +113,8 @@ def transition_provider_intervention(request_id, user, target_status):
         message=message,
         service_request=service_request,
     )
+    if target_status == ServiceRequest.Status.PROVIDER_COMPLETED:
+        schedule_waiting_request_retry(service_request.assigned_provider_id)
     return service_request
 
 

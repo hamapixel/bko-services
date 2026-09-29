@@ -60,7 +60,7 @@ class WorkflowAndIdorTests(TestCase):
             address_detail="Porte verte, près du marché.",
             priority=ServiceRequest.Priority.URGENT,
         )
-        self.assertEqual(dispatch_request(self.service_request.pk, self.admin_user), 2)
+        self.assertEqual(ServiceOffer.objects.filter(service_request=self.service_request).count(), 2)
 
         offer = ServiceOffer.objects.get(
             service_request=self.service_request,

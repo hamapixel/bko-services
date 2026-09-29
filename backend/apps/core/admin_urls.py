@@ -7,6 +7,7 @@ from .admin_views import (
     AdminProviderReviewView,
     AdminRequestDetailView,
     AdminRequestDispatchView,
+    AdminRequestResolveLocationView,
     AdminRequestListView,
     AdminUserDetailView,
     AdminUserListView,
@@ -22,4 +23,5 @@ urlpatterns = [
     path("requests/", AdminRequestListView.as_view(), name="admin-requests"),
     path("requests/<uuid:pk>/", AdminRequestDetailView.as_view(), name="admin-request-detail"),
     path("requests/<uuid:pk>/dispatch/", AdminRequestDispatchView.as_view(), name="admin-request-dispatch"),
+    path("requests/<uuid:pk>/resolve-location/", AdminRequestResolveLocationView.as_view(), name="admin-request-resolve-location"),
 ]

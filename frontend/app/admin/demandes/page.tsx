@@ -11,13 +11,14 @@ import {
 } from "@/lib/admin-api";
 import { STATUS_LABELS, statusTone } from "@/lib/client-api";
 
-type Filter = "ALL" | "ACTIVE" | "CREATED" | "DISPUTED" | "DONE";
+type Filter = "ALL" | "ACTIVE" | "CREATED" | "WAITING" | "DISPUTED" | "DONE";
 
 const FILTER_PATHS: Record<Filter, string> = {
   ALL: "/api/v1/admin/requests/",
   ACTIVE:
-    "/api/v1/admin/requests/?status=CREATED,SEARCHING,OFFERED,ACCEPTED,EN_ROUTE,ARRIVED,IN_PROGRESS,PROVIDER_COMPLETED,DISPUTED",
-  CREATED: "/api/v1/admin/requests/?status=CREATED,SEARCHING",
+    "/api/v1/admin/requests/?status=CREATED,LOCATION_PENDING,SEARCHING,OFFERED,ACCEPTED,EN_ROUTE,ARRIVED,IN_PROGRESS,PROVIDER_COMPLETED,DISPUTED",
+  CREATED: "/api/v1/admin/requests/?status=CREATED,LOCATION_PENDING,SEARCHING",
+  WAITING: "/api/v1/admin/requests/?status=LOCATION_PENDING,SEARCHING",
   DISPUTED: "/api/v1/admin/requests/?status=DISPUTED",
   DONE: "/api/v1/admin/requests/?status=CLIENT_CONFIRMED,CANCELLED",
 };
@@ -62,9 +63,12 @@ export default function AdminRequestsPage() {
 
   useEffect(() => {
     let active = true;
-    apiGet<ApiPage<AdminRequestRow>>(FILTER_PATHS.ACTIVE)
+    const initialFilter = new URLSearchParams(window.location.search).get("filter") === "waiting"
+      ? "WAITING" : "ACTIVE";
+    apiGet<ApiPage<AdminRequestRow>>(FILTER_PATHS[initialFilter])
       .then((page) => {
         if (!active) return;
+        setFilter(initialFilter);
         setItems(page.results);
         setNextPage(normalizeNext(page.next));
       })
@@ -114,6 +118,7 @@ export default function AdminRequestsPage() {
           {[
             ["ACTIVE", "Actives"],
             ["CREATED", "À matcher"],
+            ["WAITING", "Sans offre"],
             ["DISPUTED", "Contestées"],
             ["DONE", "Terminées"],
             ["ALL", "Toutes"],
@@ -167,7 +172,7 @@ export default function AdminRequestsPage() {
           >
             <div>
               <span className="request-meta">
-                {item.trade_name} · {item.commune_name}
+                {item.trade_name} · {item.commune_name} · {item.region_name}
               </span>
               <h3>{item.neighborhood_name}</h3>
               <p>

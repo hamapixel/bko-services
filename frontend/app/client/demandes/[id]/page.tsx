@@ -73,7 +73,7 @@ export default function ClientRequestDetailPage() {
         {},
       );
       setRequest(updated);
-      setMessage("Fin de l’intervention confirmée.");
+      setMessage("Fin confirmée. Vous pouvez maintenant noter le prestataire ci-dessous.");
     } catch (caught) {
       setError(
         caught instanceof Error ? caught.message : "Confirmation impossible.",
@@ -123,14 +123,14 @@ export default function ClientRequestDetailPage() {
   if (!request) return null;
 
   return (
-    <main>
+    <main className="client-request-detail">
       <section className="client-page-head detail-head">
         <div>
           <Link className="back-link" href="/client/demandes">
             ← Mes demandes
           </Link>
           <p className="page-kicker">
-            {request.trade_name} · {request.commune_name}
+            {request.trade_name} · {request.commune_name} · {request.region_name}
           </p>
           <h1>{request.title}</h1>
           <div className="detail-badges">
@@ -146,6 +146,12 @@ export default function ClientRequestDetailPage() {
 
       {message && <div className="form-success">{message}</div>}
       {error && <div className="inline-error">{error}</div>}
+      {request.status === "LOCATION_PENDING" && (
+        <div className="security-note" role="status">
+          <strong>Votre zone doit être vérifiée</strong>
+          <p>Votre demande est enregistrée. L’administration vérifie {request.requested_city}, {request.commune_name}, {request.neighborhood_name} avant d’envoyer des offres aux prestataires. Aucun professionnel n’a encore reçu votre demande.</p>
+        </div>
+      )}
 
       <div className="detail-grid">
         <div className="detail-main">
@@ -222,7 +228,8 @@ export default function ClientRequestDetailPage() {
           {request.status === "CLIENT_CONFIRMED" && !request.has_review && (
             <section className="detail-card">
               <p className="page-kicker">Votre avis</p>
-              <h2>Comment s’est passée l’intervention ?</h2>
+              <h2>Votre avis sur {request.assigned_provider_display_name ?? "le prestataire"}</h2>
+              <p>Comment s’est passée l’intervention ?</p>
               <div className="rating-row" aria-label="Note">
                 {[1, 2, 3, 4, 5].map((value) => (
                   <button
@@ -230,6 +237,7 @@ export default function ClientRequestDetailPage() {
                     key={value}
                     type="button"
                     aria-label={`${value} étoile${value > 1 ? "s" : ""}`}
+                    aria-pressed={rating === value}
                     onClick={() => setRating(value)}
                   >
                     ★
@@ -263,13 +271,19 @@ export default function ClientRequestDetailPage() {
         </div>
 
         <aside className="detail-side">
-          <section className="provider-card">
+          <section className="provider-card client-provider-card">
             <p className="page-kicker">Prestataire</p>
             {request.assigned_provider_display_name ? (
               <>
-                <div className="provider-avatar">P</div>
-                <h2>{request.assigned_provider_display_name}</h2>
-                <p>Prestataire attribué à cette demande.</p>
+                <div className="client-provider-identity">
+                  <div className="provider-avatar" aria-hidden="true">
+                    {request.assigned_provider_display_name.trim().charAt(0).toLocaleUpperCase("fr")}
+                  </div>
+                  <div>
+                    <h2>{request.assigned_provider_display_name}</h2>
+                    <p>Prestataire attribué à cette demande.</p>
+                  </div>
+                </div>
                 {request.assigned_provider_phone && (
                   <a
                     className="button-secondary button-wide"

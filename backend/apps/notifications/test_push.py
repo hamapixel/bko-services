@@ -31,7 +31,7 @@ class WebPushTests(TestCase):
             password="Strong-password-2026!",
             phone_verified_at=timezone.now(),
         )
-        self.endpoint = "https://push.example.com/subscriptions/device-1"
+        self.endpoint = "https://fcm.googleapis.com/fcm/send/device-1"
         self.payload = {
             "endpoint": self.endpoint,
             "keys": {

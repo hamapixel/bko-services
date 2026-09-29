@@ -19,6 +19,7 @@ class PaymentTransactionSerializer(serializers.ModelSerializer):
             "merchant_reference",
             "purpose",
             "payment_provider",
+            "checkout_url",
             "amount_xof",
             "currency",
             "plan_code_snapshot",

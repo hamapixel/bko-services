@@ -10,10 +10,29 @@ User = get_user_model()
 
 
 class PublicUserSerializer(serializers.ModelSerializer):
+    has_avatar = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ("id", "phone", "first_name", "last_name", "email", "role", "phone_verified_at")
+        fields = (
+            "id",
+            "phone",
+            "first_name",
+            "last_name",
+            "email",
+            "role",
+            "phone_verified_at",
+            "has_avatar",
+            "avatar_url",
+        )
         read_only_fields = fields
+
+    def get_has_avatar(self, obj):
+        return bool(obj.avatar)
+
+    def get_avatar_url(self, obj):
+        return "/api/v1/auth/avatar/" if obj.avatar else None
 
 
 class RegisterSerializer(serializers.Serializer):
@@ -66,3 +85,62 @@ class VerifyPhoneSerializer(serializers.Serializer):
         max_length=6,
         validators=[RegexValidator(regex=r"^\d{6}$", message="Le code doit contenir six chiffres.")],
     )
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=16)
+
+    def validate_phone(self, value):
+        value = value.strip()
+        field = User._meta.get_field("phone")
+        try:
+            field.run_validators(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.messages) from exc
+        return value
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=16)
+    code = serializers.CharField(
+        min_length=6,
+        max_length=6,
+        validators=[
+            RegexValidator(
+                regex=r"^\d{6}$",
+                message="Le code doit contenir six chiffres.",
+            )
+        ],
+    )
+    new_password = serializers.CharField(write_only=True, trim_whitespace=False)
+    confirm_password = serializers.CharField(write_only=True, trim_whitespace=False)
+
+    def validate_phone(self, value):
+        value = value.strip()
+        field = User._meta.get_field("phone")
+        try:
+            field.run_validators(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.messages) from exc
+        return value
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError(
+                {"confirm_password": "Les deux mots de passe ne correspondent pas."}
+            )
+        return attrs
+
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True, trim_whitespace=False)
+    new_password = serializers.CharField(write_only=True, trim_whitespace=False)
+    confirm_password = serializers.CharField(write_only=True, trim_whitespace=False)
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError(
+                {"confirm_password": "Les deux mots de passe ne correspondent pas."}
+            )
+        return attrs

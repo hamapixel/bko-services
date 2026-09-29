@@ -32,6 +32,7 @@ export type AdminOverview = {
   providers_pending: number;
   providers_verified: number;
   requests_active: number;
+  requests_waiting: number;
   complaints_open: number;
   payments_pending: number;
   payments_unfulfilled: number;
@@ -87,6 +88,7 @@ export type AdminRequestRow = {
   trade_name: string;
   neighborhood_name: string;
   commune_name: string;
+  region_name: string;
   priority: "NORMAL" | "URGENT";
   status: RequestStatus;
   client_id: string;
@@ -97,6 +99,8 @@ export type AdminRequestRow = {
 };
 
 export type AdminRequestDetail = AdminRequestRow & {
+  requested_region_id: string | null;
+  requested_city: string;
   client_phone: string;
   title: string;
   description: string;
@@ -150,6 +154,7 @@ export type AdminSubscription = {
   starts_at: string;
   ends_at: string;
   cancelled_at: string | null;
+  free_trial_used_at: string | null;
   history: SubscriptionHistory[];
   provider_id: string;
   provider_display_name: string;

@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element -- private authenticated avatar URLs intentionally bypass image optimization. */
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -24,6 +25,7 @@ type ProviderSessionValue = {
   user: PublicUser;
   profile: ProviderProfile;
   refreshProfile: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 };
 
 const ProviderSessionContext = createContext<ProviderSessionValue | null>(null);
@@ -64,20 +66,29 @@ function initials(profile: ProviderProfile) {
 export default function ProviderShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const isLoginPage = pathname === "/prestataire/connexion";
+  const isPublicProviderPage =
+    pathname === "/prestataire/connexion" ||
+    pathname.startsWith("/prestataire/devenir");
   const [user, setUser] = useState<PublicUser | null>(null);
   const [profile, setProfile] = useState<ProviderProfile | null>(null);
-  const [loading, setLoading] = useState(!isLoginPage);
+  const [loading, setLoading] = useState(!isPublicProviderPage);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sessionError, setSessionError] = useState("");
+  const [logoutBusy, setLogoutBusy] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
 
   const refreshProfile = useCallback(async () => {
     const next = await apiGet<ProviderProfile>("/api/v1/providers/application/");
     setProfile(next);
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    const next = await apiGet<PublicUser>("/api/v1/auth/me/");
+    setUser(next);
+  }, []);
+
   useEffect(() => {
-    if (isLoginPage) {
+    if (isPublicProviderPage) {
       return;
     }
 
@@ -115,7 +126,7 @@ export default function ProviderShell({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, [isLoginPage, router]);
+  }, [isPublicProviderPage, router]);
 
   const contextValue = useMemo(
     () =>
@@ -124,21 +135,29 @@ export default function ProviderShell({ children }: { children: ReactNode }) {
             user,
             profile,
             refreshProfile,
+            refreshUser,
           }
         : null,
-    [profile, refreshProfile, user],
+    [profile, refreshProfile, refreshUser, user],
   );
 
   async function logout() {
+    if (logoutBusy) return;
+    setLogoutBusy(true);
+    setLogoutError("");
     try {
       await apiMutation<void>("/api/v1/auth/logout/", "POST", {});
-    } finally {
+      setUser(null);
+      setProfile(null);
       router.replace("/prestataire/connexion");
       router.refresh();
+    } catch (caught) {
+      setLogoutError(caught instanceof Error ? caught.message : "Déconnexion impossible. Réessayez.");
+      setLogoutBusy(false);
     }
   }
 
-  if (isLoginPage) {
+  if (isPublicProviderPage) {
     return <>{children}</>;
   }
 
@@ -221,7 +240,7 @@ export default function ProviderShell({ children }: { children: ReactNode }) {
               <strong>{profile.is_available ? "Disponible" : "Indisponible"}</strong>
               <small>
                 {profile.is_available
-                  ? "Vous pouvez recevoir de nouvelles offres."
+                  ? "Un abonnement actif est aussi nécessaire pour recevoir des offres."
                   : "Aucune nouvelle offre ne vous sera proposée."}
               </small>
             </span>
@@ -245,7 +264,13 @@ export default function ProviderShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="provider-account-card">
-            <span className="provider-avatar">{initials(profile)}</span>
+            <span className="provider-avatar">
+              {user.has_avatar && user.avatar_url ? (
+                <img src={user.avatar_url} alt="" />
+              ) : (
+                initials(profile)
+              )}
+            </span>
             <span className="provider-account-copy">
               <strong>{profile.display_name}</strong>
               <small>{user.phone}</small>
@@ -254,9 +279,10 @@ export default function ProviderShell({ children }: { children: ReactNode }) {
               className="text-button"
               type="button"
               onClick={logout}
+              disabled={logoutBusy}
               aria-label="Se déconnecter"
             >
-              Quitter
+              Se déconnecter
             </button>
           </div>
         </aside>
@@ -284,22 +310,33 @@ export default function ProviderShell({ children }: { children: ReactNode }) {
               <strong>{profile.display_name}</strong>
               <small>Gérez vos offres et interventions.</small>
             </div>
-            <Link className="provider-mini-avatar" href="/prestataire/profil">
-              {initials(profile)}
+            <button className="shell-logout-button" type="button" onClick={logout} disabled={logoutBusy} aria-label="Se déconnecter">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+              <span>Déconnexion</span>
+            </button>
+            <Link className="provider-mini-avatar" href="/prestataire/profil" aria-label="Ouvrir mon profil">
+              {user.has_avatar && user.avatar_url ? (
+                <img src={user.avatar_url} alt="" />
+              ) : (
+                initials(profile)
+              )}
             </Link>
           </header>
+
+          {logoutError && <div className="shell-logout-error" role="alert">{logoutError}</div>}
 
           <div className="provider-content">{children}</div>
         </div>
 
         <nav className="provider-bottom-nav" aria-label="Navigation mobile">
-          {NAVIGATION.slice(0, 4).map((item) => {
+          {NAVIGATION.filter((item) => item.href !== "/prestataire/avis").map((item) => {
             const active = navIsActive(pathname, item.href);
             return (
               <Link
                 className={active ? "provider-bottom-link active" : "provider-bottom-link"}
                 href={item.href}
                 key={item.href}
+                aria-current={active ? "page" : undefined}
               >
                 <span aria-hidden="true">{item.icon}</span>
                 <small>{item.label}</small>

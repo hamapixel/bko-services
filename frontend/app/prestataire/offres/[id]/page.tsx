@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { ApiReadError } from "@/lib/client-api";
 import {
   apiGet,
   apiMutation,
@@ -29,23 +30,42 @@ export default function ProviderOfferDetailPage() {
 
   useEffect(() => {
     let active = true;
-
-    apiGet<ProviderOffer>(`/api/v1/providers/offers/${params.id}/`)
-      .then((data) => {
-        if (active) setOffer(data);
-      })
-      .catch((caught) => {
+    let fetching = false;
+    async function refresh() {
+      if (!active || fetching || document.visibilityState === "hidden") return;
+      fetching = true;
+      try {
+        const data = await apiGet<ProviderOffer>(`/api/v1/providers/offers/${params.id}/`);
+        if (active) {
+          setOffer(data);
+          setError("");
+        }
+      } catch (caught) {
         if (!active) return;
-        setError(
-          caught instanceof Error ? caught.message : "Offre introuvable.",
-        );
-      })
-      .finally(() => {
+        if (caught instanceof ApiReadError && caught.status === 404) {
+          setOffer(null);
+          setError("Cette offre n’est plus disponible : la mission a pu être attribuée à un autre prestataire.");
+        } else {
+          setError(caught instanceof Error ? caught.message : "Offre introuvable.");
+        }
+      } finally {
+        fetching = false;
         if (active) setLoading(false);
-      });
+      }
+    }
+    function onVisibilityChange() {
+      if (document.visibilityState === "visible") void refresh();
+    }
+    void refresh();
+    const interval = window.setInterval(() => void refresh(), 20_000);
+    window.addEventListener("focus", onVisibilityChange);
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       active = false;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onVisibilityChange);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [params.id]);
 
@@ -143,6 +163,9 @@ export default function ProviderOfferDetailPage() {
             du client restent masqués avant attribution, car ces champs peuvent
             contenir des informations personnelles.
           </div>
+          {offer.outside_declared_quartiers && (
+            <p className="provider-offer-zone-note">Cette mission est dans un autre quartier de la même commune. Vérifiez que vous pouvez vous y déplacer avant d’accepter.</p>
+          )}
         </section>
 
         <aside className="detail-side">

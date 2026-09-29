@@ -1,5 +1,7 @@
 from datetime import timedelta
+from importlib import import_module
 
+from django.apps import apps as django_apps
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
@@ -137,6 +139,36 @@ class SubscriptionTests(TestCase):
         self.assertEqual(codes, ["normal", "urgent"])
         self.assertNotIn("is_active", response.json()["results"][0])
 
+    def test_admin_can_prepare_monthly_plan_but_must_set_price_before_publication(self):
+        admin = APIClient()
+        admin.force_login(self.admin)
+        response = admin.post(
+            "/api/v1/subscriptions/admin/plans/",
+            {
+                "code": "mensuel-essentiel", "name": "Mensuel Essentiel",
+                "price_xof": 0, "duration_days": 30, "is_active": False,
+                "max_active_jobs": 1,
+                "can_receive_requests": True, "can_receive_urgent_requests": False,
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        plan_id = response.json()["id"]
+        path = f"/api/v1/subscriptions/admin/plans/{plan_id}/"
+        self.assertEqual(
+            admin.patch(path, {"is_active": True}, format="json").status_code, 400
+        )
+        updated = admin.patch(
+            path, {"price_xof": 5000, "is_active": True}, format="json"
+        )
+        self.assertEqual(updated.status_code, 200)
+        self.assertEqual(updated.json()["duration_days"], 30)
+        self.assertEqual(updated.json()["max_active_jobs"], 1)
+        public_codes = [item["code"] for item in APIClient().get(
+            "/api/v1/subscriptions/plans/"
+        ).json()["results"]]
+        self.assertIn("mensuel-essentiel", public_codes)
+
     def test_provider_sees_only_own_subscription(self):
         self.create_subscription(self.provider)
 
@@ -244,6 +276,98 @@ class SubscriptionTests(TestCase):
         self.assertEqual(history.action, SubscriptionHistory.Action.RENEWED)
         self.assertEqual(history.plan_code, "urgent")
 
+    def test_free_trial_is_once_only_and_paid_plan_restores_offers(self):
+        trial = SubscriptionPlan.objects.create(
+            code="essai-14j", name="Essai 14 jours", price_xof=0,
+            duration_days=14, can_receive_requests=True,
+            can_receive_urgent_requests=True, max_active_jobs=1,
+        )
+        another_trial = SubscriptionPlan.objects.create(
+            code="autre-essai", name="Autre essai", price_xof=0,
+            duration_days=7, can_receive_requests=True,
+        )
+        admin = APIClient()
+        admin.force_login(self.admin)
+        activation_url = f"/api/v1/subscriptions/admin/providers/{self.provider.pk}/activate/"
+        self.assertEqual(
+            admin.post(activation_url, {"plan_id": str(trial.pk)}, format="json").status_code,
+            201,
+        )
+        subscription = ProviderSubscription.objects.get(provider=self.provider)
+        self.assertIsNotNone(subscription.free_trial_used_at)
+        subscription.ends_at = timezone.now() - timedelta(seconds=1)
+        subscription.save(update_fields=["ends_at"])
+
+        provider_api = APIClient()
+        provider_api.force_login(self.provider.user)
+        status = provider_api.get("/api/v1/subscriptions/me/")
+        self.assertEqual(status.json()["subscription"]["status"], "EXPIRED")
+        self.assertIsNotNone(status.json()["subscription"]["free_trial_used_at"])
+        self.assertFalse(provider_has_entitlement(self.provider.pk))
+        request = self.create_request()
+        self.assertFalse(ServiceOffer.objects.filter(service_request=request).exists())
+
+        renew_url = f"/api/v1/subscriptions/admin/subscriptions/{subscription.pk}/renew/"
+        self.assertEqual(admin.post(renew_url, {}, format="json").status_code, 400)
+        self.assertEqual(
+            admin.post(renew_url, {"plan_id": str(another_trial.pk)}, format="json").status_code,
+            400,
+        )
+        self.assertEqual(
+            admin.post(activation_url, {"plan_id": str(another_trial.pk)}, format="json").status_code,
+            400,
+        )
+        subscription.refresh_from_db()
+        self.assertEqual(subscription.plan, trial)
+        self.assertEqual(subscription.history.count(), 1)
+        self.assertFalse(provider_has_entitlement(self.provider.pk))
+
+        self.assertEqual(
+            admin.post(activation_url, {"plan_id": str(self.normal_plan.pk)}, format="json").status_code,
+            201,
+        )
+        subscription.refresh_from_db()
+        self.assertEqual(subscription.plan, self.normal_plan)
+        self.assertIsNotNone(subscription.free_trial_used_at)
+        self.assertTrue(provider_has_entitlement(self.provider.pk))
+        self.assertEqual(
+            admin.post(activation_url, {"plan_id": str(trial.pk)}, format="json").status_code,
+            400,
+        )
+
+    def test_migration_marks_legacy_trial_even_after_paid_plan(self):
+        subscription = self.create_subscription(self.provider, self.normal_plan)
+        prior_trial = timezone.now() - timedelta(days=8)
+        SubscriptionHistory.objects.create(
+            subscription=subscription,
+            actor=self.admin,
+            action=SubscriptionHistory.Action.ACTIVATED,
+            plan_code="essai-7j",
+            plan_name="Essai 7 jours",
+            starts_at=prior_trial,
+            ends_at=prior_trial + timedelta(days=7),
+        )
+        migration = import_module("apps.subscriptions.migrations.0004_free_trial_used_at")
+        migration.mark_previous_trials(django_apps, None)
+        subscription.refresh_from_db()
+        self.assertIsNotNone(subscription.free_trial_used_at)
+
+        subscription.status = ProviderSubscription.Status.CANCELLED
+        subscription.save(update_fields=["status"])
+        trial = SubscriptionPlan.objects.create(
+            code="essai-14j", name="Essai 14 jours", price_xof=0,
+            duration_days=14, can_receive_requests=True,
+        )
+        admin = APIClient()
+        admin.force_login(self.admin)
+        self.assertEqual(
+            admin.post(
+                f"/api/v1/subscriptions/admin/providers/{self.provider.pk}/activate/",
+                {"plan_id": str(trial.pk)}, format="json",
+            ).status_code,
+            400,
+        )
+
     def test_cancelled_subscription_loses_entitlement_and_is_audited(self):
         subscription = self.create_subscription(self.provider)
 
@@ -288,7 +412,7 @@ class SubscriptionTests(TestCase):
         self.create_subscription(self.provider, self.normal_plan)
 
         normal = self.create_request(ServiceRequest.Priority.NORMAL)
-        self.assertEqual(dispatch_request(normal.pk, self.admin), 1)
+        self.assertEqual(ServiceOffer.objects.filter(service_request=normal).count(), 1)
         self.assertEqual(
             ServiceOffer.objects.get(service_request=normal).provider,
             self.provider,
@@ -302,7 +426,7 @@ class SubscriptionTests(TestCase):
         self.create_subscription(self.provider, self.urgent_plan)
 
         urgent = self.create_request(ServiceRequest.Priority.URGENT)
-        self.assertEqual(dispatch_request(urgent.pk, self.admin), 1)
+        self.assertEqual(ServiceOffer.objects.filter(service_request=urgent).count(), 1)
         offer = ServiceOffer.objects.get(service_request=urgent)
         self.assertEqual(offer.provider, self.provider)
         self.assertNotEqual(offer.provider, self.other_provider)
@@ -310,7 +434,7 @@ class SubscriptionTests(TestCase):
     def test_acceptance_revalidates_subscription_expiration(self):
         subscription = self.create_subscription(self.provider, self.urgent_plan)
         urgent = self.create_request(ServiceRequest.Priority.URGENT)
-        self.assertEqual(dispatch_request(urgent.pk, self.admin), 1)
+        self.assertEqual(ServiceOffer.objects.filter(service_request=urgent).count(), 1)
         offer = ServiceOffer.objects.get(service_request=urgent)
 
         subscription.ends_at = timezone.now() - timedelta(seconds=1)

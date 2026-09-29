@@ -85,7 +85,7 @@ class AcceptanceTests(TestCase):
     def prepare_offers(self):
         providers = [self.create_provider(), self.create_provider()]
         service_request = self.create_request()
-        self.assertEqual(dispatch_request(service_request.pk, self.admin_user), 2)
+        self.assertEqual(ServiceOffer.objects.filter(service_request=service_request).count(), 2)
         offers = list(ServiceOffer.objects.filter(service_request=service_request).order_by("created_at", "id"))
         return service_request, providers, offers
 
@@ -136,6 +136,49 @@ class AcceptanceTests(TestCase):
         )
         self.assertEqual(response.json()["assigned_provider_id"], str(providers[0].pk))
 
+    def test_other_quartier_same_commune_can_accept_and_other_offers_disappear(self):
+        neighboring_area = Neighborhood.objects.create(commune=self.area.commune, name="Quartier voisin")
+        exact = self.create_provider()
+        neighbor = self.create_provider()
+        neighbor.service_areas.set([neighboring_area])
+        service_request = self.create_request()
+        exact_offer = service_request.offers.get(provider=exact)
+        neighbor_offer = service_request.offers.get(provider=neighbor)
+
+        near_api = APIClient()
+        near_api.force_login(neighbor.user)
+        offer_data = near_api.get(f"/api/v1/providers/offers/{neighbor_offer.pk}/").json()
+        self.assertTrue(offer_data["outside_declared_quartiers"])
+        self.assertEqual(offer_data["neighborhood_name"], self.area.name)
+        self.assertEqual(near_api.post(f"/api/v1/providers/offers/{neighbor_offer.pk}/accept/").status_code, 200)
+
+        exact_api = APIClient()
+        exact_api.force_login(exact.user)
+        self.assertEqual(exact_api.get("/api/v1/providers/offers/").json()["count"], 0)
+        self.assertEqual(exact_api.get(f"/api/v1/providers/offers/{exact_offer.pk}/").status_code, 404)
+        self.assertEqual(exact_api.post(f"/api/v1/providers/offers/{exact_offer.pk}/accept/").status_code, 400)
+        service_request.refresh_from_db()
+        exact_offer.refresh_from_db()
+        self.assertEqual(service_request.assigned_provider, neighbor)
+        self.assertEqual(exact_offer.status, ServiceOffer.Status.CANCELLED)
+        self.assertEqual(ServiceOffer.objects.filter(service_request=service_request, status=ServiceOffer.Status.ACCEPTED).count(), 1)
+
+    def test_provider_cannot_accept_after_moving_coverage_to_another_commune(self):
+        neighboring_area = Neighborhood.objects.create(commune=self.area.commune, name="Quartier voisin")
+        provider = self.create_provider()
+        provider.service_areas.set([neighboring_area])
+        service_request = self.create_request()
+        offer = service_request.offers.get(provider=provider)
+        other_commune = Commune.objects.create(city=self.area.commune.city, name="Autre commune")
+        provider.service_areas.set([Neighborhood.objects.create(commune=other_commune, name="Quartier distant")])
+
+        api = APIClient()
+        api.force_login(provider.user)
+        self.assertEqual(api.post(f"/api/v1/providers/offers/{offer.pk}/accept/").status_code, 400)
+        service_request.refresh_from_db()
+        self.assertIsNone(service_request.assigned_provider_id)
+        self.assertEqual(service_request.status, ServiceRequest.Status.OFFERED)
+
     def test_provider_cannot_accept_another_providers_offer(self):
         _, providers, offers = self.prepare_offers()
         api = APIClient()
@@ -144,6 +187,26 @@ class AcceptanceTests(TestCase):
         response = api.post(f"/api/v1/providers/offers/{offers[0].pk}/accept/")
 
         self.assertEqual(response.status_code, 404)
+
+    def test_offer_cannot_be_accepted_after_provider_reaches_plan_capacity(self):
+        _, providers, offers = self.prepare_offers()
+        self.plan.max_active_jobs = 1
+        self.plan.save(update_fields=["max_active_jobs"])
+        occupied = ServiceRequest.objects.create(
+            client=self.client_user, trade=self.trade, neighborhood=self.area,
+            assigned_provider=providers[0], status=ServiceRequest.Status.IN_PROGRESS,
+            title="Autre intervention", description="Détails", address_detail="Adresse",
+        )
+        api = APIClient()
+        api.force_login(providers[0].user)
+        self.assertEqual(api.get("/api/v1/providers/offers/").json()["count"], 0)
+        response = api.post(f"/api/v1/providers/offers/{offers[0].pk}/accept/")
+        self.assertEqual(response.status_code, 400)
+        offers[0].refresh_from_db()
+        self.assertEqual(offers[0].status, ServiceOffer.Status.PENDING)
+        occupied.status = ServiceRequest.Status.PROVIDER_COMPLETED
+        occupied.save(update_fields=["status"])
+        self.assertEqual(api.get("/api/v1/providers/offers/").json()["count"], 1)
 
     def test_second_provider_cannot_win_after_first_acceptance(self):
         service_request, providers, offers = self.prepare_offers()

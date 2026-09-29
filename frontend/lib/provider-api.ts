@@ -47,6 +47,7 @@ export type ProviderOffer = {
   neighborhood_name: string;
   commune_name: string;
   priority: "NORMAL" | "URGENT";
+  outside_declared_quartiers: boolean;
   status: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED" | "CANCELLED";
   created_at: string;
 };
@@ -78,6 +79,7 @@ export type SubscriptionPlan = {
   duration_days: number;
   can_receive_requests: boolean;
   can_receive_urgent_requests: boolean;
+  max_active_jobs: number | null;
 };
 
 export type SubscriptionHistory = {
@@ -97,6 +99,7 @@ export type ProviderSubscription = {
   starts_at: string;
   ends_at: string;
   cancelled_at: string | null;
+  free_trial_used_at: string | null;
   history: SubscriptionHistory[];
 };
 
@@ -105,6 +108,7 @@ export type PaymentTransaction = {
   merchant_reference: string;
   purpose: "ACTIVATE" | "RENEW";
   payment_provider: string;
+  checkout_url: string;
   amount_xof: number;
   currency: "XOF";
   plan_code_snapshot: string;

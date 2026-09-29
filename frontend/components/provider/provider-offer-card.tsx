@@ -20,6 +20,9 @@ export default function ProviderOfferCard({ offer }: { offer: ProviderOffer }) {
         <span>📍 {offer.neighborhood_name}</span>
         <span>🕒 {formatDate(offer.created_at)}</span>
       </div>
+      {offer.outside_declared_quartiers && (
+        <p className="provider-offer-zone-note">Autre quartier de votre commune : vérifiez le trajet avant d’accepter.</p>
+      )}
       <div className="provider-offer-privacy">
         Titre, description, adresse précise et téléphone masqués avant acceptation.
       </div>

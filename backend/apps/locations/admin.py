@@ -1,13 +1,21 @@
 from django.contrib import admin
 
-from .models import City, Commune, Neighborhood
+from .models import City, Commune, Neighborhood, Region
+
+
+@admin.register(Region)
+class RegionAdmin(admin.ModelAdmin):
+    list_display = ("name", "kind", "is_active")
+    list_filter = ("kind", "is_active")
+    search_fields = ("name",)
 
 
 @admin.register(City)
 class CityAdmin(admin.ModelAdmin):
-    list_display = ("name", "is_active")
-    list_filter = ("is_active",)
+    list_display = ("name", "region", "is_active")
+    list_filter = ("region", "is_active")
     search_fields = ("name",)
+    autocomplete_fields = ("region",)
 
 
 @admin.register(Commune)

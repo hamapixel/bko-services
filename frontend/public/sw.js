@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "bko-services-";
-const STATIC_CACHE = `${CACHE_PREFIX}static-v19-1`;
+const STATIC_CACHE = `${CACHE_PREFIX}static-v20`;
 const OFFLINE_URL = "/offline";
 
 const PRECACHE_URLS = [
@@ -88,8 +88,9 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Do not cache Next.js build assets here. Their browser/HTTP cache policy is
+  // enough, and service-worker caching can serve stale CSS/JS after a deploy.
   if (
-    url.pathname.startsWith("/_next/static/") ||
     url.pathname.startsWith("/icons/") ||
     url.pathname === "/manifest.webmanifest"
   ) {

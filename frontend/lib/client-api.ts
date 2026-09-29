@@ -15,6 +15,8 @@ export type PublicUser = {
   email: string;
   role: "CLIENT" | "PROVIDER" | "ADMIN" | "SUPERADMIN";
   phone_verified_at: string | null;
+  has_avatar: boolean;
+  avatar_url: string | null;
 };
 
 export type Category = {
@@ -33,6 +35,13 @@ export type Trade = {
 export type City = {
   id: string;
   name: string;
+  region: string | null;
+};
+
+export type Region = {
+  id: string;
+  name: string;
+  kind: "REGION" | "DISTRICT";
 };
 
 export type Commune = {
@@ -49,6 +58,7 @@ export type Neighborhood = {
 
 export type RequestStatus =
   | "CREATED"
+  | "LOCATION_PENDING"
   | "SEARCHING"
   | "OFFERED"
   | "ACCEPTED"
@@ -70,9 +80,11 @@ export type ServiceRequest = {
   id: string;
   trade: string;
   trade_name: string;
-  neighborhood: string;
+  neighborhood: string | null;
   neighborhood_name: string;
   commune_name: string;
+  region_name: string;
+  requested_city: string;
   title: string;
   description: string;
   address_detail: string;
@@ -137,6 +149,31 @@ export async function apiGet<T>(path: string): Promise<T> {
   return readJson<T>(response);
 }
 
+export async function apiGetAll<T>(path: string): Promise<T[]> {
+  const items: T[] = [];
+  let next: string | null = path;
+  let pages = 0;
+
+  while (next && pages < 100) {
+    const target: string = next.startsWith("http")
+      ? (() => {
+          const url = new URL(next);
+          return url.pathname + url.search;
+        })()
+      : next;
+    const page: ApiPage<T> = await apiGet<ApiPage<T>>(target);
+    items.push(...page.results);
+    next = page.next;
+    pages += 1;
+  }
+
+  if (next) {
+    throw new Error("Trop de pages à charger.");
+  }
+
+  return items;
+}
+
 export async function getCsrfToken() {
   if (!networkAvailable()) {
     throw new OfflineActionError();
@@ -157,8 +194,31 @@ export async function apiMutation<T>(
   return sendJsonMutation<T>(path, method, { csrfToken, body });
 }
 
+export async function apiFormMutation<T>(
+  path: string,
+  method: "POST" | "PUT" | "PATCH",
+  formData: FormData,
+) {
+  if (!networkAvailable()) {
+    throw new OfflineActionError();
+  }
+
+  const csrfToken = await getCsrfToken();
+  const response = await fetch(path, {
+    method,
+    credentials: "include",
+    cache: "no-store",
+    headers: {
+      "X-CSRFToken": csrfToken,
+    },
+    body: formData,
+  });
+  return readJson<T>(response);
+}
+
 export const STATUS_LABELS: Record<RequestStatus, string> = {
   CREATED: "Enregistrée",
+  LOCATION_PENDING: "Zone à vérifier",
   SEARCHING: "Recherche en cours",
   OFFERED: "Proposée aux prestataires",
   ACCEPTED: "Prestataire trouvé",
@@ -182,7 +242,7 @@ export function statusTone(status: RequestStatus) {
   if (status === "CLIENT_CONFIRMED") return "success";
   if (status === "CANCELLED" || status === "DISPUTED") return "danger";
   if (status === "PROVIDER_COMPLETED") return "warning";
-  if (status === "CREATED" || status === "SEARCHING" || status === "OFFERED") {
+  if (status === "CREATED" || status === "LOCATION_PENDING" || status === "SEARCHING" || status === "OFFERED") {
     return "neutral";
   }
   return "active";

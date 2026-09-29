@@ -1,16 +1,18 @@
 # BKO Services
 
-**Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels de proximité à Bamako. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
+**Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels dans les zones ouvertes au Mali. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut : **étape 22 — espace administration responsive validé localement**. Dashboard permission-aware, prestataires, demandes, plaintes, abonnements, paiements et utilisateurs sont branchés sur les API Django sécurisées.
+> Statut au 29 septembre 2026 : **étapes 0 à 22 développées ; qualité et automatisation validées techniquement ; préparation de production en cours**. La suite complète a réussi avec **141 tests sur PostgreSQL**, sans test ignoré, et le frontend passe ESLint, TypeScript et le build Next.js. Les essais mobiles et d'accessibilité restent à consigner avant de clôturer l'étape 23. La CI de l'étape 24 est opérationnelle et protégée sur `main`.
+
+Pour ouvrir les abonnements payants avec Wave et Orange Money au Mali, voir [l'obtention des accès marchands et l'intégration](docs/paiements-marchands.md). L'accès Wave est codé mais attend un compte marchand réel ; Orange Money Web Payment nécessite encore l'accord marchand et son adaptateur dédié.
 
 ## Principes
 
-- Les clients n'accéderont qu'à leurs demandes ; les professionnels n'accéderont qu'aux offres qui leur sont adressées et aux interventions qui leur sont attribuées. Ces règles seront appliquées dans l'API et testées contre les accès par identifiant (IDOR).
-- Une demande urgente pourra être proposée à cinq professionnels compatibles au maximum. Une transaction PostgreSQL garantit qu'un seul l'accepte.
-- Les pièces d'identité et les coordonnées privées devront rester protégées. Avant attribution, l'offre transmise au professionnel contient seulement les renseignements nécessaires pour décider.
-- L'interface mobile devra rester utilisable avec une connexion instable. Une demande conservée hors connexion sera clairement marquée **non envoyée** jusqu'à confirmation du serveur.
-- Les prestataires devront être vérifiés pour recevoir des demandes. Les tarifs, catégories et quartiers seront gérés côté serveur.
+- Les clients n'accèdent qu'à leurs demandes ; les professionnels n'accèdent qu'aux offres qui leur sont adressées et aux interventions qui leur sont attribuées. Ces règles sont appliquées dans l'API et couvertes par des tests d'accès par identifiant (IDOR).
+- Une demande urgente peut être proposée à cinq professionnels compatibles au maximum. Une transaction PostgreSQL garantit qu'un seul l'accepte.
+- Les pièces d'identité et les coordonnées privées doivent rester protégées. Avant attribution, l'offre transmise au professionnel contient seulement les renseignements nécessaires pour décider.
+- L'interface mobile reste utilisable avec une connexion instable. Une demande conservée hors connexion est clairement marquée **non envoyée** jusqu'à confirmation du serveur.
+- Les prestataires doivent être vérifiés pour recevoir des demandes. Les tarifs, catégories et quartiers sont gérés côté serveur.
 
 ## Architecture retenue
 
@@ -19,7 +21,7 @@
 | API | Django + Django REST Framework | Authentification, droits d'accès, règles métier, administration et API `/api/v1/` |
 | Données | PostgreSQL | Données relationnelles, contraintes et attribution atomique |
 | Application web | Une application Next.js + TypeScript | Pages publiques et espaces client, prestataire et administrateur ; PWA responsive |
-| Tâches | Celery + Redis | Notifications, SMS, rappels et expirations hors des requêtes HTTP |
+| Tâches (cible) | Celery + Redis, à mettre en place | Notifications, SMS, rappels et expirations hors des requêtes HTTP |
 | Notifications | Centre interne + Web Push ; SMS via adaptateur | Alertes et vérification du téléphone, avec suivi des envois |
 | Fichiers | Stockage privé pour documents sensibles | Validation des images, accès contrôlé et sauvegardes |
 
@@ -51,13 +53,19 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 - [x] Étape 21 : espace prestataire responsive.
 - [x] Étape 22 : espace administration responsive.
 
+## Localisation et envoi des demandes
+
+Le choix suit **région ou district → ville → commune → quartier**. Le District de Bamako possède déjà des villes, communes et quartiers. Les 19 régions sont visibles après migration. Dans une région sans localités répertoriées, le client peut saisir ville, commune et quartier ; sa demande reste **Zone à vérifier** jusqu'à ce que l'administration rattache un quartier validé, puis le matching démarre. Les prestataires ne peuvent candidater qu'après ouverture de quartiers actifs. Une migration rattache la ville de Bamako déjà présente à son district. Voir [la couverture et la recherche](docs/couverture-mali-et-recherche.md).
+
+Lorsqu'un client vérifié envoie une demande, le serveur lance immédiatement la recherche et crée des offres privées (jusqu'à trois pour une demande normale ou cinq pour une urgence). La correspondance exige le **même métier**, privilégie le **quartier demandé** et réserve si possible une offre à un prestataire d'un autre quartier de la **même commune**. Le prestataire doit être approuvé, disponible, actif, avoir son téléphone vérifié et un abonnement autorisant ce type de demande. Le premier qui accepte est le seul attributaire ; les autres offres sont annulées. Sans candidat, la demande reste « Recherche en cours » ; les administrateurs sont avertis et voient le compteur des demandes sans offre. La recherche reprend automatiquement lorsqu'un prestataire compatible devient disponible, obtient ou renouvelle un abonnement, ou termine une intervention qui libère une place. La relance manuelle reste possible depuis `/admin/demandes` pour les demandes historiques et les cas particuliers.
+
 ## Démarrage sur Windows
 
 Après avoir cloné le dépôt, consulter [l'installation du backend et du frontend](docs/etape-2.md), [le modèle utilisateur](docs/etape-3.md), [l'authentification](docs/etape-4-auth.md), [les lieux](docs/etape-5-lieux.md), [le catalogue](docs/etape-6-catalogue.md), [les prestataires](docs/etape-7-prestataires.md), [les demandes](docs/etape-8-demandes.md), [le matching](docs/etape-9-matching.md) et [l'acceptation atomique](docs/etape-10-acceptation.md), puis [le workflow et les protections IDOR](docs/etape-11-workflow-idor.md) et [les avis clients](docs/etape-12-avis.md), puis [le centre de notifications](docs/etape-13-notifications.md) et [le Web Push](docs/etape-14-web-push.md), puis [le SMS/OTP professionnel](docs/etape-15-sms-otp.md) et [les plaintes / signalements](docs/etape-16-plaintes.md), puis [les plans et abonnements](docs/etape-17-abonnements.md) et [les paiements sécurisés](docs/etape-18-paiements.md), puis [la PWA et le mode hors connexion](docs/etape-19-pwa-offline.md), puis [l'espace client responsive](docs/etape-20-espace-client.md), puis [l'espace prestataire responsive](docs/etape-21-espace-prestataire.md), puis [l'espace administration responsive](docs/etape-22-espace-administration.md). Sur un poste déjà configuré, depuis la racine du dépôt :
 
 ```powershell
 & ".\.venv\Scripts\python.exe" backend\manage.py check
-& ".\.venv\Scripts\python.exe" backend\manage.py test apps.accounts apps.locations apps.catalog apps.providers apps.requests apps.reviews apps.notifications apps.messaging apps.complaints apps.subscriptions apps.payments --settings=config.test_settings
+& ".\.venv\Scripts\python.exe" backend\manage.py test apps.accounts apps.locations apps.catalog apps.providers apps.requests apps.reviews apps.notifications apps.messaging apps.complaints apps.subscriptions apps.payments
 git status
 ```
 
@@ -65,8 +73,10 @@ Ne placez jamais de mots de passe, de clés API, de fichiers `.env` ou de pièce
 
 ## Organisation du travail
 
-Chaque étape suit le cycle : explication → commandes → fichiers complets → vérification → correction → `git status` → commit → push. Les règles de sécurité et les tests sont ajoutés avec les fonctions correspondantes. `main` porte le code stable ; les modifications sont préparées sur des branches `feature/*`.
+Chaque étape suit le cycle : explication → commandes → fichiers complets → vérification → correction → `git status` → commit → push. Les règles de sécurité et les tests sont ajoutés avec les fonctions correspondantes. `main` porte le code stable ; les modifications sont préparées sur des branches `feature/*` ou `fix/*`, puis intégrées par pull request.
 
 ## À venir
 
-Tests renforcés, CI, Docker et déploiement. Les exigences avant production figurent dans [docs/architecture.md](docs/architecture.md).
+L'étape 23 a validé **141 tests sur PostgreSQL**, sans test ignoré, ainsi que **21 tests ciblés** sur les lieux, le matching, les zones non répertoriées et l'acceptation atomique. ESLint, TypeScript et le build Next.js ont également réussi. Les essais mobiles et d'accessibilité restent à consigner : [commandes et résultats](docs/etape-23-qualite.md).
+
+Le [workflow CI](docs/etape-24-ci.md) exécute les contrôles **Backend PostgreSQL** et **Frontend lint and build** ; une règle active sur `main` exige une pull request et ces deux checks avant fusion. La prochaine étape technique est la préparation serveur, puis la préproduction et le déploiement. Voir la [feuille de route de production](docs/production-roadmap.md) et les [exigences d'architecture](docs/architecture.md).

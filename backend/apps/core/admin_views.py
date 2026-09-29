@@ -15,12 +15,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.complaints.models import Complaint
+from apps.locations.models import Neighborhood
 from apps.payments.models import PaymentTransaction
 from apps.payments.services import can_manage_payments
 from apps.providers.models import ProviderProfile, ProviderReview
 from apps.providers.review import can_review_providers, review_provider
 from apps.requests.matching import can_dispatch_requests, dispatch_request
 from apps.requests.models import ServiceRequest
+from apps.requests.services import resolve_request_location
 from apps.subscriptions.models import ProviderSubscription
 from apps.subscriptions.services import can_manage_subscriptions
 
@@ -131,8 +133,9 @@ class AdminProviderReviewActionSerializer(serializers.Serializer):
 
 class AdminRequestListSerializer(serializers.ModelSerializer):
     trade_name = serializers.CharField(source="trade.name", read_only=True)
-    neighborhood_name = serializers.CharField(source="neighborhood.name", read_only=True)
-    commune_name = serializers.CharField(source="neighborhood.commune.name", read_only=True)
+    neighborhood_name = serializers.SerializerMethodField()
+    commune_name = serializers.SerializerMethodField()
+    region_name = serializers.SerializerMethodField()
     client_id = serializers.UUIDField(read_only=True)
     assigned_provider_id = serializers.UUIDField(read_only=True)
     assigned_provider_display_name = serializers.CharField(
@@ -148,6 +151,7 @@ class AdminRequestListSerializer(serializers.ModelSerializer):
             "trade_name",
             "neighborhood_name",
             "commune_name",
+            "region_name",
             "priority",
             "status",
             "client_id",
@@ -158,9 +162,20 @@ class AdminRequestListSerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
+    def get_neighborhood_name(self, obj):
+        return obj.neighborhood.name if obj.neighborhood_id else "Zone à vérifier"
+
+    def get_commune_name(self, obj):
+        return obj.neighborhood.commune.name if obj.neighborhood_id else "Localité non répertoriée"
+
+    def get_region_name(self, obj):
+        return (obj.neighborhood.commune.city.region.name if obj.neighborhood_id
+                else obj.requested_region.name)
+
 
 class AdminRequestDetailSerializer(AdminRequestListSerializer):
     client_phone = serializers.CharField(source="client.phone", read_only=True)
+    requested_region_id = serializers.UUIDField(read_only=True)
     status_history = serializers.SerializerMethodField()
     offers = serializers.SerializerMethodField()
 
@@ -170,9 +185,16 @@ class AdminRequestDetailSerializer(AdminRequestListSerializer):
             "title",
             "description",
             "address_detail",
+            "requested_region_id", "requested_city",
             "status_history",
             "offers",
         )
+
+    def get_neighborhood_name(self, obj):
+        return obj.neighborhood.name if obj.neighborhood_id else obj.requested_neighborhood
+
+    def get_commune_name(self, obj):
+        return obj.neighborhood.commune.name if obj.neighborhood_id else obj.requested_commune
 
     def get_status_history(self, obj):
         return [
@@ -232,6 +254,10 @@ class AdminOverviewView(APIView):
                 "requests_active": ServiceRequest.objects.filter(
                     status__in=active_request_statuses
                 ).count(),
+                "requests_waiting": ServiceRequest.objects.filter(
+                    status__in=[ServiceRequest.Status.SEARCHING, ServiceRequest.Status.LOCATION_PENDING],
+                    offers__isnull=True,
+                ).count() if can_view_requests else 0,
                 "complaints_open": Complaint.objects.filter(
                     status__in=[
                         Complaint.Status.OPEN,
@@ -397,6 +423,7 @@ class AdminRequestListView(ListAPIView):
                 "client",
                 "trade",
                 "neighborhood__commune",
+                "requested_region",
                 "assigned_provider",
             )
         )
@@ -427,6 +454,7 @@ class AdminRequestDetailView(RetrieveAPIView):
                 "client",
                 "trade",
                 "neighborhood__commune",
+                "requested_region",
                 "assigned_provider",
             )
             .prefetch_related(
@@ -467,3 +495,31 @@ class AdminRequestDispatchView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AdminRequestResolveLocationView(APIView):
+    permission_classes = [IsPlatformAdmin]
+
+    def post(self, request, pk):
+        reject_extra_fields(request.data, {"neighborhood"})
+        serializer = serializers.Serializer(data=request.data)
+        serializer.fields["neighborhood"] = serializers.PrimaryKeyRelatedField(
+            queryset=Neighborhood.objects.filter(
+                is_active=True, commune__is_active=True, commune__city__is_active=True,
+                commune__city__region__is_active=True,
+            )
+        )
+        serializer.is_valid(raise_exception=True)
+        try:
+            resolved = resolve_request_location(pk, request.user, serializer.validated_data["neighborhood"])
+        except ServiceRequest.DoesNotExist as exc:
+            raise NotFound("Demande introuvable.") from exc
+        except DjangoPermissionDenied as exc:
+            raise PermissionDenied(str(exc)) from exc
+        except DjangoValidationError as exc:
+            raise ValidationError({"detail": exc.messages}) from exc
+        resolved = (ServiceRequest.objects.select_related(
+            "client", "trade", "neighborhood__commune__city__region", "requested_region", "assigned_provider"
+        ).prefetch_related("status_history", "offers__provider").get(pk=resolved.pk))
+        return Response(AdminRequestDetailSerializer(resolved).data)

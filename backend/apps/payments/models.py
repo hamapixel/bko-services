@@ -54,6 +54,8 @@ class PaymentTransaction(models.Model):
         blank=True,
         null=True,
     )
+    checkout_session_id = models.CharField(max_length=40, unique=True, blank=True, null=True)
+    checkout_url = models.URLField(max_length=500, blank=True)
     idempotency_key = models.CharField(max_length=64)
     amount_xof = models.PositiveBigIntegerField()
     currency = models.CharField(max_length=3, default="XOF")

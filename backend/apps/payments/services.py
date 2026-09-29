@@ -101,7 +101,7 @@ def _derive_purpose(provider, now):
 
 
 @transaction.atomic
-def create_payment_transaction(user, *, plan_id, idempotency_key):
+def create_payment_transaction(user, *, plan_id, idempotency_key, payment_provider=None):
     provider = _validate_provider_for_payment(user)
 
     existing = (
@@ -110,7 +110,9 @@ def create_payment_transaction(user, *, plan_id, idempotency_key):
         .first()
     )
     if existing is not None:
-        if existing.plan_id != plan_id:
+        if existing.plan_id != plan_id or (
+            payment_provider and existing.payment_provider != payment_provider
+        ):
             raise ValidationError(
                 {"idempotency_key": "Cette clé a déjà été utilisée pour un autre plan."}
             )
@@ -134,7 +136,7 @@ def create_payment_transaction(user, *, plan_id, idempotency_key):
         provider=provider,
         plan=plan,
         purpose=_derive_purpose(provider, now),
-        payment_provider=settings.PAYMENT_PROVIDER,
+        payment_provider=payment_provider or settings.PAYMENT_PROVIDER,
         idempotency_key=idempotency_key,
         amount_xof=plan.price_xof,
         currency="XOF",
@@ -210,7 +212,7 @@ def _attempt_fulfillment(payment):
 
 
 @transaction.atomic
-def process_verified_webhook(payload, raw_body):
+def process_verified_webhook(payload, raw_body, *, expected_provider=None, checkout_session_id=None):
     fingerprint = hashlib.sha256(raw_body).hexdigest()
 
     try:
@@ -221,6 +223,11 @@ def process_verified_webhook(payload, raw_body):
         )
     except PaymentTransaction.DoesNotExist as exc:
         raise NotFound("Transaction de paiement introuvable.") from exc
+
+    if expected_provider and payment.payment_provider != expected_provider:
+        raise ValidationError({"detail": "Fournisseur de paiement incorrect."})
+    if checkout_session_id and payment.checkout_session_id != checkout_session_id:
+        raise ValidationError({"detail": "Session de paiement incorrecte."})
 
     existing_event = PaymentWebhookEvent.objects.filter(
         event_fingerprint=fingerprint

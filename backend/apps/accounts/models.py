@@ -28,6 +28,7 @@ class User(AbstractUser):
     )
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.CLIENT)
     phone_verified_at = models.DateTimeField(blank=True, null=True)
+    avatar = models.FileField(upload_to="avatars/", blank=True)
 
     USERNAME_FIELD = "phone"
     REQUIRED_FIELDS = []
@@ -48,3 +49,23 @@ class OtpCode(models.Model):
 
     class Meta:
         indexes = [models.Index(fields=["user", "created_at"])]
+
+
+class PasswordResetCode(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="password_reset_codes",
+    )
+    code_hash = models.CharField(max_length=128)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    consumed_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        indexes = [models.Index(
+            fields=["user", "created_at"],
+            name="accounts_pa_user_id_29e1d1_idx",
+        )]

@@ -108,6 +108,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
@@ -118,6 +119,9 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "auth_register": "3/hour",
         "auth_login": "5/min",
+        "password_reset_request": "5/hour",
+        "password_reset_confirm": "10/min",
+        "password_change": "5/hour",
         "otp_request": "5/hour",
         "otp_verify": "10/min",
         "otp_ip": "20/hour",
@@ -154,3 +158,7 @@ OTP_MIN_REQUEST_INTERVAL_SECONDS = 60
 
 PAYMENT_PROVIDER = os.getenv("PAYMENT_PROVIDER", "GENERIC").strip() or "GENERIC"
 PAYMENT_WEBHOOK_SECRET = os.getenv("PAYMENT_WEBHOOK_SECRET", "")
+WAVE_API_KEY = os.getenv("WAVE_API_KEY", "")
+WAVE_WEBHOOK_SECRET = os.getenv("WAVE_WEBHOOK_SECRET", "")
+# HTTPS origin of the public frontend (not a localhost URL).
+PAYMENT_RETURN_ORIGIN = os.getenv("PAYMENT_RETURN_ORIGIN", "").rstrip("/")

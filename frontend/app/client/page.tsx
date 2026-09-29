@@ -7,10 +7,37 @@ import RequestCard from "@/components/client/request-card";
 import { useClientSession } from "@/components/client/client-shell";
 import {
   apiGet,
+  apiGetAll,
   type ApiPage,
   type ServiceRequest,
+  type Trade,
 } from "@/lib/client-api";
 import { listRequestDrafts } from "@/lib/offline-drafts";
+
+function normalizeName(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function featuredTrades(trades: Trade[]) {
+  const chosen: Trade[] = [];
+  for (const name of ["electr", "plomb", "climat"]) {
+    const trade = trades.find((item) => normalizeName(item.name).includes(name) && !chosen.includes(item));
+    if (trade) chosen.push(trade);
+  }
+  for (const trade of trades) {
+    if (chosen.length === 3) break;
+    if (!chosen.includes(trade)) chosen.push(trade);
+  }
+  return chosen;
+}
+
+function tradeIcon(name: string) {
+  const normalized = normalizeName(name);
+  if (normalized.includes("electr")) return "⚡";
+  if (normalized.includes("plomb")) return "🔧";
+  if (normalized.includes("climat") || normalized.includes("froid")) return "❄";
+  return "✦";
+}
 
 export default function ClientDashboardPage() {
   const { user } = useClientSession();
@@ -21,6 +48,9 @@ export default function ClientDashboardPage() {
   const [draftCount, setDraftCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [trades, setTrades] = useState<Trade[]>([]);
+  const [tradesLoading, setTradesLoading] = useState(true);
+  const [tradesError, setTradesError] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -33,7 +63,7 @@ export default function ClientDashboardPage() {
       apiGet<ApiPage<ServiceRequest>>(
         "/api/v1/requests/?status=CLIENT_CONFIRMED",
       ),
-      listRequestDrafts().catch(() => []),
+      listRequestDrafts(user.id).catch(() => []),
     ])
       .then(([allPage, waitingPage, completedPage, drafts]) => {
         if (!active) return;
@@ -58,25 +88,49 @@ export default function ClientDashboardPage() {
     return () => {
       active = false;
     };
+  }, [user.id]);
+
+  useEffect(() => {
+    let active = true;
+    apiGetAll<Trade>("/api/v1/catalog/trades/")
+      .then((items) => { if (active) setTrades(featuredTrades(items)); })
+      .catch(() => { if (active) setTradesError(true); })
+      .finally(() => { if (active) setTradesLoading(false); });
+    return () => { active = false; };
   }, []);
 
+  const firstName = user.first_name || "Bienvenue";
+
   return (
-    <main>
-      <section className="client-page-head dashboard-head">
-        <div>
-          <p className="page-kicker">Bonjour</p>
-          <h1>
-            {user.first_name ? `${user.first_name},` : "Bienvenue,"} que
-            souhaitez-vous faire ?
-          </h1>
+    <main className="client-dashboard-premium">
+      <section className="client-welcome-card">
+        <div className="client-welcome-copy">
+          <span className="client-welcome-kicker">Bonjour {firstName} 👋</span>
+          <h1>Quel service vous faut-il aujourd’hui ?</h1>
           <p>
-            Créez une demande et suivez chaque étape jusqu’à la fin de
-            l’intervention.
+            Décrivez votre besoin en quelques secondes. BKO Services vous aide
+            à suivre la demande jusqu’à la fin de l’intervention.
           </p>
+          <div className="client-welcome-actions">
+            <Link className="client-premium-primary" href="/client/demandes/nouvelle">
+              <span aria-hidden="true">＋</span>
+              Nouvelle demande
+            </Link>
+            <Link className="client-premium-secondary" href="/client/demandes">
+              Voir mes demandes
+            </Link>
+          </div>
         </div>
-        <Link className="button-primary" href="/client/demandes/nouvelle">
-          + Nouvelle demande
-        </Link>
+
+        <div className="client-welcome-visual" aria-hidden="true">
+          <div className="client-service-orb client-service-orb-one">⚡</div>
+          <div className="client-service-orb client-service-orb-two">🔧</div>
+          <div className="client-service-orb client-service-orb-three">❄</div>
+          <div className="client-welcome-center">
+            <span>B</span>
+            <small>BKO Services</small>
+          </div>
+        </div>
       </section>
 
       {!user.phone_verified_at && (
@@ -94,34 +148,76 @@ export default function ClientDashboardPage() {
         </section>
       )}
 
-      <section className="metric-grid" aria-label="Résumé">
-        <article className="metric-card">
-          <span>Total demandes</span>
-          <strong>{totalCount}</strong>
-          <small>Historique complet côté serveur</small>
+      <section className="client-shortcuts" aria-labelledby="client-shortcuts-title">
+        <div className="section-heading">
+          <div>
+            <p className="page-kicker">Accès rapide</p>
+            <h2 id="client-shortcuts-title">Choisissez votre métier</h2>
+          </div>
+          <Link className="text-link" href="/client/demandes/nouvelle">Tous les métiers →</Link>
+        </div>
+        {tradesLoading ? (
+          <p className="client-shortcuts-message" role="status">Chargement des métiers…</p>
+        ) : tradesError || trades.length === 0 ? (
+          <p className="client-shortcuts-message">Les raccourcis ne sont pas disponibles. Vous pouvez toujours <Link href="/client/demandes/nouvelle">créer une demande</Link>.</p>
+        ) : (
+          <div className="client-shortcut-grid">
+            {trades.map((trade) => (
+              <Link className="client-shortcut-card" href={`/client/demandes/nouvelle?trade=${trade.id}`} key={trade.id}>
+                <span className="client-shortcut-icon" aria-hidden="true">{tradeIcon(trade.name)}</span>
+                <strong>{trade.name}</strong>
+                <small>Faire une demande <span aria-hidden="true">↗</span></small>
+              </Link>
+            ))}
+            <Link className="client-shortcut-card client-shortcut-more" href="/client/demandes/nouvelle">
+              <span className="client-shortcut-icon" aria-hidden="true">＋</span>
+              <strong>Voir tous les métiers</strong>
+              <small>Choisir un autre service <span aria-hidden="true">↗</span></small>
+            </Link>
+          </div>
+        )}
+      </section>
+
+      <section className="client-metric-grid" aria-label="Résumé">
+        <article className="client-metric-card">
+          <div className="client-metric-icon">▦</div>
+          <div>
+            <span>Total demandes</span>
+            <strong>{totalCount}</strong>
+            <small>Votre historique</small>
+          </div>
         </article>
-        <article className="metric-card">
-          <span>À confirmer</span>
-          <strong>{waitingCount}</strong>
-          <small>Terminées par le prestataire</small>
+        <article className="client-metric-card">
+          <div className="client-metric-icon">✓</div>
+          <div>
+            <span>À confirmer</span>
+            <strong>{waitingCount}</strong>
+            <small>En attente de votre validation</small>
+          </div>
         </article>
-        <article className="metric-card">
-          <span>Terminées</span>
-          <strong>{completedCount}</strong>
-          <small>Confirmées par vous</small>
+        <article className="client-metric-card">
+          <div className="client-metric-icon">★</div>
+          <div>
+            <span>Terminées</span>
+            <strong>{completedCount}</strong>
+            <small>Interventions confirmées</small>
+          </div>
         </article>
-        <article className="metric-card">
-          <span>Brouillons</span>
-          <strong>{draftCount}</strong>
-          <small>Stockés seulement sur cet appareil</small>
+        <article className="client-metric-card">
+          <div className="client-metric-icon">✎</div>
+          <div>
+            <span>Brouillons</span>
+            <strong>{draftCount}</strong>
+            <small>Sur cet appareil</small>
+          </div>
         </article>
       </section>
 
-      <section className="content-section">
+      <section className="content-section client-recent-section">
         <div className="section-heading">
           <div>
-            <p className="page-kicker">Suivi</p>
-            <h2>Demandes récentes</h2>
+            <p className="page-kicker">Activité récente</p>
+            <h2>Vos dernières demandes</h2>
           </div>
           <Link className="text-link" href="/client/demandes">
             Voir tout
@@ -137,11 +233,11 @@ export default function ClientDashboardPage() {
         )}
 
         {!loading && !error && requests.length === 0 && (
-          <div className="empty-state compact">
+          <div className="empty-state compact client-empty-premium">
+            <span className="client-empty-icon" aria-hidden="true">＋</span>
             <strong>Aucune demande pour le moment</strong>
             <p>
-              Décrivez votre besoin et BKO Services enregistrera votre première
-              demande.
+              Votre prochaine intervention commencera ici.
             </p>
             <Link className="button-primary" href="/client/demandes/nouvelle">
               Créer ma première demande

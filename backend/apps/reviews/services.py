@@ -14,7 +14,7 @@ def create_review(request_id, user, *, rating, comment=""):
     try:
         service_request = (
             ServiceRequest.objects.select_for_update()
-            .select_related("client", "assigned_provider")
+            .select_related("client")
             .get(pk=request_id)
         )
     except ServiceRequest.DoesNotExist as exc:

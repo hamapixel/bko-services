@@ -14,7 +14,7 @@ class ApplicationSerializer(serializers.ModelSerializer):
     area_ids = serializers.PrimaryKeyRelatedField(
         source="service_areas", many=True, allow_empty=False, write_only=True,
         queryset=Neighborhood.objects.filter(
-            is_active=True, commune__is_active=True, commune__city__is_active=True
+            is_active=True, commune__is_active=True, commune__city__is_active=True, commune__city__region__is_active=True
         ),
     )
 
@@ -81,7 +81,7 @@ class PublicProviderSerializer(serializers.ModelSerializer):
     def get_area_ids(self, obj):
         return [
             str(pk) for pk in obj.service_areas.filter(
-                is_active=True, commune__is_active=True, commune__city__is_active=True
+                is_active=True, commune__is_active=True, commune__city__is_active=True, commune__city__region__is_active=True
             ).values_list("pk", flat=True)
         ]
 

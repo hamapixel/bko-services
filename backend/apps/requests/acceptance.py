@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
@@ -45,14 +46,22 @@ def _validate_provider_eligibility(provider, user, service_request):
         not neighborhood.is_active
         or not neighborhood.commune.is_active
         or not neighborhood.commune.city.is_active
+        or not neighborhood.commune.city.region
+        or not neighborhood.commune.city.region.is_active
     ):
         raise ValidationError({"offer": "Le quartier de cette demande n'est plus disponible."})
 
     if not provider.trades.filter(pk=trade.pk).exists():
         raise ValidationError({"offer": "Vous n'êtes plus rattaché au métier demandé."})
 
-    if not provider.service_areas.filter(pk=neighborhood.pk).exists():
-        raise ValidationError({"offer": "Vous ne desservez plus le quartier demandé."})
+    if not provider.service_areas.filter(
+        Q(pk=neighborhood.pk) | Q(commune_id=neighborhood.commune_id),
+        is_active=True,
+        commune__is_active=True,
+        commune__city__is_active=True,
+        commune__city__region__is_active=True,
+    ).exists():
+        raise ValidationError({"offer": "Vous ne desservez plus la commune de cette demande."})
 
     is_urgent = service_request.priority == ServiceRequest.Priority.URGENT
     if not provider_has_entitlement(provider.pk, urgent=is_urgent):
@@ -66,7 +75,9 @@ def accept_offer(offer_id, user):
     request_id = _offer_request_id_for_user(offer_id, user)
 
     service_request = (
-        ServiceRequest.objects.select_for_update()
+        # The neighborhood is nullable until an administrator verifies a new
+        # region. PostgreSQL cannot lock the nullable side of this join.
+        ServiceRequest.objects.select_for_update(of=("self",))
         .select_related(
             "trade__category",
             "neighborhood__commune__city",

@@ -3,67 +3,50 @@
 import { useEffect, useState } from "react";
 
 import ProviderOfferCard from "@/components/provider/provider-offer-card";
-import {
-  apiGet,
-  type ApiPage,
-  type ProviderOffer,
-} from "@/lib/provider-api";
-
-function normalizeNext(next: string | null) {
-  if (!next) return null;
-  const parsed = new URL(next, window.location.origin);
-  return `${parsed.pathname}${parsed.search}`;
-}
+import { apiGetAll } from "@/lib/client-api";
+import type { ProviderOffer } from "@/lib/provider-api";
 
 export default function ProviderOffersPage() {
   const [offers, setOffers] = useState<ProviderOffer[]>([]);
-  const [nextPage, setNextPage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     let active = true;
-
-    apiGet<ApiPage<ProviderOffer>>("/api/v1/providers/offers/")
-      .then((page) => {
-        if (!active) return;
-        setOffers(page.results);
-        setNextPage(normalizeNext(page.next));
-      })
-      .catch((caught) => {
-        if (!active) return;
-        setError(
-          caught instanceof Error
-            ? caught.message
-            : "Impossible de charger les offres.",
+    let fetching = false;
+    async function refresh(initial = false) {
+      if (!active || fetching || document.visibilityState === "hidden") return;
+      fetching = true;
+      try {
+        const items = await apiGetAll<ProviderOffer>("/api/v1/providers/offers/");
+        if (active) {
+          setOffers(items);
+          setError("");
+        }
+      } catch (caught) {
+        if (active && initial) setError(
+          caught instanceof Error ? caught.message : "Impossible de charger les offres.",
         );
-      })
-      .finally(() => {
+      } finally {
+        fetching = false;
         if (active) setLoading(false);
-      });
+      }
+    }
+    function onVisibilityChange() {
+      if (document.visibilityState === "visible") void refresh();
+    }
+    void refresh(true);
+    const interval = window.setInterval(() => void refresh(), 20_000);
+    window.addEventListener("focus", onVisibilityChange);
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       active = false;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onVisibilityChange);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, []);
-
-  async function loadMore() {
-    if (!nextPage) return;
-    setLoadingMore(true);
-    setError("");
-    try {
-      const page = await apiGet<ApiPage<ProviderOffer>>(nextPage);
-      setOffers((current) => [...current, ...page.results]);
-      setNextPage(normalizeNext(page.next));
-    } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : "Chargement impossible.",
-      );
-    } finally {
-      setLoadingMore(false);
-    }
-  }
 
   return (
     <main>
@@ -72,8 +55,8 @@ export default function ProviderOffersPage() {
           <p className="page-kicker">Offres</p>
           <h1>Nouvelles missions</h1>
           <p>
-            Ces offres sont filtrées côté serveur selon votre métier, votre zone,
-            votre disponibilité et votre abonnement.
+            Ces offres correspondent à votre métier, à vos quartiers ou à leur commune,
+            à votre disponibilité et à votre abonnement.
           </p>
         </div>
       </section>
@@ -104,18 +87,6 @@ export default function ProviderOffersPage() {
         </div>
       )}
 
-      {nextPage && !loading && (
-        <div className="load-more-row">
-          <button
-            className="button-secondary"
-            disabled={loadingMore}
-            type="button"
-            onClick={loadMore}
-          >
-            {loadingMore ? "Chargement…" : "Charger plus"}
-          </button>
-        </div>
-      )}
     </main>
   );
 }

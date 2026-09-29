@@ -12,6 +12,7 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
         "duration_days",
         "can_receive_requests",
         "can_receive_urgent_requests",
+        "max_active_jobs",
         "is_active",
     )
     list_filter = (

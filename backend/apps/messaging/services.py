@@ -20,7 +20,10 @@ def hash_request_ip(remote_addr):
     ).hexdigest()
 
 
-def enforce_shared_otp_ip_limit(remote_addr):
+def enforce_shared_otp_ip_limit(
+    remote_addr,
+    purpose=SmsDeliveryLog.Purpose.PHONE_VERIFICATION,
+):
     ip_hash = hash_request_ip(remote_addr)
     if not ip_hash:
         return ""
@@ -29,7 +32,7 @@ def enforce_shared_otp_ip_limit(remote_addr):
     count = SmsDeliveryLog.objects.filter(
         request_ip_hash=ip_hash,
         created_at__gte=since,
-        purpose=SmsDeliveryLog.Purpose.PHONE_VERIFICATION,
+        purpose=purpose,
     ).count()
     if count >= settings.SMS_OTP_IP_LIMIT_PER_HOUR:
         raise Throttled(
@@ -39,11 +42,18 @@ def enforce_shared_otp_ip_limit(remote_addr):
 
 
 @transaction.atomic
-def create_sms_delivery_log(*, user, recipient, provider, request_ip_hash):
+def create_sms_delivery_log(
+    *,
+    user,
+    recipient,
+    provider,
+    request_ip_hash,
+    purpose=SmsDeliveryLog.Purpose.PHONE_VERIFICATION,
+):
     return SmsDeliveryLog.objects.create(
         user=user,
         recipient=recipient,
-        purpose=SmsDeliveryLog.Purpose.PHONE_VERIFICATION,
+        purpose=purpose,
         provider=provider,
         request_ip_hash=request_ip_hash,
     )

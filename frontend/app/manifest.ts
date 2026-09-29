@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "BKO Services",
     short_name: "BKO Services",
-    description: "Le bon professionnel, au bon moment à Bamako.",
+    description: "Le bon professionnel, au bon moment dans les zones desservies du Mali.",
     start_url: "/",
     scope: "/",
     display: "standalone",
