@@ -54,14 +54,21 @@ def _validate_provider_eligibility(provider, user, service_request):
     if not provider.trades.filter(pk=trade.pk).exists():
         raise ValidationError({"offer": "Vous n'êtes plus rattaché au métier demandé."})
 
-    if not provider.service_areas.filter(
+    serves_commune = provider.service_areas.filter(
         Q(pk=neighborhood.pk) | Q(commune_id=neighborhood.commune_id),
         is_active=True,
         commune__is_active=True,
         commune__city__is_active=True,
         commune__city__region__is_active=True,
-    ).exists():
-        raise ValidationError({"offer": "Vous ne desservez plus la commune de cette demande."})
+    ).exists()
+    accepts_travel = provider.travel_communes.filter(
+        pk=neighborhood.commune_id,
+        is_active=True,
+        city__is_active=True,
+        city__region__is_active=True,
+    ).exists()
+    if not serves_commune and not accepts_travel:
+        raise ValidationError({"offer": "Vous ne desservez plus cette commune et n'y autorisez plus vos déplacements."})
 
     is_urgent = service_request.priority == ServiceRequest.Priority.URGENT
     if not provider_has_entitlement(provider.pk, urgent=is_urgent):
