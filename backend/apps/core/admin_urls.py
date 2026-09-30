@@ -1,5 +1,11 @@
 from django.urls import path
 
+from .admin_catalog_views import (
+    AdminCategoryDetailView,
+    AdminCategoryListCreateView,
+    AdminTradeDetailView,
+    AdminTradeListCreateView,
+)
 from .admin_views import (
     AdminOverviewView,
     AdminProviderDetailView,
@@ -24,4 +30,8 @@ urlpatterns = [
     path("requests/<uuid:pk>/", AdminRequestDetailView.as_view(), name="admin-request-detail"),
     path("requests/<uuid:pk>/dispatch/", AdminRequestDispatchView.as_view(), name="admin-request-dispatch"),
     path("requests/<uuid:pk>/resolve-location/", AdminRequestResolveLocationView.as_view(), name="admin-request-resolve-location"),
+    path("catalog/categories/", AdminCategoryListCreateView.as_view(), name="admin-catalog-categories"),
+    path("catalog/categories/<uuid:pk>/", AdminCategoryDetailView.as_view(), name="admin-catalog-category-detail"),
+    path("catalog/trades/", AdminTradeListCreateView.as_view(), name="admin-catalog-trades"),
+    path("catalog/trades/<uuid:pk>/", AdminTradeDetailView.as_view(), name="admin-catalog-trade-detail"),
 ]
