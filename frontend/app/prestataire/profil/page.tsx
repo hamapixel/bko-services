@@ -1,11 +1,12 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- private authenticated avatar URLs intentionally bypass image optimization. */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import AccountProfileTools from "@/components/account/account-profile-tools";
 import { useProviderSession } from "@/components/provider/provider-shell";
-import { apiMutation, formatDate } from "@/lib/provider-api";
+import { apiGetAll, type Commune } from "@/lib/client-api";
+import { apiMutation, formatDate, type ProviderProfile } from "@/lib/provider-api";
 
 function providerInitials(name: string) {
   return name
@@ -18,8 +19,37 @@ function providerInitials(name: string) {
 export default function ProviderProfilePage() {
   const { user, profile, refreshProfile, refreshUser } = useProviderSession();
   const [busy, setBusy] = useState(false);
+  const [travelBusy, setTravelBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [communes, setCommunes] = useState<Commune[]>([]);
+  const [communesLoading, setCommunesLoading] = useState(true);
+  const [selectedTravelCommunes, setSelectedTravelCommunes] = useState<string[]>(
+    profile.travel_communes,
+  );
+
+  useEffect(() => {
+    let active = true;
+    apiGetAll<Commune>("/api/v1/locations/communes/")
+      .then((items) => {
+        if (active) setCommunes(items);
+      })
+      .catch((caught) => {
+        if (active) {
+          setError(
+            caught instanceof Error
+              ? caught.message
+              : "Impossible de charger les communes disponibles.",
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setCommunesLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function toggleAvailability() {
     setBusy(true);
@@ -45,6 +75,42 @@ export default function ProviderProfilePage() {
       );
     } finally {
       setBusy(false);
+    }
+  }
+
+  function toggleTravelCommune(communeId: string) {
+    setSelectedTravelCommunes((current) =>
+      current.includes(communeId)
+        ? current.filter((id) => id !== communeId)
+        : [...current, communeId],
+    );
+  }
+
+  async function saveTravelCommunes() {
+    setTravelBusy(true);
+    setMessage("");
+    setError("");
+    try {
+      const result = await apiMutation<ProviderProfile>(
+        "/api/v1/providers/travel-communes/",
+        "PATCH",
+        { commune_ids: selectedTravelCommunes },
+      );
+      setSelectedTravelCommunes(result.travel_communes);
+      await refreshProfile();
+      setMessage(
+        selectedTravelCommunes.length
+          ? "Communes de déplacement enregistrées. Elles seront utilisées en troisième priorité si aucun prestataire plus proche n'est trouvé."
+          : "Aucune commune de déplacement supplémentaire n'est autorisée.",
+      );
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Impossible d'enregistrer les communes de déplacement.",
+      );
+    } finally {
+      setTravelBusy(false);
     }
   }
 
@@ -165,7 +231,7 @@ export default function ProviderProfilePage() {
 
         <section className="account-tool-card">
           <div className="account-tool-heading">
-            <span className="page-kicker">Couverture</span>
+            <span className="page-kicker">Couverture principale</span>
             <h2>Quartiers desservis</h2>
           </div>
           <div className="tag-list">
@@ -177,6 +243,80 @@ export default function ProviderProfilePage() {
           </div>
         </section>
       </div>
+
+      <section className="account-tool-card" style={{ marginTop: 24 }}>
+        <div className="account-tool-heading">
+          <span className="page-kicker">Déplacements autorisés</span>
+          <h2>Autres communes où je peux intervenir</h2>
+          <p>
+            Le matching cherche d'abord votre quartier, puis votre commune. Ces communes
+            ne sont utilisées qu'en troisième priorité lorsqu'il reste des places d'offre.
+          </p>
+        </div>
+
+        {communesLoading ? (
+          <p>Chargement des communes…</p>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 12,
+              marginTop: 16,
+            }}
+          >
+            {communes.map((commune) => {
+              const checked = selectedTravelCommunes.includes(commune.id);
+              return (
+                <label
+                  key={commune.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "12px 14px",
+                    border: checked ? "1px solid #f27932" : "1px solid #dbe3ec",
+                    borderRadius: 14,
+                    cursor: "pointer",
+                    background: checked ? "#fff7f1" : "#fff",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleTravelCommune(commune.id)}
+                  />
+                  <span>{commune.name}</span>
+                </label>
+              );
+            })}
+          </div>
+        )}
+
+        <div style={{ marginTop: 18, display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <button
+            className="button-primary"
+            type="button"
+            disabled={travelBusy || communesLoading}
+            onClick={saveTravelCommunes}
+          >
+            {travelBusy ? "Enregistrement…" : "Enregistrer mes communes"}
+          </button>
+          <small style={{ alignSelf: "center" }}>
+            {selectedTravelCommunes.length} commune(s) supplémentaire(s) autorisée(s).
+          </small>
+        </div>
+
+        {profile.travel_commune_details.length > 0 && (
+          <div className="tag-list" style={{ marginTop: 18 }}>
+            {profile.travel_commune_details.map((commune) => (
+              <span className="provider-tag" key={commune.id}>
+                {commune.name} · {commune.city_name}
+              </span>
+            ))}
+          </div>
+        )}
+      </section>
 
       <AccountProfileTools
         user={user}
