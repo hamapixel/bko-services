@@ -249,8 +249,8 @@ export default function ProviderProfilePage() {
           <span className="page-kicker">Déplacements autorisés</span>
           <h2>Autres communes où je peux intervenir</h2>
           <p>
-            Le matching cherche d'abord votre quartier, puis votre commune. Ces communes
-            ne sont utilisées qu'en troisième priorité lorsqu'il reste des places d'offre.
+            Le matching cherche d’abord votre quartier, puis votre commune. Ces communes
+            ne sont utilisées qu’en troisième priorité lorsqu’il reste des places d’offre.
           </p>
         </div>
 
