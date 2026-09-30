@@ -24,6 +24,13 @@ export type ProviderAreaDetail = {
   commune_name: string;
 };
 
+export type ProviderTravelCommuneDetail = {
+  id: string;
+  name: string;
+  city_name: string;
+  region_name: string;
+};
+
 export type ProviderProfile = {
   id: string;
   legal_name: string;
@@ -31,8 +38,10 @@ export type ProviderProfile = {
   description: string;
   trades: string[];
   service_areas: string[];
+  travel_communes: string[];
   trade_details: ProviderTradeDetail[];
   service_area_details: ProviderAreaDetail[];
+  travel_commune_details: ProviderTravelCommuneDetail[];
   status: "PENDING" | "VERIFIED" | "REJECTED" | "SUSPENDED";
   is_available: boolean;
   verified_at: string | null;
@@ -48,6 +57,7 @@ export type ProviderOffer = {
   commune_name: string;
   priority: "NORMAL" | "URGENT";
   outside_declared_quartiers: boolean;
+  match_scope: "QUARTIER" | "COMMUNE" | "DEPLACEMENT" | "INCONNU";
   status: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED" | "CANCELLED";
   created_at: string;
 };
