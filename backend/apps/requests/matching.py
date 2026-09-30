@@ -138,27 +138,30 @@ def _match_request(request_id, actor, *, skip_if_already_matched=False):
         trades=trade,
     )
 
-    # Matching priority is strict and deterministic:
+    # Matching priority:
     # 1) exact requested quartier;
     # 2) another declared quartier in the same commune;
     # 3) a provider who explicitly authorized travel to the requested commune.
+    #
+    # Keep the existing rule that can reserve one slot for the same commune
+    # when such a provider exists, while never using cross-commune travel
+    # before the local commune tier has been exhausted.
     exact = list(candidates.filter(
         service_areas=neighborhood,
     ).order_by("verified_at", "id").distinct()[:limit])
+    same_commune = list(candidates.filter(
+        service_areas__commune_id=neighborhood.commune_id,
+        service_areas__is_active=True,
+    ).exclude(pk__in=[profile.pk for profile in exact]).order_by(
+        "verified_at", "id"
+    ).distinct()[:limit])
 
-    selected = list(exact)
-    selected_ids = [profile.pk for profile in selected]
-
+    exact_slots = min(len(exact), limit - 1) if same_commune else len(exact)
+    selected = exact[:exact_slots] + same_commune[:limit - exact_slots]
     if len(selected) < limit:
-        same_commune = list(candidates.filter(
-            service_areas__commune_id=neighborhood.commune_id,
-            service_areas__is_active=True,
-        ).exclude(pk__in=selected_ids).order_by(
-            "verified_at", "id"
-        ).distinct()[:limit - len(selected)])
-        selected.extend(same_commune)
-        selected_ids.extend(profile.pk for profile in same_commune)
+        selected.extend(exact[exact_slots:exact_slots + limit - len(selected)])
 
+    selected_ids = [profile.pk for profile in selected]
     if len(selected) < limit:
         travel = list(candidates.filter(
             travel_communes=neighborhood.commune,
