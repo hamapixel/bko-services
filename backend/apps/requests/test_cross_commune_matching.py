@@ -108,16 +108,15 @@ class CrossCommuneMatchingTests(TestCase):
         self.assertNotIn(unrelated.pk, offered)
         self.assertEqual(service_request.status, ServiceRequest.Status.OFFERED)
 
-    def test_exact_quartier_fills_normal_limit_before_fallbacks(self):
-        exact = [self.provider(self.request_area) for _ in range(3)]
+    def test_same_commune_is_used_before_authorized_travel_when_limit_is_full(self):
+        exact = [self.provider(self.request_area) for _ in range(2)]
         same_commune = self.provider(self.same_commune_area)
         travel = self.provider(self.other_area, travel_to=[self.request_commune])
 
         service_request = self.create_request()
         offered = set(service_request.offers.values_list("provider_id", flat=True))
 
-        self.assertEqual(offered, {profile.pk for profile in exact})
-        self.assertNotIn(same_commune.pk, offered)
+        self.assertEqual(offered, {exact[0].pk, exact[1].pk, same_commune.pk})
         self.assertNotIn(travel.pk, offered)
 
     def test_other_commune_is_not_used_without_explicit_authorization(self):
