@@ -4,7 +4,7 @@ from django.conf import settings
 from django.db import models
 
 from apps.catalog.models import Trade
-from apps.locations.models import Neighborhood
+from apps.locations.models import Commune, Neighborhood
 
 
 class ProviderProfile(models.Model):
@@ -21,6 +21,12 @@ class ProviderProfile(models.Model):
     description = models.CharField(max_length=1000, blank=True)
     trades = models.ManyToManyField(Trade, related_name="providers")
     service_areas = models.ManyToManyField(Neighborhood, related_name="providers")
+    travel_communes = models.ManyToManyField(
+        Commune,
+        related_name="travel_providers",
+        blank=True,
+        help_text="Communes supplémentaires dans lesquelles le prestataire accepte de se déplacer.",
+    )
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
     is_available = models.BooleanField(default=False)
     identity_checked = models.BooleanField(default=False)
