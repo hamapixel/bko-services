@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels dans les zones ouvertes au Mali. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut au 29 septembre 2026 : **étapes 0 à 22 développées ; qualité et automatisation validées techniquement ; préparation de production en cours**. La suite complète a réussi avec **141 tests sur PostgreSQL**, sans test ignoré, et le frontend passe ESLint, TypeScript et le build Next.js. Les essais mobiles et d'accessibilité restent à consigner avant de clôturer l'étape 23. La CI de l'étape 24 est opérationnelle et protégée sur `main`.
+> Statut au 30 septembre 2026 : **étapes 0 à 22 développées ; qualité et automatisation validées techniquement ; préparation de production en cours**. La suite backend actuelle a réussi avec **146 tests sur PostgreSQL**, sans test ignoré. Le frontend est contrôlé par ESLint, TypeScript et le build Next.js dans la CI. Les essais mobiles et d'accessibilité restent à consigner avant de clôturer l'étape 23. La CI de l'étape 24 est opérationnelle et protégée sur `main`.
 
 Pour ouvrir les abonnements payants avec Wave et Orange Money au Mali, voir [l'obtention des accès marchands et l'intégration](docs/paiements-marchands.md). L'accès Wave est codé mais attend un compte marchand réel ; Orange Money Web Payment nécessite encore l'accord marchand et son adaptateur dédié.
 
@@ -12,7 +12,7 @@ Pour ouvrir les abonnements payants avec Wave et Orange Money au Mali, voir [l'o
 - Une demande urgente peut être proposée à cinq professionnels compatibles au maximum. Une transaction PostgreSQL garantit qu'un seul l'accepte.
 - Les pièces d'identité et les coordonnées privées doivent rester protégées. Avant attribution, l'offre transmise au professionnel contient seulement les renseignements nécessaires pour décider.
 - L'interface mobile reste utilisable avec une connexion instable. Une demande conservée hors connexion est clairement marquée **non envoyée** jusqu'à confirmation du serveur.
-- Les prestataires doivent être vérifiés pour recevoir des demandes. Les tarifs, catégories et quartiers sont gérés côté serveur.
+- Les prestataires doivent être vérifiés pour recevoir des demandes. Les tarifs, catégories, métiers, quartiers et zones administrables sont gérés côté serveur.
 
 ## Architecture retenue
 
@@ -57,7 +57,9 @@ L'architecture, les rôles, l'arborescence prévue et la feuille de route sont d
 
 Le choix suit **région ou district → ville → commune → quartier**. Le District de Bamako possède déjà des villes, communes et quartiers. Les 19 régions sont visibles après migration. Dans une région sans localités répertoriées, le client peut saisir ville, commune et quartier ; sa demande reste **Zone à vérifier** jusqu'à ce que l'administration rattache un quartier validé, puis le matching démarre. Les prestataires ne peuvent candidater qu'après ouverture de quartiers actifs. Une migration rattache la ville de Bamako déjà présente à son district. Voir [la couverture et la recherche](docs/couverture-mali-et-recherche.md).
 
-Lorsqu'un client vérifié envoie une demande, le serveur lance immédiatement la recherche et crée des offres privées (jusqu'à trois pour une demande normale ou cinq pour une urgence). La correspondance exige le **même métier**, privilégie le **quartier demandé** et réserve si possible une offre à un prestataire d'un autre quartier de la **même commune**. Le prestataire doit être approuvé, disponible, actif, avoir son téléphone vérifié et un abonnement autorisant ce type de demande. Le premier qui accepte est le seul attributaire ; les autres offres sont annulées. Sans candidat, la demande reste « Recherche en cours » ; les administrateurs sont avertis et voient le compteur des demandes sans offre. La recherche reprend automatiquement lorsqu'un prestataire compatible devient disponible, obtient ou renouvelle un abonnement, ou termine une intervention qui libère une place. La relance manuelle reste possible depuis `/admin/demandes` pour les demandes historiques et les cas particuliers.
+Lorsqu'un client vérifié envoie une demande, le serveur lance immédiatement la recherche et crée des offres privées (jusqu'à trois pour une demande normale ou cinq pour une urgence). La correspondance exige le **même métier** puis applique l'ordre **quartier demandé → autres quartiers de la même commune → autres communes explicitement autorisées par le prestataire**. Le troisième niveau n'est utilisé que s'il reste des places d'offre ; une demande n'est donc jamais envoyée arbitrairement à tous les prestataires de Bamako. Le prestataire gère ses communes de déplacement dans son profil. Il doit aussi être approuvé, disponible, actif, avoir son téléphone vérifié et un abonnement autorisant ce type de demande. Le premier qui accepte est le seul attributaire ; toutes les autres offres en attente sont annulées.
+
+Sans candidat, la demande reste « Recherche en cours » ; les administrateurs sont avertis et voient le compteur des demandes sans offre. La recherche reprend automatiquement lorsqu'un prestataire compatible devient disponible, obtient ou renouvelle un abonnement, termine une intervention qui libère une place ou ajoute une commune de déplacement compatible. La relance manuelle reste possible depuis `/admin/demandes` pour les demandes historiques et les cas particuliers.
 
 ## Démarrage sur Windows
 
@@ -77,6 +79,6 @@ Chaque étape suit le cycle : explication → commandes → fichiers complets �
 
 ## À venir
 
-L'étape 23 a validé **141 tests sur PostgreSQL**, sans test ignoré, ainsi que **21 tests ciblés** sur les lieux, le matching, les zones non répertoriées et l'acceptation atomique. ESLint, TypeScript et le build Next.js ont également réussi. Les essais mobiles et d'accessibilité restent à consigner : [commandes et résultats](docs/etape-23-qualite.md).
+L'étape 23 dispose maintenant d'une suite de **146 tests sur PostgreSQL**, sans test ignoré. Les 5 nouveaux tests couvrent spécifiquement le matching quartier → commune → déplacement autorisé, le refus d'un déplacement non autorisé, la relance après ajout d'une commune et l'attribution unique. Les essais mobiles et d'accessibilité restent à consigner : [commandes et résultats](docs/etape-23-qualite.md).
 
-Le [workflow CI](docs/etape-24-ci.md) exécute les contrôles **Backend PostgreSQL** et **Frontend lint and build** ; une règle active sur `main` exige une pull request et ces deux checks avant fusion. La prochaine étape technique est la préparation serveur, puis la préproduction et le déploiement. Voir la [feuille de route de production](docs/production-roadmap.md) et les [exigences d'architecture](docs/architecture.md).
+Le [workflow CI](docs/etape-24-ci.md) exécute les contrôles **Backend PostgreSQL** et **Frontend lint and build** ; une règle active sur `main` exige une pull request et ces deux checks avant fusion. La prochaine étape technique reste la préparation serveur, puis la préproduction et le déploiement. Voir la [feuille de route de production](docs/production-roadmap.md) et les [exigences d'architecture](docs/architecture.md).
