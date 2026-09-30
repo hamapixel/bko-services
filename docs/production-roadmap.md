@@ -1,6 +1,6 @@
 # Feuille de route vers la production
 
-État au 29 septembre 2026. Cette page décrit le dépôt actuel, pas un environnement déjà déployé. La branche `fix/regions-auto-matching` porte l'état fonctionnel à intégrer par pull request dans `main`. Le déploiement public doit utiliser uniquement une version relue, validée par la CI et intégrée à la branche de livraison.
+État au 30 septembre 2026. Cette page décrit le dépôt actuel, pas un environnement déjà déployé. La branche `feature/production-prep` porte les évolutions fonctionnelles et la préparation précédant le serveur ; elles sont intégrées à `main` uniquement par pull request après réussite des contrôles requis.
 
 ## Ce qui fonctionne déjà
 
@@ -8,11 +8,11 @@ L'application comprend les parcours client, prestataire et administration, les l
 
 La recherche instantanée sur les métiers, les notifications internes et le compteur admin des demandes sans offre, la relance du matching lors des événements prestataire et les 19 régions administrables sont détaillés dans [couverture-mali-et-recherche.md](couverture-mali-et-recherche.md). Les subdivisions des nouvelles régions restent à renseigner avant leur ouverture aux utilisateurs.
 
-Le matching exige le même métier, privilégie le quartier demandé et peut proposer la demande à un prestataire d'un autre quartier de la même commune. Une demande normale produit au plus trois offres et une urgence au plus cinq. L'acceptation PostgreSQL est atomique : un seul prestataire devient attributaire et les autres offres sont annulées.
+Le matching exige le **même métier** puis applique l'ordre géographique **quartier demandé → autres quartiers de la même commune → autres communes explicitement autorisées par le prestataire**. Le troisième niveau n'est utilisé que s'il reste des places d'offre et si le prestataire a enregistré la commune cible dans ses communes de déplacement. Une demande normale produit au plus trois offres et une urgence au plus cinq. L'acceptation PostgreSQL est atomique : le premier prestataire qui accepte devient l'unique attributaire et les autres offres sont annulées.
 
 Ces fonctionnalités ne prouvent pas encore qu'un paiement, un SMS ou une notification fonctionne avec un compte marchand réel en production. Orange Money n'est pas intégré. Le README mentionne Celery et Redis comme architecture cible : aucun worker Celery, Redis ou configuration Docker de production n'est actuellement présent dans le dépôt.
 
-La qualité technique a été renouvelée sur l'état fonctionnel actuel : **141 tests backend sur PostgreSQL réussis, sans test ignoré**, plus **21 tests ciblés** sur les lieux, le matching, les zones non répertoriées et l'acceptation atomique. ESLint, TypeScript et le build Next.js ont réussi localement. GitHub Actions a également validé les jobs **Backend PostgreSQL** et **Frontend lint and build** sur la référence fonctionnelle `0cc4f18`.
+La qualité technique de la branche fonctionnelle actuelle a été renouvelée : **146 tests backend sur PostgreSQL réussis, sans test ignoré**. Les 5 nouveaux tests ajoutés à la suite couvrent le matching inter-commune autorisé et l'attribution unique ; le lot ciblé local historique de 21 tests continue de couvrir les lieux, le matching de base, les zones non répertoriées et l'acceptation atomique. `manage.py check` et `makemigrations --check --dry-run` sont propres. La CI doit également garder **Frontend lint and build** vert sur le head final de la PR avant fusion.
 
 L'obtention des comptes marchands Wave Business et Orange Money Web Payment au Mali peut avancer en parallèle. Si les deux moyens de paiement sont requis au lancement, l'adaptateur Orange et les essais marchands des deux parcours doivent être terminés avant l'ouverture publique. Procédure et critères : [paiements-marchands.md](paiements-marchands.md).
 
@@ -20,8 +20,8 @@ L'obtention des comptes marchands Wave Business et Orange Money Web Payment au M
 
 | Étape | Travail | Preuve attendue |
 | --- | --- | --- |
-| 23 — Qualité | Suite PostgreSQL validée avec 141 tests ; 21 tests ciblés validés ; frontend validé. | Consigner les essais mobiles et d'accessibilité sur appareils réels. |
-| 24 — Automatisation | CI PostgreSQL/frontend opérationnelle ; ruleset `main` actif. | Les deux jobs requis passent sur la PR avant fusion. |
+| 23 — Qualité | Suite PostgreSQL validée avec 146 tests sur l'état fonctionnel actuel ; frontend contrôlé par CI. | Rejouer localement après synchronisation et consigner les essais mobiles et d'accessibilité sur appareils réels. |
+| 24 — Automatisation | CI PostgreSQL/frontend opérationnelle ; ruleset `main` actif. | Les deux jobs requis passent sur le head de la PR avant fusion. |
 | 25 — Préparation serveur | Paramètres Django de production, serveur WSGI, fichiers statiques, reverse proxy HTTPS, stockage durable des avatars, sauvegardes et journaux ; décider si Redis/worker est nécessaire aux notifications et aux limites de débit entre processus. | `check --deploy` examiné, services relancés automatiquement, sauvegarde et restauration testées. |
 | 26 — Préproduction | Domaine de test HTTPS, vraie livraison SMS, Web Push, installation iPhone/Android, abonnements et paiement Wave sous contrat marchand. | Tests sur appareils réels, webhook signé, expiration et renouvellement constatés ; incident simulé. |
 | 27 — Ouverture | Intégration finale, sauvegarde, migration, déploiement contrôlé, surveillance et support. | Parcours de bout en bout réussi sur le domaine final et plan de retour arrière documenté. |
