@@ -14,7 +14,10 @@ RUN python -m pip install --upgrade pip \
 
 COPY . .
 
-RUN chmod +x /app/entrypoint.sh \
+# Windows checkouts can convert shell scripts to CRLF. Normalize the
+# entrypoint inside the Linux image before making it executable.
+RUN sed -i 's/\r$//' /app/entrypoint.sh \
+    && chmod +x /app/entrypoint.sh \
     && mkdir -p /app/staticfiles /app/media \
     && chown -R app:app /app
 
