@@ -32,7 +32,13 @@ type PaymentMethods = {
 };
 
 export default function ProviderSubscriptionPage() {
-  const alert = useBkoAlert();
+  const {
+    success: showSuccess,
+    error: showError,
+    warning: showWarning,
+    info: showInfo,
+    confirmAction,
+  } = useBkoAlert();
   const [subscription, setSubscription] = useState<ProviderSubscription | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
@@ -120,7 +126,7 @@ export default function ProviderSubscriptionPage() {
         if (!active) return;
         if (payment.status === "FAILED" || payment.status === "CANCELLED") {
           setMessage("Paiement non confirmé. Aucun abonnement n’a été activé par ce retour.");
-          alert.warning({
+          showWarning({
             title: "Paiement non confirmé",
             message: "Aucun abonnement n’a été activé. Vous pouvez réessayer depuis cette page.",
           });
@@ -131,7 +137,7 @@ export default function ProviderSubscriptionPage() {
           await Promise.all([refreshSubscription(), refreshPayments()]);
           if (active) {
             setMessage("Paiement confirmé : abonnement actualisé.");
-            alert.success({
+            showSuccess({
               title: "Abonnement activé",
               message: "Le serveur a confirmé le paiement et actualisé votre abonnement.",
             });
@@ -148,7 +154,7 @@ export default function ProviderSubscriptionPage() {
         if (active) {
           const detail = caught instanceof Error ? caught.message : "Vérification du paiement impossible.";
           setError(detail);
-          alert.error({ title: "Vérification impossible", message: detail });
+          showError({ title: "Vérification impossible", message: detail });
         }
       }
     }
@@ -158,17 +164,17 @@ export default function ProviderSubscriptionPage() {
       active = false;
       if (timer) clearTimeout(timer);
     };
-  }, [alert]);
+  }, [showError, showSuccess, showWarning]);
 
   async function startCheckout(plan: SubscriptionPlan) {
     if (plan.price_xof === 0) {
       const detail = "Ce plan gratuit nécessite une activation administrative.";
       setError(detail);
-      alert.info({ title: "Activation administrative", message: detail });
+      showInfo({ title: "Activation administrative", message: detail });
       return;
     }
 
-    const confirmed = await alert.confirmAction({
+    const confirmed = await confirmAction({
       title: `Souscrire au plan ${plan.name}`,
       message: `Montant : ${formatXof(plan.price_xof)} pour ${plan.duration_days} jours. Vous serez redirigé vers le service de paiement sécurisé.`,
       confirmLabel: "Continuer vers le paiement",
@@ -203,7 +209,7 @@ export default function ProviderSubscriptionPage() {
           ? caught.message
           : "Impossible de lancer le paiement.";
       setError(detail);
-      alert.error({ title: "Paiement indisponible", message: detail });
+      showError({ title: "Paiement indisponible", message: detail });
     } finally {
       setBusyPlan(null);
     }
@@ -215,14 +221,14 @@ export default function ProviderSubscriptionPage() {
     try {
       await Promise.all([refreshSubscription(), refreshPayments()]);
       setMessage("Statuts actualisés depuis le serveur.");
-      alert.success({
+      showSuccess({
         title: "Statuts actualisés",
         message: "Les informations affichées viennent du serveur BKO Services.",
       });
     } catch (caught) {
       const detail = caught instanceof Error ? caught.message : "Actualisation impossible.";
       setError(detail);
-      alert.error({ title: "Actualisation impossible", message: detail });
+      showError({ title: "Actualisation impossible", message: detail });
     }
   }
 
