@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { useBkoAlert } from "@/components/bko-alert";
 import {
   apiGet,
   apiMutation,
@@ -17,6 +18,7 @@ import {
 export default function ClientRequestDetailPage() {
   const params = useParams<{ id: string }>();
   const requestId = params.id;
+  const alert = useBkoAlert();
   const [request, setRequest] = useState<ServiceRequest | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
@@ -55,13 +57,14 @@ export default function ClientRequestDetailPage() {
   }, [requestId]);
 
   async function confirmCompletion() {
-    if (
-      !window.confirm(
-        "Confirmer que l’intervention est réellement terminée ?",
-      )
-    ) {
-      return;
-    }
+    const confirmed = await alert.confirmAction({
+      title: "Confirmer la fin de l’intervention ?",
+      message:
+        "Confirmez uniquement si le prestataire a réellement terminé l’intervention. Cette confirmation sera enregistrée par le serveur.",
+      confirmLabel: "Confirmer la fin",
+      cancelLabel: "Pas encore",
+    });
+    if (!confirmed) return;
 
     setBusy(true);
     setError("");
@@ -73,11 +76,21 @@ export default function ClientRequestDetailPage() {
         {},
       );
       setRequest(updated);
-      setMessage("Fin confirmée. Vous pouvez maintenant noter le prestataire ci-dessous.");
+      const successMessage =
+        "Fin confirmée. Vous pouvez maintenant noter le prestataire ci-dessous.";
+      setMessage(successMessage);
+      alert.success({
+        title: "Intervention confirmée",
+        message: successMessage,
+      });
     } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : "Confirmation impossible.",
-      );
+      const detail =
+        caught instanceof Error ? caught.message : "Confirmation impossible.";
+      setError(detail);
+      alert.error({
+        title: "Confirmation impossible",
+        message: detail,
+      });
     } finally {
       setBusy(false);
     }
@@ -94,11 +107,20 @@ export default function ClientRequestDetailPage() {
         { rating, comment: comment.trim() },
       );
       await loadRequest();
-      setMessage("Merci, votre avis a bien été enregistré.");
+      const successMessage = "Merci, votre avis a bien été enregistré.";
+      setMessage(successMessage);
+      alert.success({
+        title: "Avis publié",
+        message: successMessage,
+      });
     } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : "Avis impossible à envoyer.",
-      );
+      const detail =
+        caught instanceof Error ? caught.message : "Avis impossible à envoyer.";
+      setError(detail);
+      alert.error({
+        title: "Avis non envoyé",
+        message: detail,
+      });
     } finally {
       setBusy(false);
     }
