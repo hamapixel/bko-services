@@ -1,20 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { useAdminSession } from "@/components/admin/admin-shell";
 import {
   apiGet,
+  apiMutation,
   formatDate,
   type AdminUser,
 } from "@/lib/admin-api";
 
 export default function AdminUserDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const { user: actor } = useAdminSession();
   const [user, setUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [actionInfo, setActionInfo] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -36,6 +42,52 @@ export default function AdminUserDetailPage() {
     };
   }, [params.id]);
 
+  async function setAccountActive(nextActive: boolean) {
+    if (!user || busy) return;
+    const actionLabel = nextActive ? "réactiver" : "désactiver";
+    if (!window.confirm(`Confirmer : ${actionLabel} le compte ${user.phone} ?`)) return;
+
+    setBusy(true);
+    setError("");
+    setActionInfo("");
+    try {
+      const updated = await apiMutation<AdminUser>(
+        `/api/v1/admin/users/${user.id}/status/`,
+        "PATCH",
+        { is_active: nextActive },
+      );
+      setUser(updated);
+      setActionInfo(nextActive ? "Compte réactivé." : "Compte désactivé.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Action impossible.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteAccount() {
+    if (!user || busy) return;
+    if (
+      !window.confirm(
+        `Supprimer définitivement ${user.phone} ? Cette action est refusée si le compte possède déjà un historique BKO Services.`,
+      )
+    ) {
+      return;
+    }
+
+    setBusy(true);
+    setError("");
+    setActionInfo("");
+    try {
+      await apiMutation<void>(`/api/v1/admin/users/${user.id}/delete/`, "DELETE");
+      router.replace("/admin/utilisateurs");
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Suppression impossible.");
+      setBusy(false);
+    }
+  }
+
   if (loading) return <div className="skeleton-list">Chargement…</div>;
 
   if (!user) {
@@ -49,6 +101,11 @@ export default function AdminUserDetailPage() {
       </div>
     );
   }
+
+  const canManage =
+    actor.role === "SUPERADMIN" &&
+    actor.id !== user.id &&
+    user.role !== "SUPERADMIN";
 
   return (
     <main>
@@ -67,6 +124,9 @@ export default function AdminUserDetailPage() {
           </span>
         </div>
       </section>
+
+      {actionInfo && <div className="admin-waiting-alert" role="status">{actionInfo}</div>}
+      {error && <div className="shell-logout-error" role="alert">{error}</div>}
 
       <div className="detail-grid">
         <section className="detail-card">
@@ -90,12 +150,52 @@ export default function AdminUserDetailPage() {
 
         <aside className="detail-side">
           <section className="security-note">
-            <strong>Lecture seule</strong>
+            <strong>Gestion sécurisée</strong>
             <p>
-              Le rôle, le statut actif, les permissions et les mots de passe ne
-              sont jamais modifiés depuis cette interface de supervision.
+              Un numéro correspond à un seul compte et un seul rôle actif. La
+              désactivation bloque la connexion sans supprimer l’historique.
             </p>
           </section>
+
+          {canManage && (
+            <section className="detail-card">
+              <h2>Actions du compte</h2>
+              <p>
+                Privilégiez la désactivation pour conserver l’historique des
+                demandes, interventions, paiements et abonnements.
+              </p>
+              <div className="role-welcome-actions" style={{ marginTop: 16 }}>
+                {user.is_active ? (
+                  <button
+                    className="button-secondary"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void setAccountActive(false)}
+                  >
+                    Désactiver
+                  </button>
+                ) : (
+                  <button
+                    className="button-primary"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void setAccountActive(true)}
+                  >
+                    Réactiver
+                  </button>
+                )}
+                <button
+                  className="button-secondary"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void deleteAccount()}
+                  style={{ color: "#b42318" }}
+                >
+                  Supprimer si aucun historique
+                </button>
+              </div>
+            </section>
+          )}
         </aside>
       </div>
     </main>
