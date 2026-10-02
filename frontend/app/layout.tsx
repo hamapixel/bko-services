@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
+import BkoAlertProvider from "@/components/bko-alert";
 import PwaClient from "@/components/pwa-client";
 
 import "./globals.css";
+import "./bko-alert.css";
 
 export const metadata: Metadata = {
   title: "BKO Services",
@@ -50,8 +52,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="fr">
       <body>
-        {children}
-        <PwaClient />
+        <BkoAlertProvider>
+          {children}
+          <PwaClient />
+        </BkoAlertProvider>
       </body>
     </html>
   );
