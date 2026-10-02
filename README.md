@@ -2,7 +2,7 @@
 
 **Le bon professionnel, au bon moment.** BKO Services met en relation des clients et des professionnels dans les zones ouvertes au Mali. Le premier parcours à livrer couvre l'inscription, le choix d'un métier et d'un quartier, la création d'une demande, l'attribution à un professionnel, le suivi de l'intervention et l'avis du client.
 
-> Statut au 30 septembre 2026 : **étapes 0 à 22 développées ; qualité et automatisation validées techniquement ; préparation de production en cours**. La suite backend actuelle a réussi avec **146 tests sur PostgreSQL**, sans test ignoré. Le frontend est contrôlé par ESLint, TypeScript et le build Next.js dans la CI. Les essais mobiles et d'accessibilité restent à consigner avant de clôturer l'étape 23. La CI de l'étape 24 est opérationnelle et protégée sur `main`.
+> Statut au 2 octobre 2026 : **étapes 0 à 22 développées ; qualité et automatisation validées techniquement ; préparation de production en cours**. La suite backend actuelle a réussi avec **150 tests sur PostgreSQL**, sans test ignoré. Le frontend est contrôlé par ESLint, TypeScript et le build Next.js dans la CI. La préparation production inclut maintenant des images Docker Django/Next.js, une stack Compose isolée et un smoke test Docker automatisé.
 
 Pour ouvrir les abonnements payants avec Wave et Orange Money au Mali, voir [l'obtention des accès marchands et l'intégration](docs/paiements-marchands.md). L'accès Wave est codé mais attend un compte marchand réel ; Orange Money Web Payment nécessite encore l'accord marchand et son adaptateur dédié.
 
@@ -73,12 +73,37 @@ git status
 
 Ne placez jamais de mots de passe, de clés API, de fichiers `.env` ou de pièces d'identité dans Git. Les migrations applicatives sont versionnées dans le dépôt.
 
+## Docker et Coolify
+
+La stack de production est décrite par `compose.prod.yml` et utilise le nom de projet Docker **`bko_services`**. Son réseau et ses volumes sont donc séparés des autres applications Docker du poste ou du VPS.
+
+Pour un test local Docker sans prendre les ports habituels `3000/8000` :
+
+```powershell
+Copy-Item .env.docker.example .env.docker
+docker compose --env-file .env.docker -f compose.prod.yml -f compose.local.yml up -d --build
+```
+
+Par défaut :
+
+- frontend BKO : `http://localhost:3001` ;
+- backend BKO : `http://localhost:8001` ;
+- PostgreSQL BKO : réseau Docker interne uniquement, aucun port hôte publié.
+
+Pour arrêter uniquement BKO Services sans toucher à Sugu Kura ou à une autre stack :
+
+```powershell
+docker compose --env-file .env.docker -f compose.prod.yml -f compose.local.yml down
+```
+
+La procédure complète, les volumes persistants, les variables de production et le futur branchement Coolify sont documentés dans [docs/docker-coolify.md](docs/docker-coolify.md). Le modèle de variables VPS est `.env.production.example`.
+
 ## Organisation du travail
 
 Chaque étape suit le cycle : explication → commandes → fichiers complets → vérification → correction → `git status` → commit → push. Les règles de sécurité et les tests sont ajoutés avec les fonctions correspondantes. `main` porte le code stable ; les modifications sont préparées sur des branches `feature/*` ou `fix/*`, puis intégrées par pull request.
 
 ## À venir
 
-L'étape 23 dispose maintenant d'une suite de **146 tests sur PostgreSQL**, sans test ignoré. Les 5 nouveaux tests couvrent spécifiquement le matching quartier → commune → déplacement autorisé, le refus d'un déplacement non autorisé, la relance après ajout d'une commune et l'attribution unique. Les essais mobiles et d'accessibilité restent à consigner : [commandes et résultats](docs/etape-23-qualite.md).
+L'étape 23 dispose maintenant d'une suite de **150 tests sur PostgreSQL**, sans test ignoré. Les tests couvrent notamment le matching quartier → commune → déplacement autorisé, le refus d'un déplacement non autorisé, la relance après ajout d'une commune, l'attribution unique et l'administration sécurisée des catégories/métiers. Les essais mobiles et d'accessibilité restent à consigner : [commandes et résultats](docs/etape-23-qualite.md).
 
-Le [workflow CI](docs/etape-24-ci.md) exécute les contrôles **Backend PostgreSQL** et **Frontend lint and build** ; une règle active sur `main` exige une pull request et ces deux checks avant fusion. La prochaine étape technique reste la préparation serveur, puis la préproduction et le déploiement. Voir la [feuille de route de production](docs/production-roadmap.md) et les [exigences d'architecture](docs/architecture.md).
+Le [workflow CI](docs/etape-24-ci.md) exécute les contrôles **Backend PostgreSQL**, **Frontend lint and build** et désormais un **Docker production stack** qui construit et démarre les conteneurs puis vérifie les health checks. La prochaine étape technique reste la validation locale de cette stack, puis la préproduction et le déploiement. Voir la [feuille de route de production](docs/production-roadmap.md), le [guide Docker/Coolify](docs/docker-coolify.md) et les [exigences d'architecture](docs/architecture.md).
