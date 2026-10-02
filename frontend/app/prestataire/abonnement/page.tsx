@@ -166,11 +166,44 @@ export default function ProviderSubscriptionPage() {
     };
   }, [showError, showSuccess, showWarning]);
 
+  async function activateTrial(plan: SubscriptionPlan) {
+    const confirmed = await confirmAction({
+      title: "Activer mon essai gratuit",
+      message: `Votre essai ${plan.name} démarre immédiatement pour ${plan.duration_days} jours. Il ne peut être utilisé qu’une seule fois.`,
+      confirmLabel: "Activer mon essai",
+      cancelLabel: "Plus tard",
+    });
+    if (!confirmed) return;
+
+    setBusyPlan(plan.id);
+    setError("");
+    setMessage("");
+    try {
+      const activated = await apiMutation<ProviderSubscription>(
+        "/api/v1/subscriptions/trial/activate/",
+        "POST",
+        {},
+      );
+      setSubscription(activated);
+      setMessage("Essai gratuit activé. Rendez-vous disponible pour commencer à recevoir des offres.");
+      showSuccess({
+        title: "Essai activé",
+        message: `Votre essai ${activated.plan.name} est maintenant actif. Vous pouvez passer disponible depuis votre profil prestataire.`,
+      });
+    } catch (caught) {
+      const detail = caught instanceof Error ? caught.message : "Activation de l’essai impossible.";
+      setError(detail);
+      showError({ title: "Essai non activé", message: detail });
+    } finally {
+      setBusyPlan(null);
+    }
+  }
+
   async function startCheckout(plan: SubscriptionPlan) {
     if (plan.price_xof === 0) {
-      const detail = "Ce plan gratuit nécessite une activation administrative.";
+      const detail = "Ce plan gratuit s’active directement depuis BKO Services.";
       setError(detail);
-      showInfo({ title: "Activation administrative", message: detail });
+      showInfo({ title: "Essai gratuit", message: detail });
       return;
     }
 
@@ -287,10 +320,10 @@ export default function ProviderSubscriptionPage() {
                 </>
               ) : (
                 <>
-                  <h2>Aucun abonnement</h2>
+                  <h2>Bienvenue dans le réseau BKO Services</h2>
                   <p>
-                    Vous pouvez consulter votre espace, mais aucune nouvelle offre
-                    ne doit être reçue sans droit actif.
+                    Votre profil est validé. Activez votre essai gratuit ou choisissez
+                    un abonnement payant pour commencer à recevoir des offres.
                   </p>
                 </>
               )}
@@ -306,42 +339,59 @@ export default function ProviderSubscriptionPage() {
             </div>
 
             <div className="provider-plan-grid">
-              {plans.map((plan) => (
-                <article className="provider-plan-card" key={plan.id}>
-                  <div>
-                    <span className="request-meta">{plan.duration_days} jours</span>
-                    <h3>{plan.name}</h3>
-                    <p>{plan.description || "Plan BKO Services."}</p>
-                  </div>
-                  <strong className="provider-plan-price">
-                    {formatXof(plan.price_xof)}
-                  </strong>
-                  <div className="subscription-entitlements">
-                    <span>{plan.can_receive_requests ? "✓" : "×"} Demandes normales</span>
-                    <span>{plan.can_receive_urgent_requests ? "✓" : "×"} Demandes urgentes</span>
-                    <span>{plan.max_active_jobs === null ? "Interventions simultanées illimitées" : `${plan.max_active_jobs} intervention${plan.max_active_jobs > 1 ? "s" : ""} en cours à la fois`}</span>
-                  </div>
-                  <button
-                    className="button-primary button-wide"
-                    disabled={busyPlan !== null || plan.price_xof === 0 || !checkoutAvailable}
-                    type="button"
-                    onClick={() => void startCheckout(plan)}
-                  >
-                    {busyPlan === plan.id
-                      ? "Préparation…"
-                      : plan.price_xof === 0
-                        ? subscription?.free_trial_used_at ? "Essai déjà utilisé" : "Activation administrative"
-                        : checkoutAvailable ? `Payer avec ${checkoutLabel}` : "Paiement bientôt disponible"}
-                  </button>
-                  {plan.price_xof === 0 && (
-                    <p className="muted-copy">
-                      {subscription?.free_trial_used_at
-                        ? "L’essai gratuit est accordé une seule fois. Un plan payant est nécessaire pour les nouvelles offres."
-                        : "Cet essai est accordé une seule fois par l’administration aux prestataires vérifiés."}
-                    </p>
-                  )}
-                </article>
-              ))}
+              {plans.map((plan) => {
+                const isTrial = plan.price_xof === 0;
+                const trialAlreadyUsed = Boolean(subscription?.free_trial_used_at);
+                const trialBlockedByExistingSubscription = isTrial && subscription !== null;
+                const disabled =
+                  busyPlan !== null
+                  || (isTrial ? trialBlockedByExistingSubscription : !checkoutAvailable);
+
+                return (
+                  <article className="provider-plan-card" key={plan.id}>
+                    <div>
+                      <span className="request-meta">{plan.duration_days} jours</span>
+                      <h3>{plan.name}</h3>
+                      <p>{plan.description || "Plan BKO Services."}</p>
+                    </div>
+                    <strong className="provider-plan-price">
+                      {formatXof(plan.price_xof)}
+                    </strong>
+                    <div className="subscription-entitlements">
+                      <span>{plan.can_receive_requests ? "✓" : "×"} Demandes normales</span>
+                      <span>{plan.can_receive_urgent_requests ? "✓" : "×"} Demandes urgentes</span>
+                      <span>{plan.max_active_jobs === null ? "Interventions simultanées illimitées" : `${plan.max_active_jobs} intervention${plan.max_active_jobs > 1 ? "s" : ""} en cours à la fois`}</span>
+                    </div>
+                    <button
+                      className="button-primary button-wide"
+                      disabled={disabled}
+                      type="button"
+                      onClick={() => void (isTrial ? activateTrial(plan) : startCheckout(plan))}
+                    >
+                      {busyPlan === plan.id
+                        ? isTrial ? "Activation…" : "Préparation…"
+                        : isTrial
+                          ? subscription === null
+                            ? "Activer mon essai gratuit"
+                            : trialAlreadyUsed
+                              ? "Essai déjà utilisé"
+                              : "Essai réservé au démarrage"
+                          : checkoutAvailable
+                            ? `Payer avec ${checkoutLabel}`
+                            : "Paiement bientôt disponible"}
+                    </button>
+                    {isTrial && (
+                      <p className="muted-copy">
+                        {subscription === null
+                          ? "Cet essai démarre immédiatement et ne peut être activé qu’une seule fois après validation de votre profil."
+                          : trialAlreadyUsed
+                            ? "Votre essai gratuit a déjà été utilisé. Choisissez un plan payant pour poursuivre après son expiration."
+                            : "L’essai gratuit est réservé au tout premier abonnement d’un nouveau prestataire."}
+                      </p>
+                    )}
+                  </article>
+                );
+              })}
             </div>
           </section>
 
