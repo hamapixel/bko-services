@@ -28,6 +28,7 @@ from .services import (
     cancel_subscription,
     renew_subscription,
 )
+from .trial import activate_own_free_trial
 
 
 def reject_extra_fields(data, allowed):
@@ -68,6 +69,19 @@ class MySubscriptionView(APIView):
                     else None
                 )
             }
+        )
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class SelfActivateTrialView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        reject_extra_fields(request.data, set())
+        subscription = activate_own_free_trial(request.user)
+        return Response(
+            ProviderSubscriptionSerializer(subscription).data,
+            status=status.HTTP_201_CREATED,
         )
 
 
