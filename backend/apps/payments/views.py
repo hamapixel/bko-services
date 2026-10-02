@@ -1,7 +1,6 @@
 import json
 
 from django.conf import settings
-from django.http import Http404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from rest_framework import status
@@ -12,6 +11,13 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
+from .cinetpay import (
+    InvalidCinetPayToken,
+    cinetpay_is_configured,
+    complete_cinetpay_checkout,
+    start_cinetpay_payment,
+    verify_cinetpay_token,
+)
 from .models import PaymentTransaction
 from .permissions import CanManagePayments
 from .serializers import (
@@ -38,6 +44,12 @@ def reject_extra_fields(data, allowed):
 
 def _checkout_method():
     provider = settings.PAYMENT_PROVIDER.upper()
+    if provider == "CINETPAY":
+        return {
+            "provider": "CINETPAY",
+            "label": "CinetPay",
+            "available": cinetpay_is_configured(),
+        }
     if provider == "WAVE":
         return {
             "provider": "WAVE",
@@ -105,22 +117,20 @@ class PaymentMethodsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        provider = settings.PAYMENT_PROVIDER.upper()
         return Response(
             {
                 "checkout": _checkout_method(),
+                "cinetpay": cinetpay_is_configured(),
                 "wave": wave_is_configured(),
-                "orange_money": False,
+                "orange_money": provider == "CINETPAY" and cinetpay_is_configured(),
             }
         )
 
 
 @method_decorator(csrf_protect, name="dispatch")
 class PaymentCheckoutView(APIView):
-    """Provider-neutral checkout entrypoint used by the frontend.
-
-    The browser should never need to know which payment gateway is behind BKO.
-    New aggregators can be wired here while keeping the same frontend route.
-    """
+    """Provider-neutral checkout entrypoint used by the frontend."""
 
     permission_classes = [IsAuthenticated]
     throttle_scope = "payment_create"
@@ -134,6 +144,16 @@ class PaymentCheckoutView(APIView):
         serializer.is_valid(raise_exception=True)
 
         provider = settings.PAYMENT_PROVIDER.upper()
+        if provider == "CINETPAY":
+            try:
+                payment = start_cinetpay_payment(request.user, **serializer.validated_data)
+            except PaymentConfigurationError:
+                return Response(
+                    {"detail": "Paiement CinetPay indisponible."},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+            return Response(PaymentTransactionSerializer(payment).data)
+
         if provider == "WAVE":
             try:
                 payment = start_wave_payment(request.user, **serializer.validated_data)
@@ -152,6 +172,33 @@ class PaymentCheckoutView(APIView):
                 )
             },
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class CinetPayWebhookView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        if settings.PAYMENT_PROVIDER.upper() != "CINETPAY":
+            return Response({"detail": "Webhook CinetPay indisponible."}, status=503)
+
+        payload = {key: request.data.get(key, "") for key in request.data.keys()}
+        try:
+            verify_cinetpay_token(payload, request.headers.get("x-token", ""))
+        except PaymentConfigurationError:
+            return Response({"detail": "Webhook CinetPay indisponible."}, status=503)
+        except InvalidCinetPayToken:
+            return Response({"detail": "Token CinetPay invalide."}, status=401)
+
+        payment, result, response_status = complete_cinetpay_checkout(payload)
+        return Response(
+            {
+                "result": result,
+                "transaction": PaymentTransactionSerializer(payment).data,
+            },
+            status=response_status,
         )
 
 
