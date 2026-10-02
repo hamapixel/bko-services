@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { useAdminSession } from "@/components/admin/admin-shell";
+import { useBkoAlert } from "@/components/bko-alert";
 import {
   apiGet,
   apiMutation,
@@ -16,11 +17,11 @@ export default function AdminUserDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { user: actor } = useAdminSession();
+  const alerts = useBkoAlert();
   const [user, setUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [actionInfo, setActionInfo] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -44,12 +45,18 @@ export default function AdminUserDetailPage() {
 
   async function setAccountActive(nextActive: boolean) {
     if (!user || busy) return;
-    const actionLabel = nextActive ? "réactiver" : "désactiver";
-    if (!window.confirm(`Confirmer : ${actionLabel} le compte ${user.phone} ?`)) return;
+    const confirmed = await alerts.confirmAction({
+      title: nextActive ? "Réactiver ce compte ?" : "Désactiver ce compte ?",
+      message: nextActive
+        ? `${user.phone} pourra de nouveau se connecter à BKO Services.`
+        : `${user.phone} ne pourra plus se connecter. Son historique sera conservé.`,
+      confirmLabel: nextActive ? "Réactiver" : "Désactiver",
+      danger: !nextActive,
+    });
+    if (!confirmed) return;
 
     setBusy(true);
     setError("");
-    setActionInfo("");
     try {
       const updated = await apiMutation<AdminUser>(
         `/api/v1/admin/users/${user.id}/status/`,
@@ -57,9 +64,16 @@ export default function AdminUserDetailPage() {
         { is_active: nextActive },
       );
       setUser(updated);
-      setActionInfo(nextActive ? "Compte réactivé." : "Compte désactivé.");
+      alerts.success({
+        title: nextActive ? "Compte réactivé" : "Compte désactivé",
+        message: nextActive
+          ? "Le serveur a réactivé le compte avec succès."
+          : "Le serveur a bloqué la connexion tout en conservant l’historique.",
+      });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Action impossible.");
+      const message = caught instanceof Error ? caught.message : "Action impossible.";
+      setError(message);
+      alerts.error({ title: "Action refusée", message });
     } finally {
       setBusy(false);
     }
@@ -67,23 +81,28 @@ export default function AdminUserDetailPage() {
 
   async function deleteAccount() {
     if (!user || busy) return;
-    if (
-      !window.confirm(
-        `Supprimer définitivement ${user.phone} ? Cette action est refusée si le compte possède déjà un historique BKO Services.`,
-      )
-    ) {
-      return;
-    }
+    const confirmed = await alerts.confirmAction({
+      title: "Supprimer définitivement ce compte ?",
+      message: `${user.phone} sera supprimé uniquement si le serveur confirme qu’aucun historique BKO Services n’est lié à ce compte.`,
+      confirmLabel: "Supprimer définitivement",
+      danger: true,
+    });
+    if (!confirmed) return;
 
     setBusy(true);
     setError("");
-    setActionInfo("");
     try {
       await apiMutation<void>(`/api/v1/admin/users/${user.id}/delete/`, "DELETE");
+      alerts.success({
+        title: "Compte supprimé",
+        message: "Le serveur a confirmé la suppression du compte.",
+      });
       router.replace("/admin/utilisateurs");
       router.refresh();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Suppression impossible.");
+      const message = caught instanceof Error ? caught.message : "Suppression impossible.";
+      setError(message);
+      alerts.error({ title: "Suppression refusée", message });
       setBusy(false);
     }
   }
@@ -125,7 +144,6 @@ export default function AdminUserDetailPage() {
         </div>
       </section>
 
-      {actionInfo && <div className="admin-waiting-alert" role="status">{actionInfo}</div>}
       {error && <div className="shell-logout-error" role="alert">{error}</div>}
 
       <div className="detail-grid">
