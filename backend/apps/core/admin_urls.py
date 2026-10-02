@@ -6,6 +6,7 @@ from .admin_catalog_views import (
     AdminTradeDetailView,
     AdminTradeListCreateView,
 )
+from .admin_user_actions import AdminUserDeleteView, AdminUserStatusView
 from .admin_views import (
     AdminOverviewView,
     AdminProviderDetailView,
@@ -23,6 +24,8 @@ urlpatterns = [
     path("overview/", AdminOverviewView.as_view(), name="admin-overview"),
     path("users/", AdminUserListView.as_view(), name="admin-users"),
     path("users/<uuid:pk>/", AdminUserDetailView.as_view(), name="admin-user-detail"),
+    path("users/<uuid:pk>/status/", AdminUserStatusView.as_view(), name="admin-user-status"),
+    path("users/<uuid:pk>/delete/", AdminUserDeleteView.as_view(), name="admin-user-delete"),
     path("providers/", AdminProviderListView.as_view(), name="admin-providers"),
     path("providers/<uuid:pk>/", AdminProviderDetailView.as_view(), name="admin-provider-detail"),
     path("providers/<uuid:pk>/review/", AdminProviderReviewView.as_view(), name="admin-provider-review"),
