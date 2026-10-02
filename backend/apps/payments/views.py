@@ -36,6 +36,21 @@ def reject_extra_fields(data, allowed):
         raise ValidationError({"detail": "Champ non autorisé."})
 
 
+def _checkout_method():
+    provider = settings.PAYMENT_PROVIDER.upper()
+    if provider == "WAVE":
+        return {
+            "provider": "WAVE",
+            "label": "Wave",
+            "available": wave_is_configured(),
+        }
+    return {
+        "provider": provider,
+        "label": "Paiement mobile",
+        "available": False,
+    }
+
+
 @method_decorator(csrf_protect, name="dispatch")
 class PaymentListCreateView(ListAPIView):
     permission_classes = [IsAuthenticated]
@@ -90,7 +105,54 @@ class PaymentMethodsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response({"wave": wave_is_configured(), "orange_money": False})
+        return Response(
+            {
+                "checkout": _checkout_method(),
+                "wave": wave_is_configured(),
+                "orange_money": False,
+            }
+        )
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class PaymentCheckoutView(APIView):
+    """Provider-neutral checkout entrypoint used by the frontend.
+
+    The browser should never need to know which payment gateway is behind BKO.
+    New aggregators can be wired here while keeping the same frontend route.
+    """
+
+    permission_classes = [IsAuthenticated]
+    throttle_scope = "payment_create"
+
+    def get_throttles(self):
+        return [ScopedRateThrottle()]
+
+    def post(self, request):
+        reject_extra_fields(request.data, set(PaymentCreateSerializer().fields))
+        serializer = PaymentCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        provider = settings.PAYMENT_PROVIDER.upper()
+        if provider == "WAVE":
+            try:
+                payment = start_wave_payment(request.user, **serializer.validated_data)
+            except PaymentConfigurationError:
+                return Response(
+                    {"detail": "Paiement Wave indisponible."},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+            return Response(PaymentTransactionSerializer(payment).data)
+
+        return Response(
+            {
+                "detail": (
+                    "Aucun agrégateur de paiement n'est encore configuré pour "
+                    "le parcours de paiement BKO Services."
+                )
+            },
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
 
 
 @method_decorator(csrf_protect, name="dispatch")
