@@ -21,12 +21,18 @@ function paymentTone(status: PaymentTransaction["status"]) {
   return "warning";
 }
 
+type PaymentMethodProvider = "ORANGE_MONEY" | "WAVE" | "CINETPAY";
+
+type PaymentMethod = {
+  provider: PaymentMethodProvider;
+  label: string;
+  available: boolean;
+};
+
 type PaymentMethods = {
-  checkout?: {
-    provider: string;
-    label: string;
-    available: boolean;
-  };
+  checkout?: PaymentMethod;
+  methods?: PaymentMethod[];
+  cinetpay?: boolean;
   wave: boolean;
   orange_money: boolean;
 };
@@ -56,6 +62,31 @@ function hasFutureScheduledChange(subscription: ProviderSubscription | null) {
   );
 }
 
+function directPaymentMethods(payload: PaymentMethods): PaymentMethod[] {
+  const fromApi = (payload.methods ?? []).filter(
+    (method) => method.provider === "ORANGE_MONEY" || method.provider === "WAVE",
+  );
+  if (fromApi.length > 0) return fromApi;
+
+  return [
+    {
+      provider: "ORANGE_MONEY",
+      label: "Orange Money",
+      available: Boolean(payload.orange_money),
+    },
+    {
+      provider: "WAVE",
+      label: "Wave",
+      available: Boolean(payload.wave),
+    },
+  ];
+}
+
+function methodStatusLabel(method: PaymentMethod | undefined) {
+  if (!method) return "Bientôt disponible";
+  return method.available ? "Disponible" : "Bientôt disponible";
+}
+
 export default function ProviderSubscriptionPage() {
   const {
     success: showSuccess,
@@ -64,15 +95,23 @@ export default function ProviderSubscriptionPage() {
     info: showInfo,
     confirmAction,
   } = useBkoAlert();
+
   const [subscription, setSubscription] = useState<ProviderSubscription | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
-  const [checkoutAvailable, setCheckoutAvailable] = useState(false);
-  const [checkoutLabel, setCheckoutLabel] = useState("Paiement mobile");
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busyPlan, setBusyPlan] = useState<string | null>(null);
+  const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+
+  const orangeMoney = paymentMethods.find(
+    (method) => method.provider === "ORANGE_MONEY",
+  );
+  const wave = paymentMethods.find((method) => method.provider === "WAVE");
+  const anyDirectPaymentAvailable = Boolean(
+    orangeMoney?.available || wave?.available,
+  );
 
   async function refreshPayments() {
     const page = await apiGet<ApiPage<PaymentTransaction>>(
@@ -89,6 +128,11 @@ export default function ProviderSubscriptionPage() {
     return payload.subscription;
   }
 
+  async function refreshMethods() {
+    const payload = await apiGet<PaymentMethods>("/api/v1/payments/methods/");
+    setPaymentMethods(directPaymentMethods(payload));
+  }
+
   useEffect(() => {
     let active = true;
 
@@ -100,18 +144,12 @@ export default function ProviderSubscriptionPage() {
       apiGet<ApiPage<PaymentTransaction>>("/api/v1/payments/transactions/"),
       apiGet<PaymentMethods>("/api/v1/payments/methods/"),
     ])
-      .then(([subscriptionPayload, planPage, paymentPage, methods]) => {
+      .then(([subscriptionPayload, planPage, paymentPage, methodsPayload]) => {
         if (!active) return;
         setSubscription(subscriptionPayload.subscription);
         setPlans(planPage.results);
         setPayments(paymentPage.results);
-        if (methods.checkout) {
-          setCheckoutAvailable(methods.checkout.available);
-          setCheckoutLabel(methods.checkout.label || "Paiement mobile");
-        } else {
-          setCheckoutAvailable(methods.wave);
-          setCheckoutLabel(methods.wave ? "Wave" : "Paiement mobile");
-        }
+        setPaymentMethods(directPaymentMethods(methodsPayload));
       })
       .catch((caught) => {
         if (!active) return;
@@ -136,9 +174,7 @@ export default function ProviderSubscriptionPage() {
     if (returned !== "retour" && returned !== "erreur") return;
 
     const transactionId = params.get("transaction");
-    if (!transactionId || !/^[0-9a-f-]{36}$/i.test(transactionId)) {
-      return;
-    }
+    if (!transactionId || !/^[0-9a-f-]{36}$/i.test(transactionId)) return;
 
     let active = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -150,6 +186,7 @@ export default function ProviderSubscriptionPage() {
           `/api/v1/payments/transactions/${transactionId}/`,
         );
         if (!active) return;
+
         if (payment.status === "FAILED" || payment.status === "CANCELLED") {
           setMessage("Paiement non confirmé. Aucun abonnement n’a été activé par ce retour.");
           showWarning({
@@ -159,6 +196,7 @@ export default function ProviderSubscriptionPage() {
           await refreshPayments();
           return;
         }
+
         if (payment.status === "SUCCEEDED" && payment.fulfilled_at) {
           const [updatedSubscription] = await Promise.all([
             refreshSubscription(),
@@ -180,6 +218,7 @@ export default function ProviderSubscriptionPage() {
           }
           return;
         }
+
         setMessage(
           payment.status === "SUCCEEDED"
             ? "Paiement confirmé : activation en cours sur le serveur."
@@ -188,7 +227,9 @@ export default function ProviderSubscriptionPage() {
         if (++attempts < 10) timer = setTimeout(checkPayment, 3000);
       } catch (caught) {
         if (active) {
-          const detail = caught instanceof Error ? caught.message : "Vérification du paiement impossible.";
+          const detail = caught instanceof Error
+            ? caught.message
+            : "Vérification du paiement impossible.";
           setError(detail);
           showError({ title: "Vérification impossible", message: detail });
         }
@@ -211,7 +252,8 @@ export default function ProviderSubscriptionPage() {
     });
     if (!confirmed) return;
 
-    setBusyPlan(plan.id);
+    const actionKey = `trial:${plan.id}`;
+    setBusyAction(actionKey);
     setError("");
     setMessage("");
     try {
@@ -227,19 +269,29 @@ export default function ProviderSubscriptionPage() {
         message: `Votre essai ${activated.plan.name} est maintenant actif. Vous pouvez passer disponible depuis votre profil prestataire.`,
       });
     } catch (caught) {
-      const detail = caught instanceof Error ? caught.message : "Activation de l’essai impossible.";
+      const detail = caught instanceof Error
+        ? caught.message
+        : "Activation de l’essai impossible.";
       setError(detail);
       showError({ title: "Essai non activé", message: detail });
     } finally {
-      setBusyPlan(null);
+      setBusyAction(null);
     }
   }
 
-  async function startCheckout(plan: SubscriptionPlan) {
+  async function startCheckout(plan: SubscriptionPlan, method: PaymentMethod) {
     if (plan.price_xof === 0) {
       const detail = "Ce plan gratuit s’active directement depuis BKO Services.";
       setError(detail);
       showInfo({ title: "Essai gratuit", message: detail });
+      return;
+    }
+
+    if (!method.available) {
+      showWarning({
+        title: `${method.label} bientôt disponible`,
+        message: "Les identifiants marchands de ce moyen de paiement ne sont pas encore activés sur BKO Services.",
+      });
       return;
     }
 
@@ -271,13 +323,14 @@ export default function ProviderSubscriptionPage() {
             : changeKind === "downgrade"
               ? `Programmer le plan ${plan.name}`
               : `Souscrire au plan ${plan.name}`,
-      message: `${changeMessage} Montant : ${formatXof(plan.price_xof)}. Vous serez redirigé vers ${checkoutLabel}.`,
-      confirmLabel: "Continuer vers le paiement",
+      message: `${changeMessage} Montant : ${formatXof(plan.price_xof)}. Paiement choisi : ${method.label}.`,
+      confirmLabel: `Continuer avec ${method.label}`,
       cancelLabel: "Annuler",
     });
     if (!confirmed) return;
 
-    setBusyPlan(plan.id);
+    const actionKey = `payment:${plan.id}:${method.provider}`;
+    setBusyAction(actionKey);
     setError("");
     setMessage("");
     try {
@@ -288,6 +341,7 @@ export default function ProviderSubscriptionPage() {
         {
           plan_id: plan.id,
           idempotency_key: key,
+          payment_method: method.provider,
         },
       );
       setPayments((current) => [
@@ -299,14 +353,13 @@ export default function ProviderSubscriptionPage() {
       }
       window.location.assign(payment.checkout_url);
     } catch (caught) {
-      const detail =
-        caught instanceof Error
-          ? caught.message
-          : "Impossible de lancer le paiement.";
+      const detail = caught instanceof Error
+        ? caught.message
+        : "Impossible de lancer le paiement.";
       setError(detail);
       showError({ title: "Paiement indisponible", message: detail });
     } finally {
-      setBusyPlan(null);
+      setBusyAction(null);
     }
   }
 
@@ -314,14 +367,20 @@ export default function ProviderSubscriptionPage() {
     setError("");
     setMessage("");
     try {
-      await Promise.all([refreshSubscription(), refreshPayments()]);
+      await Promise.all([
+        refreshSubscription(),
+        refreshPayments(),
+        refreshMethods(),
+      ]);
       setMessage("Statuts actualisés depuis le serveur.");
       showSuccess({
         title: "Statuts actualisés",
         message: "Les informations affichées viennent du serveur BKO Services.",
       });
     } catch (caught) {
-      const detail = caught instanceof Error ? caught.message : "Actualisation impossible.";
+      const detail = caught instanceof Error
+        ? caught.message
+        : "Actualisation impossible.";
       setError(detail);
       showError({ title: "Actualisation impossible", message: detail });
     }
@@ -379,17 +438,24 @@ export default function ProviderSubscriptionPage() {
                     <span>
                       {subscription.plan.can_receive_urgent_requests ? "✓" : "×"} Demandes urgentes
                     </span>
-                    <span>{subscription.plan.max_active_jobs === null ? "Interventions simultanées illimitées" : `${subscription.plan.max_active_jobs} intervention${subscription.plan.max_active_jobs > 1 ? "s" : ""} en cours à la fois`}</span>
+                    <span>
+                      {subscription.plan.max_active_jobs === null
+                        ? "Interventions simultanées illimitées"
+                        : `${subscription.plan.max_active_jobs} intervention${subscription.plan.max_active_jobs > 1 ? "s" : ""} en cours à la fois`}
+                    </span>
                   </div>
-                  {futureScheduledChange && subscription.pending_plan && subscription.pending_starts_at && subscription.pending_ends_at && (
-                    <div className="provider-payment-warning">
-                      <strong>Prochain plan : {subscription.pending_plan.name}</strong>
-                      <p>
-                        Votre plan actuel reste actif jusqu’au {formatDate(subscription.pending_starts_at)}.
-                        {" "}Le plan {subscription.pending_plan.name} prendra ensuite le relais jusqu’au {formatDate(subscription.pending_ends_at)}.
-                      </p>
-                    </div>
-                  )}
+                  {futureScheduledChange
+                    && subscription.pending_plan
+                    && subscription.pending_starts_at
+                    && subscription.pending_ends_at && (
+                      <div className="provider-payment-warning">
+                        <strong>Prochain plan : {subscription.pending_plan.name}</strong>
+                        <p>
+                          Votre plan actuel reste actif jusqu’au {formatDate(subscription.pending_starts_at)}.
+                          {" "}Le plan {subscription.pending_plan.name} prendra ensuite le relais jusqu’au {formatDate(subscription.pending_ends_at)}.
+                        </p>
+                      </div>
+                    )}
                 </>
               ) : (
                 <>
@@ -417,20 +483,9 @@ export default function ProviderSubscriptionPage() {
                 const trialAlreadyUsed = Boolean(subscription?.free_trial_used_at);
                 const trialBlockedByExistingSubscription = isTrial && subscription !== null;
                 const changeKind = planChangeKind(subscription, plan);
-                const disabled =
-                  busyPlan !== null
-                  || (isTrial
-                    ? trialBlockedByExistingSubscription
-                    : futureScheduledChange || !checkoutAvailable);
-
-                const paidLabel =
-                  changeKind === "renew"
-                    ? `Renouveler avec ${checkoutLabel}`
-                    : changeKind === "upgrade"
-                      ? `Passer à ${plan.name}`
-                      : changeKind === "downgrade"
-                        ? `Programmer ${plan.name}`
-                        : `Payer avec ${checkoutLabel}`;
+                const trialBusyKey = `trial:${plan.id}`;
+                const orangeBusyKey = `payment:${plan.id}:ORANGE_MONEY`;
+                const waveBusyKey = `payment:${plan.id}:WAVE`;
 
                 return (
                   <article className="provider-plan-card" key={plan.id}>
@@ -439,34 +494,69 @@ export default function ProviderSubscriptionPage() {
                       <h3>{plan.name}</h3>
                       <p>{plan.description || "Plan BKO Services."}</p>
                     </div>
+
                     <strong className="provider-plan-price">
                       {formatXof(plan.price_xof)}
                     </strong>
+
                     <div className="subscription-entitlements">
                       <span>{plan.can_receive_requests ? "✓" : "×"} Demandes normales</span>
                       <span>{plan.can_receive_urgent_requests ? "✓" : "×"} Demandes urgentes</span>
-                      <span>{plan.max_active_jobs === null ? "Interventions simultanées illimitées" : `${plan.max_active_jobs} intervention${plan.max_active_jobs > 1 ? "s" : ""} en cours à la fois`}</span>
+                      <span>
+                        {plan.max_active_jobs === null
+                          ? "Interventions simultanées illimitées"
+                          : `${plan.max_active_jobs} intervention${plan.max_active_jobs > 1 ? "s" : ""} en cours à la fois`}
+                      </span>
                     </div>
-                    <button
-                      className="button-primary button-wide"
-                      disabled={disabled}
-                      type="button"
-                      onClick={() => void (isTrial ? activateTrial(plan) : startCheckout(plan))}
-                    >
-                      {busyPlan === plan.id
-                        ? isTrial ? "Activation…" : "Préparation…"
-                        : isTrial
-                          ? subscription === null
+
+                    {isTrial ? (
+                      <button
+                        className="button-primary button-wide"
+                        disabled={busyAction !== null || trialBlockedByExistingSubscription}
+                        type="button"
+                        onClick={() => void activateTrial(plan)}
+                      >
+                        {busyAction === trialBusyKey
+                          ? "Activation…"
+                          : subscription === null
                             ? "Activer mon essai gratuit"
                             : trialAlreadyUsed
                               ? "Essai déjà utilisé"
-                              : "Essai réservé au démarrage"
-                          : futureScheduledChange
-                            ? "Changement déjà programmé"
-                            : checkoutAvailable
-                              ? paidLabel
-                              : "Paiement bientôt disponible"}
-                    </button>
+                              : "Essai réservé au démarrage"}
+                      </button>
+                    ) : futureScheduledChange ? (
+                      <button className="button-secondary button-wide" disabled type="button">
+                        Changement déjà programmé
+                      </button>
+                    ) : (
+                      <div style={{ display: "grid", gap: 10 }}>
+                        <button
+                          className="button-primary button-wide"
+                          disabled={busyAction !== null || !orangeMoney?.available}
+                          type="button"
+                          onClick={() => orangeMoney && void startCheckout(plan, orangeMoney)}
+                        >
+                          {busyAction === orangeBusyKey
+                            ? "Préparation Orange Money…"
+                            : orangeMoney?.available
+                              ? "Payer avec Orange Money"
+                              : "Orange Money — bientôt disponible"}
+                        </button>
+                        <button
+                          className="button-secondary button-wide"
+                          disabled={busyAction !== null || !wave?.available}
+                          type="button"
+                          onClick={() => wave && void startCheckout(plan, wave)}
+                        >
+                          {busyAction === waveBusyKey
+                            ? "Préparation Wave…"
+                            : wave?.available
+                              ? "Payer avec Wave"
+                              : "Wave — bientôt disponible"}
+                        </button>
+                      </div>
+                    )}
+
                     {isTrial && (
                       <p className="muted-copy">
                         {subscription === null
@@ -476,13 +566,17 @@ export default function ProviderSubscriptionPage() {
                             : "L’essai gratuit est réservé au tout premier abonnement d’un nouveau prestataire."}
                       </p>
                     )}
-                    {!isTrial && !futureScheduledChange && subscription?.status === "ACTIVE" && changeKind !== "renew" && (
-                      <p className="muted-copy">
-                        {changeKind === "upgrade"
-                          ? "Le plan supérieur s’applique dès confirmation du paiement."
-                          : "Le plan inférieur commencera à la fin de votre période actuelle."}
-                      </p>
-                    )}
+
+                    {!isTrial
+                      && !futureScheduledChange
+                      && subscription?.status === "ACTIVE"
+                      && changeKind !== "renew" && (
+                        <p className="muted-copy">
+                          {changeKind === "upgrade"
+                            ? "Le plan supérieur s’applique dès confirmation du paiement."
+                            : "Le plan inférieur commencera à la fin de votre période actuelle."}
+                        </p>
+                      )}
                   </article>
                 );
               })}
@@ -492,18 +586,31 @@ export default function ProviderSubscriptionPage() {
           <section className="content-section provider-payment-section">
             <div className="section-heading">
               <div>
-                <p className="page-kicker">Transactions</p>
-                <h2>Historique des paiements</h2>
+                <p className="page-kicker">Moyens de paiement</p>
+                <h2>Orange Money et Wave</h2>
               </div>
             </div>
 
             <div className="provider-payment-warning">
-              <strong>{checkoutAvailable ? checkoutLabel : "Paiement mobile bientôt disponible"}</strong>
+              <strong>
+                {anyDirectPaymentAvailable
+                  ? "Paiements mobiles sécurisés"
+                  : "Activation marchande en cours"}
+              </strong>
               <p>
-                {checkoutAvailable
-                  ? "Après le paiement, BKO Services attend la confirmation sécurisée du fournisseur. Seule cette confirmation serveur peut activer, renouveler ou programmer un changement de plan."
-                  : "L’agrégateur de paiement n’est pas encore connecté. Aucun paiement n’est encaissé sur cette page pour le moment."}
+                Orange Money : {methodStatusLabel(orangeMoney)} · Wave : {methodStatusLabel(wave)}.
+                {" "}BKO Services n’active jamais un abonnement sur le simple retour du navigateur :
+                seule la confirmation serveur du fournisseur peut valider le paiement.
               </p>
+            </div>
+          </section>
+
+          <section className="content-section provider-payment-section">
+            <div className="section-heading">
+              <div>
+                <p className="page-kicker">Transactions</p>
+                <h2>Historique des paiements</h2>
+              </div>
             </div>
 
             {payments.length === 0 ? (
@@ -520,7 +627,9 @@ export default function ProviderSubscriptionPage() {
                         {payment.plan_name_snapshot}
                       </span>
                       <h3>{payment.merchant_reference}</h3>
-                      <small>{formatDate(payment.created_at)}</small>
+                      <small>
+                        {payment.payment_provider} · {formatDate(payment.created_at)}
+                      </small>
                     </div>
                     <div className="provider-payment-amount">
                       <strong>{formatXof(payment.amount_xof)}</strong>
@@ -528,7 +637,9 @@ export default function ProviderSubscriptionPage() {
                         {PAYMENT_STATUS_LABELS[payment.status]}
                       </span>
                       {payment.status === "PENDING" && payment.checkout_url && (
-                        <a href={payment.checkout_url} rel="noopener noreferrer">Reprendre le paiement</a>
+                        <a href={payment.checkout_url} rel="noopener noreferrer">
+                          Reprendre le paiement
+                        </a>
                       )}
                     </div>
                   </article>
