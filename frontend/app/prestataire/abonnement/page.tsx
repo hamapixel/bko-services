@@ -31,6 +31,31 @@ type PaymentMethods = {
   orange_money: boolean;
 };
 
+type PlanChangeKind = "new" | "renew" | "upgrade" | "downgrade";
+
+function planChangeKind(
+  subscription: ProviderSubscription | null,
+  plan: SubscriptionPlan,
+): PlanChangeKind {
+  if (!subscription || subscription.status !== "ACTIVE") return "new";
+  if (subscription.plan.id === plan.id) return "renew";
+  if (
+    subscription.plan.price_xof === 0
+    || plan.price_xof > subscription.plan.price_xof
+  ) {
+    return "upgrade";
+  }
+  return "downgrade";
+}
+
+function hasFutureScheduledChange(subscription: ProviderSubscription | null) {
+  return Boolean(
+    subscription?.pending_plan
+    && subscription.pending_starts_at
+    && new Date(subscription.pending_starts_at).getTime() > Date.now(),
+  );
+}
+
 export default function ProviderSubscriptionPage() {
   const {
     success: showSuccess,
@@ -61,6 +86,7 @@ export default function ProviderSubscriptionPage() {
       "/api/v1/subscriptions/me/",
     );
     setSubscription(payload.subscription);
+    return payload.subscription;
   }
 
   useEffect(() => {
@@ -134,12 +160,22 @@ export default function ProviderSubscriptionPage() {
           return;
         }
         if (payment.status === "SUCCEEDED" && payment.fulfilled_at) {
-          await Promise.all([refreshSubscription(), refreshPayments()]);
+          const [updatedSubscription] = await Promise.all([
+            refreshSubscription(),
+            refreshPayments(),
+          ]);
           if (active) {
-            setMessage("Paiement confirmé : abonnement actualisé.");
+            const scheduled = hasFutureScheduledChange(updatedSubscription);
+            setMessage(
+              scheduled
+                ? "Paiement confirmé : votre prochain plan est programmé."
+                : "Paiement confirmé : abonnement actualisé.",
+            );
             showSuccess({
-              title: "Abonnement activé",
-              message: "Le serveur a confirmé le paiement et actualisé votre abonnement.",
+              title: scheduled ? "Changement programmé" : "Abonnement actualisé",
+              message: scheduled
+                ? "Votre plan actuel reste actif jusqu’à sa date de fin. Le nouveau plan prendra ensuite automatiquement le relais."
+                : "Le serveur a confirmé le paiement et actualisé votre abonnement.",
             });
           }
           return;
@@ -207,9 +243,35 @@ export default function ProviderSubscriptionPage() {
       return;
     }
 
+    if (hasFutureScheduledChange(subscription)) {
+      showWarning({
+        title: "Changement déjà programmé",
+        message: "Votre prochain plan est déjà enregistré. Attendez son démarrage avant d’effectuer un nouveau changement.",
+      });
+      return;
+    }
+
+    const changeKind = planChangeKind(subscription, plan);
+    const currentEnd = subscription ? formatDate(subscription.ends_at) : "";
+    const changeMessage =
+      changeKind === "renew"
+        ? `Votre plan ${plan.name} sera renouvelé pour ${plan.duration_days} jours supplémentaires après la période déjà acquise.`
+        : changeKind === "upgrade"
+          ? `Le plan ${plan.name} sera appliqué immédiatement après confirmation du paiement. Les ${plan.duration_days} jours payés seront ajoutés après votre période déjà acquise.`
+          : changeKind === "downgrade"
+            ? `Votre plan actuel reste actif jusqu’au ${currentEnd}. Le plan ${plan.name} prendra ensuite automatiquement le relais pour ${plan.duration_days} jours.`
+            : `Le plan ${plan.name} sera activé pour ${plan.duration_days} jours après confirmation du paiement.`;
+
     const confirmed = await confirmAction({
-      title: `Souscrire au plan ${plan.name}`,
-      message: `Montant : ${formatXof(plan.price_xof)} pour ${plan.duration_days} jours. Vous serez redirigé vers le service de paiement sécurisé.`,
+      title:
+        changeKind === "renew"
+          ? `Renouveler ${plan.name}`
+          : changeKind === "upgrade"
+            ? `Passer au plan ${plan.name}`
+            : changeKind === "downgrade"
+              ? `Programmer le plan ${plan.name}`
+              : `Souscrire au plan ${plan.name}`,
+      message: `${changeMessage} Montant : ${formatXof(plan.price_xof)}. Vous serez redirigé vers ${checkoutLabel}.`,
       confirmLabel: "Continuer vers le paiement",
       cancelLabel: "Annuler",
     });
@@ -265,6 +327,8 @@ export default function ProviderSubscriptionPage() {
     }
   }
 
+  const futureScheduledChange = hasFutureScheduledChange(subscription);
+
   return (
     <main>
       <section className="provider-page-head">
@@ -273,8 +337,8 @@ export default function ProviderSubscriptionPage() {
           <h1>Plans et paiements</h1>
           <p>
             Votre droit à recevoir de nouvelles offres dépend d’un abonnement
-            effectif. Les interventions déjà attribuées ne sont pas interrompues
-            par une expiration ultérieure.
+            effectif. Vous pouvez renouveler ou changer de plan sans perdre
+            votre compte, vos avis ni vos interventions déjà attribuées.
           </p>
         </div>
         <button className="button-secondary" type="button" onClick={refreshStatus}>
@@ -317,6 +381,15 @@ export default function ProviderSubscriptionPage() {
                     </span>
                     <span>{subscription.plan.max_active_jobs === null ? "Interventions simultanées illimitées" : `${subscription.plan.max_active_jobs} intervention${subscription.plan.max_active_jobs > 1 ? "s" : ""} en cours à la fois`}</span>
                   </div>
+                  {futureScheduledChange && subscription.pending_plan && subscription.pending_starts_at && subscription.pending_ends_at && (
+                    <div className="provider-payment-warning">
+                      <strong>Prochain plan : {subscription.pending_plan.name}</strong>
+                      <p>
+                        Votre plan actuel reste actif jusqu’au {formatDate(subscription.pending_starts_at)}.
+                        {" "}Le plan {subscription.pending_plan.name} prendra ensuite le relais jusqu’au {formatDate(subscription.pending_ends_at)}.
+                      </p>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
@@ -343,9 +416,21 @@ export default function ProviderSubscriptionPage() {
                 const isTrial = plan.price_xof === 0;
                 const trialAlreadyUsed = Boolean(subscription?.free_trial_used_at);
                 const trialBlockedByExistingSubscription = isTrial && subscription !== null;
+                const changeKind = planChangeKind(subscription, plan);
                 const disabled =
                   busyPlan !== null
-                  || (isTrial ? trialBlockedByExistingSubscription : !checkoutAvailable);
+                  || (isTrial
+                    ? trialBlockedByExistingSubscription
+                    : futureScheduledChange || !checkoutAvailable);
+
+                const paidLabel =
+                  changeKind === "renew"
+                    ? `Renouveler avec ${checkoutLabel}`
+                    : changeKind === "upgrade"
+                      ? `Passer à ${plan.name}`
+                      : changeKind === "downgrade"
+                        ? `Programmer ${plan.name}`
+                        : `Payer avec ${checkoutLabel}`;
 
                 return (
                   <article className="provider-plan-card" key={plan.id}>
@@ -376,17 +461,26 @@ export default function ProviderSubscriptionPage() {
                             : trialAlreadyUsed
                               ? "Essai déjà utilisé"
                               : "Essai réservé au démarrage"
-                          : checkoutAvailable
-                            ? `Payer avec ${checkoutLabel}`
-                            : "Paiement bientôt disponible"}
+                          : futureScheduledChange
+                            ? "Changement déjà programmé"
+                            : checkoutAvailable
+                              ? paidLabel
+                              : "Paiement bientôt disponible"}
                     </button>
                     {isTrial && (
                       <p className="muted-copy">
                         {subscription === null
-                          ? "Cet essai démarre immédiatement et ne peut être activé qu’une seule fois après validation de votre profil."
+                          ? "Cet essai démarre immédiatement après votre activation et ne peut être utilisé qu’une seule fois."
                           : trialAlreadyUsed
                             ? "Votre essai gratuit a déjà été utilisé. Choisissez un plan payant pour poursuivre après son expiration."
                             : "L’essai gratuit est réservé au tout premier abonnement d’un nouveau prestataire."}
+                      </p>
+                    )}
+                    {!isTrial && !futureScheduledChange && subscription?.status === "ACTIVE" && changeKind !== "renew" && (
+                      <p className="muted-copy">
+                        {changeKind === "upgrade"
+                          ? "Le plan supérieur s’applique dès confirmation du paiement."
+                          : "Le plan inférieur commencera à la fin de votre période actuelle."}
                       </p>
                     )}
                   </article>
@@ -407,7 +501,7 @@ export default function ProviderSubscriptionPage() {
               <strong>{checkoutAvailable ? checkoutLabel : "Paiement mobile bientôt disponible"}</strong>
               <p>
                 {checkoutAvailable
-                  ? "Après le paiement, BKO Services attend la confirmation sécurisée du fournisseur. Seule cette confirmation serveur peut activer ou renouveler l’abonnement."
+                  ? "Après le paiement, BKO Services attend la confirmation sécurisée du fournisseur. Seule cette confirmation serveur peut activer, renouveler ou programmer un changement de plan."
                   : "L’agrégateur de paiement n’est pas encore connecté. Aucun paiement n’est encaissé sur cette page pour le moment."}
               </p>
             </div>
