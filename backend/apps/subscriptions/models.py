@@ -66,6 +66,15 @@ class ProviderSubscription(models.Model):
         on_delete=models.PROTECT,
         related_name="subscriptions",
     )
+    pending_plan = models.ForeignKey(
+        SubscriptionPlan,
+        on_delete=models.PROTECT,
+        related_name="pending_subscriptions",
+        blank=True,
+        null=True,
+    )
+    pending_starts_at = models.DateTimeField(blank=True, null=True)
+    pending_ends_at = models.DateTimeField(blank=True, null=True)
     status = models.CharField(
         max_length=12,
         choices=Status.choices,
@@ -87,6 +96,23 @@ class ProviderSubscription(models.Model):
 
     class Meta:
         ordering = ["-updated_at", "-id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        pending_plan__isnull=True,
+                        pending_starts_at__isnull=True,
+                        pending_ends_at__isnull=True,
+                    )
+                    | models.Q(
+                        pending_plan__isnull=False,
+                        pending_starts_at__isnull=False,
+                        pending_ends_at__isnull=False,
+                    )
+                ),
+                name="subscriptions_pending_plan_complete",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.provider_id} — {self.plan.code}"
