@@ -19,9 +19,16 @@ from .cinetpay import (
     verify_cinetpay_token,
 )
 from .models import PaymentTransaction
+from .orange_money import (
+    InvalidOrangeMoneyNotification,
+    complete_orange_money_checkout,
+    orange_money_is_configured,
+    start_orange_money_payment,
+)
 from .permissions import CanManagePayments
 from .serializers import (
     AdminPaymentTransactionSerializer,
+    PaymentCheckoutSerializer,
     PaymentCreateSerializer,
     PaymentTransactionSerializer,
     PaymentWebhookSerializer,
@@ -34,7 +41,12 @@ from .services import (
     retry_fulfillment,
     verify_webhook_signature,
 )
-from .wave import complete_wave_checkout, start_wave_payment, verify_wave_signature, wave_is_configured
+from .wave import (
+    complete_wave_checkout,
+    start_wave_payment,
+    verify_wave_signature,
+    wave_is_configured,
+)
 
 
 def reject_extra_fields(data, allowed):
@@ -42,20 +54,39 @@ def reject_extra_fields(data, allowed):
         raise ValidationError({"detail": "Champ non autorisé."})
 
 
-def _checkout_method():
-    provider = settings.PAYMENT_PROVIDER.upper()
-    if provider == "CINETPAY":
-        return {
-            "provider": "CINETPAY",
-            "label": "CinetPay",
-            "available": cinetpay_is_configured(),
-        }
-    if provider == "WAVE":
-        return {
+def _payment_methods():
+    return [
+        {
+            "provider": "ORANGE_MONEY",
+            "label": "Orange Money",
+            "available": orange_money_is_configured(),
+        },
+        {
             "provider": "WAVE",
             "label": "Wave",
             "available": wave_is_configured(),
-        }
+        },
+        {
+            "provider": "CINETPAY",
+            "label": "CinetPay",
+            "available": cinetpay_is_configured(),
+        },
+    ]
+
+
+def _checkout_method():
+    provider = settings.PAYMENT_PROVIDER.upper()
+    by_provider = {item["provider"]: item for item in _payment_methods()}
+    if provider in by_provider:
+        return by_provider[provider]
+
+    available = next(
+        (item for item in by_provider.values() if item["available"]),
+        None,
+    )
+    if available:
+        return available
+
     return {
         "provider": provider,
         "label": "Paiement mobile",
@@ -117,13 +148,26 @@ class PaymentMethodsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        provider = settings.PAYMENT_PROVIDER.upper()
+        methods = _payment_methods()
         return Response(
             {
                 "checkout": _checkout_method(),
-                "cinetpay": cinetpay_is_configured(),
-                "wave": wave_is_configured(),
-                "orange_money": provider == "CINETPAY" and cinetpay_is_configured(),
+                "methods": methods,
+                "cinetpay": next(
+                    item["available"]
+                    for item in methods
+                    if item["provider"] == "CINETPAY"
+                ),
+                "wave": next(
+                    item["available"]
+                    for item in methods
+                    if item["provider"] == "WAVE"
+                ),
+                "orange_money": next(
+                    item["available"]
+                    for item in methods
+                    if item["provider"] == "ORANGE_MONEY"
+                ),
             }
         )
 
@@ -139,14 +183,28 @@ class PaymentCheckoutView(APIView):
         return [ScopedRateThrottle()]
 
     def post(self, request):
-        reject_extra_fields(request.data, set(PaymentCreateSerializer().fields))
-        serializer = PaymentCreateSerializer(data=request.data)
+        reject_extra_fields(request.data, set(PaymentCheckoutSerializer().fields))
+        serializer = PaymentCheckoutSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        provider = settings.PAYMENT_PROVIDER.upper()
+        validated = dict(serializer.validated_data)
+        provider = str(
+            validated.pop("payment_method", None) or settings.PAYMENT_PROVIDER
+        ).upper()
+
+        if provider == "ORANGE_MONEY":
+            try:
+                payment = start_orange_money_payment(request.user, **validated)
+            except PaymentConfigurationError:
+                return Response(
+                    {"detail": "Paiement Orange Money indisponible."},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+            return Response(PaymentTransactionSerializer(payment).data)
+
         if provider == "CINETPAY":
             try:
-                payment = start_cinetpay_payment(request.user, **serializer.validated_data)
+                payment = start_cinetpay_payment(request.user, **validated)
             except PaymentConfigurationError:
                 return Response(
                     {"detail": "Paiement CinetPay indisponible."},
@@ -156,7 +214,7 @@ class PaymentCheckoutView(APIView):
 
         if provider == "WAVE":
             try:
-                payment = start_wave_payment(request.user, **serializer.validated_data)
+                payment = start_wave_payment(request.user, **validated)
             except PaymentConfigurationError:
                 return Response(
                     {"detail": "Paiement Wave indisponible."},
@@ -167,7 +225,7 @@ class PaymentCheckoutView(APIView):
         return Response(
             {
                 "detail": (
-                    "Aucun agrégateur de paiement n'est encore configuré pour "
+                    "Aucun fournisseur de paiement n'est encore configuré pour "
                     "le parcours de paiement BKO Services."
                 )
             },
@@ -181,7 +239,7 @@ class CinetPayWebhookView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        if settings.PAYMENT_PROVIDER.upper() != "CINETPAY":
+        if not cinetpay_is_configured():
             return Response({"detail": "Webhook CinetPay indisponible."}, status=503)
 
         payload = {key: request.data.get(key, "") for key in request.data.keys()}
@@ -193,6 +251,43 @@ class CinetPayWebhookView(APIView):
             return Response({"detail": "Token CinetPay invalide."}, status=401)
 
         payment, result, response_status = complete_cinetpay_checkout(payload)
+        return Response(
+            {
+                "result": result,
+                "transaction": PaymentTransactionSerializer(payment).data,
+            },
+            status=response_status,
+        )
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class OrangeMoneyWebhookView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        if not orange_money_is_configured():
+            return Response(
+                {"detail": "Webhook Orange Money indisponible."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        if not isinstance(request.data, dict):
+            raise ParseError("Payload Orange Money invalide.")
+
+        payload = {key: request.data.get(key, "") for key in request.data.keys()}
+        try:
+            payment, result, response_status = complete_orange_money_checkout(payload)
+        except PaymentConfigurationError:
+            return Response(
+                {"detail": "Webhook Orange Money indisponible."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        except InvalidOrangeMoneyNotification:
+            return Response(
+                {"detail": "Notification Orange Money invalide."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
         return Response(
             {
                 "result": result,
