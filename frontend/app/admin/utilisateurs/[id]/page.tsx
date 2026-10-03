@@ -1,19 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { useAdminSession } from "@/components/admin/admin-shell";
+import { useBkoAlert } from "@/components/bko-alert";
 import {
   apiGet,
+  apiMutation,
   formatDate,
   type AdminUser,
 } from "@/lib/admin-api";
 
 export default function AdminUserDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const { user: actor } = useAdminSession();
+  const alerts = useBkoAlert();
   const [user, setUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -36,6 +43,70 @@ export default function AdminUserDetailPage() {
     };
   }, [params.id]);
 
+  async function setAccountActive(nextActive: boolean) {
+    if (!user || busy) return;
+    const confirmed = await alerts.confirmAction({
+      title: nextActive ? "Réactiver ce compte ?" : "Désactiver ce compte ?",
+      message: nextActive
+        ? `${user.phone} pourra de nouveau se connecter à BKO Services.`
+        : `${user.phone} ne pourra plus se connecter. Son historique sera conservé.`,
+      confirmLabel: nextActive ? "Réactiver" : "Désactiver",
+      danger: !nextActive,
+    });
+    if (!confirmed) return;
+
+    setBusy(true);
+    setError("");
+    try {
+      const updated = await apiMutation<AdminUser>(
+        `/api/v1/admin/users/${user.id}/status/`,
+        "PATCH",
+        { is_active: nextActive },
+      );
+      setUser(updated);
+      alerts.success({
+        title: nextActive ? "Compte réactivé" : "Compte désactivé",
+        message: nextActive
+          ? "Le serveur a réactivé le compte avec succès."
+          : "Le serveur a bloqué la connexion tout en conservant l’historique.",
+      });
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : "Action impossible.";
+      setError(message);
+      alerts.error({ title: "Action refusée", message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteAccount() {
+    if (!user || busy) return;
+    const confirmed = await alerts.confirmAction({
+      title: "Supprimer définitivement ce compte ?",
+      message: `${user.phone} sera supprimé uniquement si le serveur confirme qu’aucun historique BKO Services n’est lié à ce compte.`,
+      confirmLabel: "Supprimer définitivement",
+      danger: true,
+    });
+    if (!confirmed) return;
+
+    setBusy(true);
+    setError("");
+    try {
+      await apiMutation<void>(`/api/v1/admin/users/${user.id}/delete/`, "DELETE");
+      alerts.success({
+        title: "Compte supprimé",
+        message: "Le serveur a confirmé la suppression du compte.",
+      });
+      router.replace("/admin/utilisateurs");
+      router.refresh();
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : "Suppression impossible.";
+      setError(message);
+      alerts.error({ title: "Suppression refusée", message });
+      setBusy(false);
+    }
+  }
+
   if (loading) return <div className="skeleton-list">Chargement…</div>;
 
   if (!user) {
@@ -49,6 +120,11 @@ export default function AdminUserDetailPage() {
       </div>
     );
   }
+
+  const canManage =
+    actor.role === "SUPERADMIN" &&
+    actor.id !== user.id &&
+    user.role !== "SUPERADMIN";
 
   return (
     <main>
@@ -67,6 +143,8 @@ export default function AdminUserDetailPage() {
           </span>
         </div>
       </section>
+
+      {error && <div className="shell-logout-error" role="alert">{error}</div>}
 
       <div className="detail-grid">
         <section className="detail-card">
@@ -90,12 +168,52 @@ export default function AdminUserDetailPage() {
 
         <aside className="detail-side">
           <section className="security-note">
-            <strong>Lecture seule</strong>
+            <strong>Gestion sécurisée</strong>
             <p>
-              Le rôle, le statut actif, les permissions et les mots de passe ne
-              sont jamais modifiés depuis cette interface de supervision.
+              Un numéro correspond à un seul compte et un seul rôle actif. La
+              désactivation bloque la connexion sans supprimer l’historique.
             </p>
           </section>
+
+          {canManage && (
+            <section className="detail-card">
+              <h2>Actions du compte</h2>
+              <p>
+                Privilégiez la désactivation pour conserver l’historique des
+                demandes, interventions, paiements et abonnements.
+              </p>
+              <div className="role-welcome-actions" style={{ marginTop: 16 }}>
+                {user.is_active ? (
+                  <button
+                    className="button-secondary"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void setAccountActive(false)}
+                  >
+                    Désactiver
+                  </button>
+                ) : (
+                  <button
+                    className="button-primary"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void setAccountActive(true)}
+                  >
+                    Réactiver
+                  </button>
+                )}
+                <button
+                  className="button-secondary"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void deleteAccount()}
+                  style={{ color: "#b42318" }}
+                >
+                  Supprimer si aucun historique
+                </button>
+              </div>
+            </section>
+          )}
         </aside>
       </div>
     </main>

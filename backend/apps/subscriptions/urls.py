@@ -11,11 +11,13 @@ from .views import (
     AdminSubscriptionListView,
     MySubscriptionView,
     PublicPlanListView,
+    SelfActivateTrialView,
 )
 
 urlpatterns = [
     path("plans/", PublicPlanListView.as_view(), name="subscription-plans"),
     path("me/", MySubscriptionView.as_view(), name="my-subscription"),
+    path("trial/activate/", SelfActivateTrialView.as_view(), name="subscription-self-trial"),
     path("admin/plans/", AdminPlanListCreateView.as_view(), name="subscription-admin-plans"),
     path(
         "admin/plans/<uuid:pk>/",

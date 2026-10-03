@@ -1,7 +1,6 @@
 import json
 
 from django.conf import settings
-from django.http import Http404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from rest_framework import status
@@ -12,10 +11,24 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
+from .cinetpay import (
+    InvalidCinetPayToken,
+    cinetpay_is_configured,
+    complete_cinetpay_checkout,
+    start_cinetpay_payment,
+    verify_cinetpay_token,
+)
 from .models import PaymentTransaction
+from .orange_money import (
+    InvalidOrangeMoneyNotification,
+    complete_orange_money_checkout,
+    orange_money_is_configured,
+    start_orange_money_payment,
+)
 from .permissions import CanManagePayments
 from .serializers import (
     AdminPaymentTransactionSerializer,
+    PaymentCheckoutSerializer,
     PaymentCreateSerializer,
     PaymentTransactionSerializer,
     PaymentWebhookSerializer,
@@ -28,12 +41,57 @@ from .services import (
     retry_fulfillment,
     verify_webhook_signature,
 )
-from .wave import complete_wave_checkout, start_wave_payment, verify_wave_signature, wave_is_configured
+from .wave import (
+    complete_wave_checkout,
+    start_wave_payment,
+    verify_wave_signature,
+    wave_is_configured,
+)
 
 
 def reject_extra_fields(data, allowed):
     if not isinstance(data, dict) or set(data) - allowed:
         raise ValidationError({"detail": "Champ non autorisé."})
+
+
+def _payment_methods():
+    return [
+        {
+            "provider": "ORANGE_MONEY",
+            "label": "Orange Money",
+            "available": orange_money_is_configured(),
+        },
+        {
+            "provider": "WAVE",
+            "label": "Wave",
+            "available": wave_is_configured(),
+        },
+        {
+            "provider": "CINETPAY",
+            "label": "CinetPay",
+            "available": cinetpay_is_configured(),
+        },
+    ]
+
+
+def _checkout_method():
+    provider = settings.PAYMENT_PROVIDER.upper()
+    by_provider = {item["provider"]: item for item in _payment_methods()}
+    if provider in by_provider:
+        return by_provider[provider]
+
+    available = next(
+        (item for item in by_provider.values() if item["available"]),
+        None,
+    )
+    if available:
+        return available
+
+    return {
+        "provider": provider,
+        "label": "Paiement mobile",
+        "available": False,
+    }
 
 
 @method_decorator(csrf_protect, name="dispatch")
@@ -90,7 +148,153 @@ class PaymentMethodsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response({"wave": wave_is_configured(), "orange_money": False})
+        methods = _payment_methods()
+        return Response(
+            {
+                "checkout": _checkout_method(),
+                "methods": methods,
+                "cinetpay": next(
+                    item["available"]
+                    for item in methods
+                    if item["provider"] == "CINETPAY"
+                ),
+                "wave": next(
+                    item["available"]
+                    for item in methods
+                    if item["provider"] == "WAVE"
+                ),
+                "orange_money": next(
+                    item["available"]
+                    for item in methods
+                    if item["provider"] == "ORANGE_MONEY"
+                ),
+            }
+        )
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class PaymentCheckoutView(APIView):
+    """Provider-neutral checkout entrypoint used by the frontend."""
+
+    permission_classes = [IsAuthenticated]
+    throttle_scope = "payment_create"
+
+    def get_throttles(self):
+        return [ScopedRateThrottle()]
+
+    def post(self, request):
+        reject_extra_fields(request.data, set(PaymentCheckoutSerializer().fields))
+        serializer = PaymentCheckoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        validated = dict(serializer.validated_data)
+        provider = str(
+            validated.pop("payment_method", None) or settings.PAYMENT_PROVIDER
+        ).upper()
+
+        if provider == "ORANGE_MONEY":
+            try:
+                payment = start_orange_money_payment(request.user, **validated)
+            except PaymentConfigurationError:
+                return Response(
+                    {"detail": "Paiement Orange Money indisponible."},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+            return Response(PaymentTransactionSerializer(payment).data)
+
+        if provider == "CINETPAY":
+            try:
+                payment = start_cinetpay_payment(request.user, **validated)
+            except PaymentConfigurationError:
+                return Response(
+                    {"detail": "Paiement CinetPay indisponible."},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+            return Response(PaymentTransactionSerializer(payment).data)
+
+        if provider == "WAVE":
+            try:
+                payment = start_wave_payment(request.user, **validated)
+            except PaymentConfigurationError:
+                return Response(
+                    {"detail": "Paiement Wave indisponible."},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+            return Response(PaymentTransactionSerializer(payment).data)
+
+        return Response(
+            {
+                "detail": (
+                    "Aucun fournisseur de paiement n'est encore configuré pour "
+                    "le parcours de paiement BKO Services."
+                )
+            },
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class CinetPayWebhookView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        if not cinetpay_is_configured():
+            return Response({"detail": "Webhook CinetPay indisponible."}, status=503)
+
+        payload = {key: request.data.get(key, "") for key in request.data.keys()}
+        try:
+            verify_cinetpay_token(payload, request.headers.get("x-token", ""))
+        except PaymentConfigurationError:
+            return Response({"detail": "Webhook CinetPay indisponible."}, status=503)
+        except InvalidCinetPayToken:
+            return Response({"detail": "Token CinetPay invalide."}, status=401)
+
+        payment, result, response_status = complete_cinetpay_checkout(payload)
+        return Response(
+            {
+                "result": result,
+                "transaction": PaymentTransactionSerializer(payment).data,
+            },
+            status=response_status,
+        )
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class OrangeMoneyWebhookView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        if not orange_money_is_configured():
+            return Response(
+                {"detail": "Webhook Orange Money indisponible."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        if not isinstance(request.data, dict):
+            raise ParseError("Payload Orange Money invalide.")
+
+        payload = {key: request.data.get(key, "") for key in request.data.keys()}
+        try:
+            payment, result, response_status = complete_orange_money_checkout(payload)
+        except PaymentConfigurationError:
+            return Response(
+                {"detail": "Webhook Orange Money indisponible."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        except InvalidOrangeMoneyNotification:
+            return Response(
+                {"detail": "Notification Orange Money invalide."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        return Response(
+            {
+                "result": result,
+                "transaction": PaymentTransactionSerializer(payment).data,
+            },
+            status=response_status,
+        )
 
 
 @method_decorator(csrf_protect, name="dispatch")

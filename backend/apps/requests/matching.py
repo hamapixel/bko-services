@@ -48,13 +48,19 @@ def retry_waiting_requests_for_provider(provider_id):
         is_active=True, commune__is_active=True, commune__city__is_active=True,
         commune__city__region__is_active=True,
     ).values("commune_id")
+    travel_commune_ids = profile.travel_communes.filter(
+        is_active=True, city__is_active=True, city__region__is_active=True,
+        neighborhoods__is_active=True,
+    ).values("pk")
     waiting = list(ServiceRequest.objects.filter(
         status=ServiceRequest.Status.SEARCHING,
         trade_id__in=trade_ids,
         offers__isnull=True,
     ).filter(
-        Q(neighborhood_id__in=area_ids) | Q(neighborhood__commune_id__in=commune_ids)
-    ).order_by("created_at", "pk").values_list("pk", "client_id"))
+        Q(neighborhood_id__in=area_ids)
+        | Q(neighborhood__commune_id__in=commune_ids)
+        | Q(neighborhood__commune_id__in=travel_commune_ids)
+    ).order_by("created_at", "pk").distinct().values_list("pk", "client_id"))
     matched = 0
     for request_id, client_id in waiting:
         with transaction.atomic():
@@ -67,7 +73,7 @@ def retry_waiting_requests_for_provider(provider_id):
 
 
 def schedule_waiting_request_retry(provider_id):
-    # Payment and availability changes must commit before the entitlement is checked.
+    # Payment, availability and travel-area changes must commit before the entitlement is checked.
     transaction.on_commit(
         lambda: retry_waiting_requests_for_provider(provider_id), robust=True,
     )
@@ -132,24 +138,40 @@ def _match_request(request_id, actor, *, skip_if_already_matched=False):
         trades=trade,
     )
 
-    # The requested quartier has priority; other active quartiers in its
-    # commune are the only fallback candidates.
+    # Matching priority:
+    # 1) exact requested quartier;
+    # 2) another declared quartier in the same commune;
+    # 3) a provider who explicitly authorized travel to the requested commune.
+    #
+    # Keep the existing rule that can reserve one slot for the same commune
+    # when such a provider exists, while never using cross-commune travel
+    # before the local commune tier has been exhausted.
     exact = list(candidates.filter(
         service_areas=neighborhood,
     ).order_by("verified_at", "id").distinct()[:limit])
-    neighbors = list(candidates.filter(
+    same_commune = list(candidates.filter(
         service_areas__commune_id=neighborhood.commune_id,
         service_areas__is_active=True,
     ).exclude(pk__in=[profile.pk for profile in exact]).order_by(
         "verified_at", "id"
     ).distinct()[:limit])
 
-    # Reserve one of the limited offers for another quartier in the commune,
-    # even if exact-quartier providers have not yet answered.
-    exact_slots = min(len(exact), limit - 1) if neighbors else len(exact)
-    selected = exact[:exact_slots] + neighbors[:limit - exact_slots]
+    exact_slots = min(len(exact), limit - 1) if same_commune else len(exact)
+    selected = exact[:exact_slots] + same_commune[:limit - exact_slots]
     if len(selected) < limit:
         selected.extend(exact[exact_slots:exact_slots + limit - len(selected)])
+
+    selected_ids = [profile.pk for profile in selected]
+    if len(selected) < limit:
+        travel = list(candidates.filter(
+            travel_communes=neighborhood.commune,
+            travel_communes__is_active=True,
+            travel_communes__city__is_active=True,
+            travel_communes__city__region__is_active=True,
+        ).exclude(pk__in=selected_ids).order_by(
+            "verified_at", "id"
+        ).distinct()[:limit - len(selected)])
+        selected.extend(travel)
 
     for profile in selected:
         ServiceOffer.objects.create(service_request=service_request, provider=profile)

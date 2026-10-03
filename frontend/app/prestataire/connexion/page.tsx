@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
-import { apiMutation, getCsrfToken, type PublicUser } from "@/lib/client-api";
+import { apiGet, apiMutation, getCsrfToken, type PublicUser } from "@/lib/client-api";
 import { sendJsonMutation } from "@/lib/safe-api";
 
 function messageFromError(error: unknown) {
@@ -46,7 +46,14 @@ export default function ProviderLoginPage() {
         throw new Error("Ce compte n’est pas un compte prestataire.");
       }
 
-      router.replace("/prestataire");
+      const subscriptionState = await apiGet<{ subscription: unknown | null }>(
+        "/api/v1/subscriptions/me/",
+      );
+      router.replace(
+        subscriptionState.subscription
+          ? "/prestataire"
+          : "/prestataire/abonnement?bienvenue=1",
+      );
       router.refresh();
     } catch (caught) {
       setError(messageFromError(caught));

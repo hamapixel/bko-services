@@ -4,6 +4,9 @@ from .views import (
     AdminPaymentDetailView,
     AdminPaymentListView,
     AdminRetryFulfillmentView,
+    CinetPayWebhookView,
+    OrangeMoneyWebhookView,
+    PaymentCheckoutView,
     PaymentDetailView,
     PaymentListCreateView,
     PaymentMethodsView,
@@ -14,7 +17,14 @@ from .views import (
 
 urlpatterns = [
     path("methods/", PaymentMethodsView.as_view(), name="payment-methods"),
+    path("checkout/", PaymentCheckoutView.as_view(), name="payment-checkout"),
     path("wave/checkout/", WaveCheckoutView.as_view(), name="wave-checkout"),
+    path("webhooks/cinetpay/", CinetPayWebhookView.as_view(), name="cinetpay-webhook"),
+    path(
+        "webhooks/orange-money/",
+        OrangeMoneyWebhookView.as_view(),
+        name="orange-money-webhook",
+    ),
     path("webhooks/wave/", WaveWebhookView.as_view(), name="wave-webhook"),
     path("transactions/", PaymentListCreateView.as_view(), name="payments"),
     path(

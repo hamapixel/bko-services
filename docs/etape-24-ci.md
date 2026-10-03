@@ -6,7 +6,7 @@ Le workflow [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) s'exécute
 - Le frontend utilise Node.js 24 et `npm ci` à partir du lockfile, puis lance ESLint, TypeScript et le build Next.js.
 - Le jeton GitHub a seulement le droit de lire le dépôt. Les contrôles ne publient pas d'artefact et ne déploient pas l'application.
 
-La référence fonctionnelle `0cc4f18` a passé les deux jobs GitHub Actions avec succès. Sur le même état fonctionnel, la suite PostgreSQL locale compte **141 tests réussis, sans test ignoré**. Toute modification ultérieure de la pull request relance la CI et doit à nouveau obtenir les deux checks verts avant intégration.
+Sur la branche de préparation du matching inter-commune, le job backend a validé `manage.py check`, `makemigrations --check --dry-run` et **146 tests PostgreSQL réussis**. Toute modification ultérieure d'une pull request relance la CI et doit à nouveau obtenir les deux checks verts avant intégration. Un check vert sur un ancien commit ne remplace jamais la validation du head actuel de la PR.
 
 ## Protection de `main`
 
@@ -19,12 +19,12 @@ Le ruleset GitHub `main` est **Active** et cible la branche par défaut. Il impo
 - l'interdiction des mises à jour non fast-forward ;
 - aucun acteur de contournement configuré.
 
-Les méthodes de fusion autorisées par la règle sont merge, squash et rebase. Pour cette grosse branche d'intégration, conserver une PR explicite vers `main` permet d'avoir un historique de validation lisible et de laisser les checks requis protéger la livraison.
+Les méthodes de fusion autorisées par la règle sont merge, squash et rebase. Pour une branche fonctionnelle importante, conserver une PR explicite vers `main` permet d'avoir un historique de validation lisible et de laisser les checks requis protéger la livraison.
 
 ## État de passage
 
-- CI backend PostgreSQL : opérationnelle.
-- CI frontend ESLint + TypeScript + build : opérationnelle.
+- CI backend PostgreSQL : opérationnelle ; état courant de la suite fonctionnelle, **146 tests**.
+- CI frontend ESLint + TypeScript + build : opérationnelle et obligatoire avant fusion.
 - Ruleset `main` : actif avec pull request et deux checks requis.
 - Déploiement automatique : non configuré, volontairement reporté aux étapes serveur/préproduction.
-- Prochaine étape : préparation serveur et paramètres de production, après clôture des essais mobiles/accessibilité de l'étape 23.
+- Prochaine étape : préparation serveur et paramètres de production, après validation de la PR fonctionnelle en cours et clôture des essais mobiles/accessibilité de l'étape 23.

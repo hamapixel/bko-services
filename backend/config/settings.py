@@ -1,4 +1,4 @@
-"""BKO Services development settings. Production settings will be hardened before launch."""
+"""BKO Services settings for local development, CI and production containers."""
 
 import os
 from pathlib import Path
@@ -11,12 +11,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_DIR = BASE_DIR.parent
 load_dotenv(PROJECT_DIR / ".env")
 
+
+def env_bool(name, default=False):
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "")
 if not SECRET_KEY:
-    raise ImproperlyConfigured("DJANGO_SECRET_KEY doit être défini dans le fichier .env local.")
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY doit être défini dans l'environnement.")
 
-DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() == "true"
-ALLOWED_HOSTS = [host.strip() for host in os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",") if host.strip()]
+DEBUG = env_bool("DJANGO_DEBUG", False)
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",")
+    if host.strip()
+]
+if not DEBUG and not ALLOWED_HOSTS:
+    raise ImproperlyConfigured("DJANGO_ALLOWED_HOSTS doit être défini en production.")
 
 _default_csrf_origins = (
     "http://localhost:3000,http://127.0.0.1:3000"
@@ -63,6 +77,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+if not DEBUG:
+    MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
 
 ROOT_URLCONF = "config.urls"
 TEMPLATES = [
@@ -92,6 +108,7 @@ DATABASES = {
         "PASSWORD": os.getenv("DB_PASSWORD", ""),
         "HOST": os.getenv("DB_HOST", "localhost"),
         "PORT": os.getenv("DB_PORT", "5432"),
+        "CONN_MAX_AGE": int(os.getenv("DB_CONN_MAX_AGE", "0" if DEBUG else "60")),
     }
 }
 
@@ -107,9 +124,20 @@ TIME_ZONE = "Africa/Bamako"
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+if not DEBUG:
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
@@ -135,8 +163,16 @@ SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
-SESSION_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_SECURE = not DEBUG
+_cookie_secure = env_bool("DJANGO_COOKIE_SECURE", not DEBUG)
+SESSION_COOKIE_SECURE = _cookie_secure
+CSRF_COOKIE_SECURE = _cookie_secure
+
+# Coolify terminates HTTPS at its reverse proxy and forwards the original scheme.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", False)
+SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_SECURE_HSTS_SECONDS", "0"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", False)
+SECURE_HSTS_PRELOAD = env_bool("DJANGO_SECURE_HSTS_PRELOAD", False)
 
 WEB_PUSH_VAPID_PUBLIC_KEY = os.getenv("WEB_PUSH_VAPID_PUBLIC_KEY", "")
 WEB_PUSH_VAPID_PRIVATE_KEY = os.getenv("WEB_PUSH_VAPID_PRIVATE_KEY", "")
@@ -155,10 +191,19 @@ OTP_MAX_ATTEMPTS = 5
 OTP_PHONE_DAILY_LIMIT = 5
 OTP_MIN_REQUEST_INTERVAL_SECONDS = 60
 
-
 PAYMENT_PROVIDER = os.getenv("PAYMENT_PROVIDER", "GENERIC").strip() or "GENERIC"
 PAYMENT_WEBHOOK_SECRET = os.getenv("PAYMENT_WEBHOOK_SECRET", "")
+
+# CinetPay Checkout API. Keep all real credentials in Coolify/VPS secrets only.
+CINETPAY_API_KEY = os.getenv("CINETPAY_API_KEY", "")
+CINETPAY_SITE_ID = os.getenv("CINETPAY_SITE_ID", "")
+CINETPAY_SECRET_KEY = os.getenv("CINETPAY_SECRET_KEY", "")
+CINETPAY_CHANNELS = os.getenv("CINETPAY_CHANNELS", "MOBILE_MONEY").strip() or "MOBILE_MONEY"
+CINETPAY_HTTP_TIMEOUT_SECONDS = int(os.getenv("CINETPAY_HTTP_TIMEOUT_SECONDS", "8"))
+
+# Wave remains available as an optional direct connector.
 WAVE_API_KEY = os.getenv("WAVE_API_KEY", "")
 WAVE_WEBHOOK_SECRET = os.getenv("WAVE_WEBHOOK_SECRET", "")
-# HTTPS origin of the public frontend (not a localhost URL).
+
+# HTTPS origin of the public frontend (not a localhost URL in production).
 PAYMENT_RETURN_ORIGIN = os.getenv("PAYMENT_RETURN_ORIGIN", "").rstrip("/")

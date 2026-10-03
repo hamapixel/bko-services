@@ -11,6 +11,13 @@ class PaymentCreateSerializer(serializers.Serializer):
     )
 
 
+class PaymentCheckoutSerializer(PaymentCreateSerializer):
+    payment_method = serializers.ChoiceField(
+        choices=("ORANGE_MONEY", "WAVE", "CINETPAY"),
+        required=False,
+    )
+
+
 class PaymentTransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = PaymentTransaction

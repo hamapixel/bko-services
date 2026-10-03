@@ -55,8 +55,8 @@ export default function ProviderOffersPage() {
           <p className="page-kicker">Offres</p>
           <h1>Nouvelles missions</h1>
           <p>
-            Ces offres correspondent à votre métier, à vos quartiers ou à leur commune,
-            à votre disponibilité et à votre abonnement.
+            Le matching respecte cet ordre : votre quartier, les autres quartiers de votre commune,
+            puis les autres communes que vous avez explicitement autorisées dans votre profil.
           </p>
         </div>
       </section>
@@ -75,7 +75,7 @@ export default function ProviderOffersPage() {
       {!loading && !error && offers.length === 0 && (
         <div className="empty-state">
           <strong>Aucune offre disponible</strong>
-          <p>Revenez plus tard ou vérifiez votre disponibilité et votre abonnement.</p>
+          <p>Revenez plus tard ou vérifiez votre disponibilité, votre abonnement et vos communes de déplacement.</p>
         </div>
       )}
 

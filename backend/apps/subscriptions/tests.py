@@ -145,7 +145,7 @@ class SubscriptionTests(TestCase):
         response = admin.post(
             "/api/v1/subscriptions/admin/plans/",
             {
-                "code": "mensuel-essentiel", "name": "Mensuel Essentiel",
+                "code": "mensuel-test", "name": "Mensuel Essentiel",
                 "price_xof": 0, "duration_days": 30, "is_active": False,
                 "max_active_jobs": 1,
                 "can_receive_requests": True, "can_receive_urgent_requests": False,
@@ -167,7 +167,7 @@ class SubscriptionTests(TestCase):
         public_codes = [item["code"] for item in APIClient().get(
             "/api/v1/subscriptions/plans/"
         ).json()["results"]]
-        self.assertIn("mensuel-essentiel", public_codes)
+        self.assertIn("mensuel-test", public_codes)
 
     def test_provider_sees_only_own_subscription(self):
         self.create_subscription(self.provider)

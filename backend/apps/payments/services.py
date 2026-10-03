@@ -3,6 +3,7 @@ import hmac
 
 from django.conf import settings
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
@@ -83,14 +84,19 @@ def _validate_provider_for_payment(user):
 
 
 def _derive_purpose(provider, now):
+    current_window = Q(starts_at__lte=now, ends_at__gt=now)
+    pending_window = Q(
+        pending_plan__isnull=False,
+        pending_starts_at__lte=now,
+        pending_ends_at__gt=now,
+    )
     subscription = (
         ProviderSubscription.objects.select_for_update()
         .filter(
             provider=provider,
             status=ProviderSubscription.Status.ACTIVE,
-            starts_at__lte=now,
-            ends_at__gt=now,
         )
+        .filter(current_window | pending_window)
         .first()
     )
     return (
@@ -132,6 +138,29 @@ def create_payment_transaction(user, *, plan_id, idempotency_key, payment_provid
         )
 
     now = timezone.now()
+    subscription = (
+        ProviderSubscription.objects.select_for_update()
+        .filter(
+            provider=provider,
+            status=ProviderSubscription.Status.ACTIVE,
+        )
+        .first()
+    )
+    if (
+        subscription is not None
+        and subscription.pending_plan_id
+        and subscription.pending_starts_at is not None
+        and subscription.pending_starts_at > now
+    ):
+        raise ValidationError(
+            {
+                "detail": (
+                    "Un changement de plan est déjà programmé. "
+                    "Attendez son démarrage avant d'effectuer un nouveau paiement."
+                )
+            }
+        )
+
     transaction_obj = PaymentTransaction.objects.create(
         provider=provider,
         plan=plan,

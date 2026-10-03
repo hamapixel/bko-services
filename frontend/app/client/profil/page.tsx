@@ -4,6 +4,7 @@
 import { FormEvent, useState } from "react";
 
 import AccountProfileTools from "@/components/account/account-profile-tools";
+import { useBkoAlert } from "@/components/bko-alert";
 import { useClientSession } from "@/components/client/client-shell";
 import { apiMutation } from "@/lib/client-api";
 
@@ -18,6 +19,7 @@ function initials(firstName: string, lastName: string, phone: string) {
 
 export default function ClientProfilePage() {
   const { user, refreshUser } = useClientSession();
+  const alerts = useBkoAlert();
   const [firstName, setFirstName] = useState(user.first_name);
   const [lastName, setLastName] = useState(user.last_name);
   const [email, setEmail] = useState(user.email);
@@ -43,10 +45,15 @@ export default function ClientProfilePage() {
       );
       await refreshUser();
       setMessage("Profil mis à jour.");
+      alerts.success({
+        title: "Profil mis à jour",
+        message: "Le serveur a enregistré vos nouvelles informations.",
+      });
     } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : "Mise à jour impossible.",
-      );
+      const errorMessage =
+        caught instanceof Error ? caught.message : "Mise à jour impossible.";
+      setError(errorMessage);
+      alerts.error({ title: "Mise à jour impossible", message: errorMessage });
     } finally {
       setBusy(false);
     }
@@ -62,13 +69,15 @@ export default function ClientProfilePage() {
         "POST",
         {},
       );
-      setMessage(
-        "Code demandé. En développement, consultez le terminal Django si le transport SMS console est utilisé.",
-      );
+      const successMessage =
+        "Code demandé. En développement, consultez le terminal Django si le transport SMS console est utilisé.";
+      setMessage(successMessage);
+      alerts.info({ title: "Code demandé", message: successMessage });
     } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : "Envoi du code impossible.",
-      );
+      const errorMessage =
+        caught instanceof Error ? caught.message : "Envoi du code impossible.";
+      setError(errorMessage);
+      alerts.error({ title: "Code non envoyé", message: errorMessage });
     } finally {
       setBusy(false);
     }
@@ -76,7 +85,9 @@ export default function ClientProfilePage() {
 
   async function verifyCode() {
     if (!/^\d{6}$/.test(code)) {
-      setError("Le code doit contenir exactement 6 chiffres.");
+      const errorMessage = "Le code doit contenir exactement 6 chiffres.";
+      setError(errorMessage);
+      alerts.warning({ title: "Code incomplet", message: errorMessage });
       return;
     }
 
@@ -92,12 +103,17 @@ export default function ClientProfilePage() {
       await refreshUser();
       setCode("");
       setMessage("Numéro de téléphone vérifié.");
+      alerts.success({
+        title: "Téléphone vérifié",
+        message: "Le serveur a confirmé votre numéro. Vous pouvez envoyer des demandes.",
+      });
     } catch (caught) {
-      setError(
+      const errorMessage =
         caught instanceof Error
           ? caught.message
-          : "Vérification du code impossible.",
-      );
+          : "Vérification du code impossible.";
+      setError(errorMessage);
+      alerts.error({ title: "Vérification refusée", message: errorMessage });
     } finally {
       setBusy(false);
     }
