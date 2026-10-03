@@ -6,7 +6,13 @@ import { useEffect, useState } from "react";
 import AccountProfileTools from "@/components/account/account-profile-tools";
 import { useProviderSession } from "@/components/provider/provider-shell";
 import { apiGetAll, type Commune } from "@/lib/client-api";
-import { apiMutation, formatDate, type ProviderProfile } from "@/lib/provider-api";
+import {
+  apiGet,
+  apiMutation,
+  formatDate,
+  type ProviderProfile,
+  type ProviderSubscription,
+} from "@/lib/provider-api";
 
 function providerInitials(name: string) {
   return name
@@ -24,6 +30,7 @@ export default function ProviderProfilePage() {
   const [error, setError] = useState("");
   const [communes, setCommunes] = useState<Commune[]>([]);
   const [communesLoading, setCommunesLoading] = useState(true);
+  const [subscription, setSubscription] = useState<ProviderSubscription | null>(null);
   const [selectedTravelCommunes, setSelectedTravelCommunes] = useState<string[]>(
     profile.travel_communes,
   );
@@ -51,6 +58,24 @@ export default function ProviderProfilePage() {
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    apiGet<{ subscription: ProviderSubscription | null }>(
+      "/api/v1/subscriptions/me/",
+    )
+      .then((payload) => {
+        if (active) setSubscription(payload.subscription);
+      })
+      .catch(() => {
+        // Availability can still be managed; the backend remains authoritative.
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const subscriptionActive = subscription?.status === "ACTIVE";
+
   async function toggleAvailability() {
     setBusy(true);
     setMessage("");
@@ -64,7 +89,9 @@ export default function ProviderProfilePage() {
       await refreshProfile();
       setMessage(
         result.is_available
-          ? "Vous êtes disponible. Un abonnement actif reste nécessaire pour recevoir des offres."
+          ? subscriptionActive
+            ? "Vous êtes disponible. Votre abonnement est actif : vous pouvez recevoir de nouvelles offres compatibles."
+            : "Vous êtes disponible. Activez un abonnement pour recevoir de nouvelles offres."
           : "Vous êtes maintenant indisponible pour les nouvelles offres.",
       );
     } catch (caught) {
@@ -208,7 +235,9 @@ export default function ProviderProfilePage() {
               <strong>{profile.is_available ? "Disponible" : "Indisponible"}</strong>
               <small>
                 {profile.is_available
-                  ? "Un abonnement actif est aussi nécessaire pour recevoir des offres."
+                  ? subscriptionActive
+                    ? "Votre abonnement est actif : vous pouvez recevoir de nouvelles offres compatibles."
+                    : "Un abonnement actif est nécessaire pour recevoir de nouvelles offres."
                   : "Les nouvelles offres sont temporairement suspendues."}
               </small>
             </div>
