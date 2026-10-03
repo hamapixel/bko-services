@@ -3,7 +3,7 @@ from rest_framework import serializers
 from apps.providers.models import ProviderProfile
 
 from .models import ProviderSubscription, SubscriptionHistory, SubscriptionPlan
-from .services import effective_subscription_status
+from .services import effective_subscription_period, effective_subscription_status
 
 
 class SubscriptionPlanSerializer(serializers.ModelSerializer):
@@ -73,8 +73,11 @@ class SubscriptionHistorySerializer(serializers.ModelSerializer):
 
 
 class ProviderSubscriptionSerializer(serializers.ModelSerializer):
-    plan = PublicSubscriptionPlanSerializer(read_only=True)
+    plan = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
+    starts_at = serializers.SerializerMethodField()
+    ends_at = serializers.SerializerMethodField()
+    pending_plan = PublicSubscriptionPlanSerializer(read_only=True)
     history = SubscriptionHistorySerializer(many=True, read_only=True)
 
     class Meta:
@@ -85,14 +88,29 @@ class ProviderSubscriptionSerializer(serializers.ModelSerializer):
             "status",
             "starts_at",
             "ends_at",
+            "pending_plan",
+            "pending_starts_at",
+            "pending_ends_at",
             "cancelled_at",
             "free_trial_used_at",
             "history",
         )
         read_only_fields = fields
 
+    def get_plan(self, obj):
+        plan, _, _ = effective_subscription_period(obj)
+        return PublicSubscriptionPlanSerializer(plan).data
+
     def get_status(self, obj):
         return effective_subscription_status(obj)
+
+    def get_starts_at(self, obj):
+        _, starts_at, _ = effective_subscription_period(obj)
+        return starts_at
+
+    def get_ends_at(self, obj):
+        _, _, ends_at = effective_subscription_period(obj)
+        return ends_at
 
 
 class AdminProviderSubscriptionSerializer(ProviderSubscriptionSerializer):
