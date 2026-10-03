@@ -19,7 +19,7 @@ import {
   apiMutation,
   type PublicUser,
 } from "@/lib/client-api";
-import type { ProviderProfile } from "@/lib/provider-api";
+import type { ProviderProfile, ProviderSubscription } from "@/lib/provider-api";
 
 type ProviderSessionValue = {
   user: PublicUser;
@@ -71,6 +71,7 @@ export default function ProviderShell({ children }: { children: ReactNode }) {
     pathname.startsWith("/prestataire/devenir");
   const [user, setUser] = useState<PublicUser | null>(null);
   const [profile, setProfile] = useState<ProviderProfile | null>(null);
+  const [subscription, setSubscription] = useState<ProviderSubscription | null>(null);
   const [loading, setLoading] = useState(!isPublicProviderPage);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sessionError, setSessionError] = useState("");
@@ -97,11 +98,15 @@ export default function ProviderShell({ children }: { children: ReactNode }) {
     Promise.all([
       apiGet<PublicUser>("/api/v1/auth/me/"),
       apiGet<ProviderProfile>("/api/v1/providers/application/"),
+      apiGet<{ subscription: ProviderSubscription | null }>(
+        "/api/v1/subscriptions/me/",
+      ),
     ])
-      .then(([account, provider]) => {
+      .then(([account, provider, subscriptionPayload]) => {
         if (!active) return;
         setUser(account);
         setProfile(provider);
+        setSubscription(subscriptionPayload.subscription);
         setSessionError("");
       })
       .catch((error: unknown) => {
@@ -149,6 +154,7 @@ export default function ProviderShell({ children }: { children: ReactNode }) {
       await apiMutation<void>("/api/v1/auth/logout/", "POST", {});
       setUser(null);
       setProfile(null);
+      setSubscription(null);
       router.replace("/prestataire/connexion");
       router.refresh();
     } catch (caught) {
@@ -206,6 +212,8 @@ export default function ProviderShell({ children }: { children: ReactNode }) {
     );
   }
 
+  const subscriptionActive = subscription?.status === "ACTIVE";
+
   return (
     <ProviderSessionContext.Provider value={contextValue}>
       <div className="provider-app">
@@ -240,7 +248,9 @@ export default function ProviderShell({ children }: { children: ReactNode }) {
               <strong>{profile.is_available ? "Disponible" : "Indisponible"}</strong>
               <small>
                 {profile.is_available
-                  ? "Un abonnement actif est aussi nécessaire pour recevoir des offres."
+                  ? subscriptionActive
+                    ? "Vous pouvez recevoir de nouvelles offres."
+                    : "Un abonnement actif est nécessaire pour recevoir de nouvelles offres."
                   : "Aucune nouvelle offre ne vous sera proposée."}
               </small>
             </span>
