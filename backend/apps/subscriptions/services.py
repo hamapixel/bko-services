@@ -435,7 +435,7 @@ def activate_subscription(provider_id, actor, *, plan_id, note=""):
     plan = _locked_plan(plan_id)
 
     subscription = (
-        ProviderSubscription.objects.select_for_update()
+        ProviderSubscription.objects.select_for_update(of=("self",))
         .select_related("plan", "pending_plan")
         .filter(provider=provider)
         .first()
@@ -510,7 +510,7 @@ def renew_subscription(subscription_id, actor, *, plan_id=None, note=""):
 
     try:
         subscription = (
-            ProviderSubscription.objects.select_for_update()
+            ProviderSubscription.objects.select_for_update(of=("self",))
             .select_related("plan", "pending_plan", "provider__user")
             .get(pk=subscription_id)
         )
@@ -552,7 +552,7 @@ def cancel_subscription(subscription_id, actor, *, note):
 
     try:
         subscription = (
-            ProviderSubscription.objects.select_for_update()
+            ProviderSubscription.objects.select_for_update(of=("self",))
             .select_related("plan", "pending_plan")
             .get(pk=subscription_id)
         )
@@ -612,7 +612,7 @@ def apply_paid_subscription(
         raise NotFound("Plan payé introuvable.") from exc
 
     subscription = (
-        ProviderSubscription.objects.select_for_update()
+        ProviderSubscription.objects.select_for_update(of=("self",))
         .select_related("plan", "pending_plan")
         .filter(provider=provider)
         .first()
