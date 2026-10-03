@@ -108,6 +108,9 @@ export type ProviderSubscription = {
   status: "ACTIVE" | "CANCELLED" | "EXPIRED";
   starts_at: string;
   ends_at: string;
+  pending_plan: SubscriptionPlan | null;
+  pending_starts_at: string | null;
+  pending_ends_at: string | null;
   cancelled_at: string | null;
   free_trial_used_at: string | null;
   history: SubscriptionHistory[];
