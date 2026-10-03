@@ -138,7 +138,8 @@ class CinetPayPaymentTests(TestCase):
         self.assertEqual(response.json()["checkout"]["provider"], "CINETPAY")
         self.assertEqual(response.json()["checkout"]["label"], "CinetPay")
         self.assertTrue(response.json()["checkout"]["available"])
-        self.assertTrue(response.json()["orange_money"])
+        # Orange Money direct is exposed independently from CinetPay.
+        self.assertFalse(response.json()["orange_money"])
 
     def test_checkout_creates_pending_cinetpay_transaction(self):
         response, payment = self._start_checkout()
