@@ -417,7 +417,10 @@ export default function ProviderSubscriptionPage() {
               ? `Programmer le plan ${plan.name}`
               : `Souscrire au plan ${plan.name}`,
       message: `${changeMessage} Montant : ${formatXof(plan.price_xof)}. Paiement choisi : ${method.label}.`,
-      confirmLabel: `Continuer avec ${method.label}`,
+      confirmLabel:
+        method.provider === "PAYDUNYA"
+          ? "Continuer avec PayDunya"
+          : `Continuer avec ${method.label}`,
       cancelLabel: "Annuler",
     });
     if (!confirmed) return;
