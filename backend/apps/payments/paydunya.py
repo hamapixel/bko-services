@@ -91,6 +91,10 @@ def _headers():
     return {
         "Content-Type": "application/json",
         "Accept": "application/json",
+        # PayDunya is protected by Cloudflare and currently rejects Python's
+        # default urllib signature with Error 1010. A standard HTTP client
+        # user-agent keeps the server-to-server API request compatible.
+        "User-Agent": "curl/8.10.1",
         "PAYDUNYA-MASTER-KEY": settings.PAYDUNYA_MASTER_KEY,
         "PAYDUNYA-PRIVATE-KEY": settings.PAYDUNYA_PRIVATE_KEY,
         "PAYDUNYA-TOKEN": settings.PAYDUNYA_TOKEN,

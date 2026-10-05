@@ -11,6 +11,7 @@ from apps.providers.models import ProviderProfile
 from apps.subscriptions.models import ProviderSubscription, SubscriptionPlan
 
 from .models import PaymentTransaction
+from .paydunya import _headers
 
 
 PAYDUNYA_SETTINGS = {
@@ -67,6 +68,11 @@ class PayDunyaPaymentTests(TestCase):
         return hashlib.sha512(
             PAYDUNYA_SETTINGS["PAYDUNYA_MASTER_KEY"].encode("utf-8")
         ).hexdigest()
+
+    def test_api_headers_avoid_python_urllib_signature(self):
+        headers = _headers()
+        self.assertEqual(headers["User-Agent"], "curl/8.10.1")
+        self.assertNotIn("Python-urllib", headers["User-Agent"])
 
     def _start_checkout(self, key="paydunya-key-0001"):
         token = "test_BKO_PAYDUNYA_TOKEN"
