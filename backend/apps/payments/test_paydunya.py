@@ -11,7 +11,7 @@ from apps.providers.models import ProviderProfile
 from apps.subscriptions.models import ProviderSubscription, SubscriptionPlan
 
 from .models import PaymentTransaction
-from .paydunya import _headers
+from .paydunya import _checkout_url_is_valid, _headers
 
 
 PAYDUNYA_SETTINGS = {
@@ -73,6 +73,27 @@ class PayDunyaPaymentTests(TestCase):
         headers = _headers()
         self.assertEqual(headers["User-Agent"], "curl/8.10.1")
         self.assertNotIn("Python-urllib", headers["User-Agent"])
+
+    def test_checkout_url_accepts_current_paydunya_hosts(self):
+        token = "test_BKO_PAYDUNYA_TOKEN"
+        self.assertTrue(
+            _checkout_url_is_valid(
+                "https://app.paydunya.com/sandbox-checkout/invoice/" + token,
+                token,
+            )
+        )
+        self.assertTrue(
+            _checkout_url_is_valid(
+                "https://paydunya.com/sandbox-checkout/invoice/" + token,
+                token,
+            )
+        )
+        self.assertFalse(
+            _checkout_url_is_valid(
+                "https://paydunya.example/sandbox-checkout/invoice/" + token,
+                token,
+            )
+        )
 
     def _start_checkout(self, key="paydunya-key-0001"):
         token = "test_BKO_PAYDUNYA_TOKEN"

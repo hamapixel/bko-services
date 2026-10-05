@@ -26,6 +26,7 @@ from .services import (
 
 _ALLOWED_MODES = {"sandbox", "live"}
 _ALLOWED_MALI_CHANNELS = {"orange-money-mali"}
+_ALLOWED_CHECKOUT_HOSTS = {"app.paydunya.com", "paydunya.com"}
 
 
 class PayDunyaUnavailable(APIException):
@@ -128,7 +129,7 @@ def _checkout_url_is_valid(value, token):
     parts = [part for part in parsed.path.split("/") if part]
     return bool(
         parsed.scheme == "https"
-        and parsed.hostname == "app.paydunya.com"
+        and parsed.hostname in _ALLOWED_CHECKOUT_HOSTS
         and not parsed.username
         and not parsed.password
         and parts
