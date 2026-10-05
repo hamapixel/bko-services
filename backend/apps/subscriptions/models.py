@@ -122,6 +122,7 @@ class SubscriptionHistory(models.Model):
     class Action(models.TextChoices):
         ACTIVATED = "ACTIVATED", "Activation"
         RENEWED = "RENEWED", "Renouvellement"
+        PLAN_CANCEL = "PLAN_CANCEL", "Changement de plan annulé"
         CANCELLED = "CANCELLED", "Annulation"
         EXPIRED = "EXPIRED", "Expiration"
 

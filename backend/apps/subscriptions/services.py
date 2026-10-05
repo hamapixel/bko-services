@@ -591,6 +591,73 @@ def cancel_subscription(subscription_id, actor, *, note):
 
 
 @transaction.atomic
+def cancel_own_pending_plan_change(user):
+    if (
+        not user
+        or not user.is_authenticated
+        or not user.is_active
+        or user.role != user.Role.PROVIDER
+    ):
+        raise PermissionDenied("Espace réservé aux prestataires actifs.")
+
+    try:
+        subscription = (
+            ProviderSubscription.objects.select_for_update(of=("self",))
+            .select_related("plan", "pending_plan", "provider__user")
+            .get(provider__user=user)
+        )
+    except ProviderSubscription.DoesNotExist as exc:
+        raise NotFound("Abonnement introuvable.") from exc
+
+    now = timezone.now()
+    _expire_if_needed(subscription, actor=user, now=now)
+    subscription.refresh_from_db()
+
+    if subscription.status != ProviderSubscription.Status.ACTIVE:
+        raise ValidationError({"detail": "Cet abonnement n'est pas actif."})
+
+    if (
+        not subscription.pending_plan_id
+        or subscription.pending_starts_at is None
+        or subscription.pending_ends_at is None
+        or subscription.pending_starts_at <= now
+    ):
+        raise ValidationError(
+            {"detail": "Aucun changement de plan futur n'est programmé."}
+        )
+
+    pending_plan = subscription.pending_plan
+    pending_starts_at = subscription.pending_starts_at
+    pending_ends_at = subscription.pending_ends_at
+
+    subscription.pending_plan = None
+    subscription.pending_starts_at = None
+    subscription.pending_ends_at = None
+    subscription.save(
+        update_fields=[
+            "pending_plan",
+            "pending_starts_at",
+            "pending_ends_at",
+            "updated_at",
+        ]
+    )
+
+    _record_history(
+        subscription,
+        actor=user,
+        action=SubscriptionHistory.Action.PLAN_CANCEL,
+        note=(
+            f"Changement programmé vers {pending_plan.name} annulé "
+            "par le prestataire."
+        ),
+        plan=pending_plan,
+        starts_at=pending_starts_at,
+        ends_at=pending_ends_at,
+    )
+    return subscription
+
+
+@transaction.atomic
 def apply_paid_subscription(
     provider_id,
     *,

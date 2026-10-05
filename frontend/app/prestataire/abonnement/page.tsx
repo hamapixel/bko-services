@@ -290,6 +290,50 @@ export default function ProviderSubscriptionPage() {
     }
   }
 
+  async function cancelScheduledChange() {
+    if (
+      !subscription?.pending_plan
+      || !subscription.pending_starts_at
+      || !subscription.pending_ends_at
+    ) {
+      return;
+    }
+
+    const confirmed = await confirmAction({
+      title: "Annuler le changement programmé",
+      message: `Le passage vers ${subscription.pending_plan.name} sera annulé. Votre plan ${subscription.plan.name} restera actif jusqu’au ${formatDate(subscription.ends_at)}.`,
+      confirmLabel: "Annuler le changement",
+      cancelLabel: "Garder le changement",
+    });
+    if (!confirmed) return;
+
+    const actionKey = "cancel-pending-plan";
+    setBusyAction(actionKey);
+    setError("");
+    setMessage("");
+    try {
+      const updated = await apiMutation<ProviderSubscription>(
+        "/api/v1/subscriptions/me/pending-change/cancel/",
+        "POST",
+        {},
+      );
+      setSubscription(updated);
+      setMessage("Le changement programmé a été annulé. Votre plan actuel est conservé.");
+      showSuccess({
+        title: "Changement annulé",
+        message: `Votre plan ${updated.plan.name} reste actif jusqu’au ${formatDate(updated.ends_at)}. Vous pouvez maintenant choisir un autre plan.`,
+      });
+    } catch (caught) {
+      const detail = caught instanceof Error
+        ? caught.message
+        : "Impossible d’annuler le changement programmé.";
+      setError(detail);
+      showError({ title: "Annulation impossible", message: detail });
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
   async function startCheckout(plan: SubscriptionPlan, method: PaymentMethod) {
     if (plan.price_xof === 0) {
       const detail = "Ce plan gratuit s’active directement depuis BKO Services.";
@@ -465,6 +509,16 @@ export default function ProviderSubscriptionPage() {
                           Votre plan actuel reste actif jusqu’au {formatDate(subscription.pending_starts_at)}.
                           {" "}Le plan {subscription.pending_plan.name} prendra ensuite le relais jusqu’au {formatDate(subscription.pending_ends_at)}.
                         </p>
+                        <button
+                          className="button-secondary"
+                          disabled={busyAction !== null}
+                          type="button"
+                          onClick={() => void cancelScheduledChange()}
+                        >
+                          {busyAction === "cancel-pending-plan"
+                            ? "Annulation…"
+                            : "Annuler ce changement programmé"}
+                        </button>
                       </div>
                     )}
                 </>

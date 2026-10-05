@@ -12,12 +12,18 @@ from .views import (
     MySubscriptionView,
     PublicPlanListView,
     SelfActivateTrialView,
+    SelfCancelPendingPlanChangeView,
 )
 
 urlpatterns = [
     path("plans/", PublicPlanListView.as_view(), name="subscription-plans"),
     path("me/", MySubscriptionView.as_view(), name="my-subscription"),
     path("trial/activate/", SelfActivateTrialView.as_view(), name="subscription-self-trial"),
+    path(
+        "me/pending-change/cancel/",
+        SelfCancelPendingPlanChangeView.as_view(),
+        name="subscription-self-cancel-pending-change",
+    ),
     path("admin/plans/", AdminPlanListCreateView.as_view(), name="subscription-admin-plans"),
     path(
         "admin/plans/<uuid:pk>/",

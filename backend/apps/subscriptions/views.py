@@ -25,6 +25,7 @@ from .serializers import (
 )
 from .services import (
     activate_subscription,
+    cancel_own_pending_plan_change,
     cancel_subscription,
     renew_subscription,
 )
@@ -83,6 +84,16 @@ class SelfActivateTrialView(APIView):
             ProviderSubscriptionSerializer(subscription).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class SelfCancelPendingPlanChangeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        reject_extra_fields(request.data, set())
+        subscription = cancel_own_pending_plan_change(request.user)
+        return Response(ProviderSubscriptionSerializer(subscription).data)
 
 
 @method_decorator(csrf_protect, name="dispatch")
