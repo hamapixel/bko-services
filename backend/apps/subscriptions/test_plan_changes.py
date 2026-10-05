@@ -86,7 +86,7 @@ class SubscriptionPlanChangeTests(TestCase):
             activated_by=self.admin,
         )
 
-    def test_paid_upgrade_applies_immediately_and_extends_from_current_end(self):
+    def test_paid_upgrade_applies_immediately_and_preserves_remaining_value(self):
         subscription = self.create_subscription(self.essential)
         old_end = subscription.ends_at
         before = timezone.now()
@@ -99,10 +99,24 @@ class SubscriptionPlanChangeTests(TestCase):
         )
 
         subscription.refresh_from_db()
+        remaining_seconds = max(
+            0,
+            int((old_end - subscription.starts_at).total_seconds()),
+        )
+        credit_seconds = (
+            remaining_seconds
+            * self.essential.price_xof
+            // self.plus.price_xof
+        )
+        expected_end = subscription.starts_at + timedelta(
+            days=30,
+            seconds=credit_seconds,
+        )
+
         self.assertEqual(subscription.plan, self.plus)
         self.assertIsNone(subscription.pending_plan_id)
         self.assertGreaterEqual(subscription.starts_at, before)
-        self.assertEqual(subscription.ends_at, old_end + timedelta(days=30))
+        self.assertEqual(subscription.ends_at, expected_end)
         self.assertTrue(provider_has_entitlement(self.provider.pk, urgent=True))
         history = subscription.history.get()
         self.assertEqual(history.plan_code, self.plus.code)
