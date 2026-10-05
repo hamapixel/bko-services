@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
 
 import { useBkoAlert } from "@/components/bko-alert";
@@ -724,13 +723,10 @@ export default function ProviderSubscriptionPage() {
               <article className="provider-payment-method-card is-primary">
                 <div className="provider-payment-brand">
                   <div className="provider-paydunya-logo-wrap">
-                    <Image
+                    <img
                       alt="PayDunya"
                       className="provider-paydunya-logo"
-                      height={36}
-                      src="https://paydunya.com/images/logo_blue.png"
-                      unoptimized
-                      width={132}
+                      src="https://paydunya.com/refont/images/logo/blue_logo.png"
                     />
                   </div>
                   <span className={`status-badge ${paydunya?.available ? "success" : "warning"}`}>

@@ -7495,3 +7495,153 @@ textarea:disabled {
     padding: 18px;
   }
 }
+
+
+/* Subscription page: keep premium cards readable on narrow phones. */
+.provider-plan-grid,
+.provider-plan-card,
+.provider-payment-options,
+.provider-payment-method-card,
+.provider-subscription-hero {
+  min-width: 0;
+}
+
+.provider-plan-card,
+.provider-payment-method-card,
+.provider-subscription-hero {
+  overflow-wrap: anywhere;
+}
+
+.provider-paydunya-logo {
+  display: block;
+  max-width: 132px;
+  height: auto;
+}
+
+@media (max-width: 760px) {
+  .provider-page-head {
+    gap: 14px;
+  }
+
+  .provider-page-head h1 {
+    max-width: 100%;
+    margin-bottom: 10px;
+    font-size: clamp(26px, 8vw, 34px);
+    line-height: 1.08;
+    overflow-wrap: anywhere;
+  }
+
+  .provider-page-head > div > p:not(.page-kicker) {
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .provider-current-subscription {
+    padding: 18px;
+  }
+
+  .provider-current-subscription h2 {
+    font-size: 24px;
+  }
+
+  .provider-current-subscription > div > p,
+  .provider-current-subscription .provider-payment-warning {
+    font-size: 12px;
+  }
+
+  .provider-plan-card {
+    gap: 14px;
+    padding: 18px 16px;
+  }
+
+  .provider-plan-card-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .provider-plan-card h3 {
+    margin-top: 5px;
+    font-size: 20px;
+  }
+
+  .provider-plan-badge {
+    max-width: 100%;
+    min-height: 25px;
+    padding: 4px 9px;
+    font-size: 8px;
+    white-space: normal;
+  }
+
+  .provider-plan-subtitle,
+  .provider-plan-card p,
+  .provider-payment-method-card p,
+  .muted-copy {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .provider-plan-price-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .provider-plan-price {
+    font-size: 24px;
+  }
+
+  .subscription-entitlements {
+    display: grid;
+    gap: 7px;
+    font-size: 11px;
+  }
+
+  .provider-plan-card .button-primary,
+  .provider-plan-card .button-secondary {
+    min-height: 46px;
+    padding: 10px 12px;
+    font-size: 11px;
+    line-height: 1.25;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .provider-payment-hint {
+    font-size: 10px !important;
+    line-height: 1.4 !important;
+  }
+
+  .provider-payment-brand {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .provider-paydunya-logo-wrap {
+    max-width: 100%;
+  }
+
+  .provider-paydunya-logo {
+    max-width: min(122px, 58vw);
+  }
+
+  .provider-payment-method-card h3 {
+    font-size: 16px;
+    line-height: 1.25;
+  }
+
+  .provider-payment-security {
+    display: grid;
+  }
+
+  .provider-payment-security span {
+    width: fit-content;
+    max-width: 100%;
+    font-size: 9px;
+  }
+
+  .provider-payment-trust {
+    padding: 13px;
+    font-size: 11px;
+  }
+}
