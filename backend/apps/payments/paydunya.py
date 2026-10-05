@@ -195,7 +195,7 @@ def _prepare_checkout(payment_id):
                 "payment_id": str(payment.pk),
             },
             "actions": {
-                "cancel_url": origin + "/prestataire/abonnement?paiement=erreur",
+                "cancel_url": origin + "/api/v1/payments/cancels/paydunya/",
                 "return_url": origin + "/api/v1/payments/returns/paydunya/",
                 "callback_url": origin + "/api/v1/payments/webhooks/paydunya/",
             },
@@ -281,14 +281,16 @@ def _integer_amount(value):
     return int(amount)
 
 
-def complete_paydunya_checkout(notification_payload):
-    callback_hash, token = _callback_identity(notification_payload)
-    _verify_hash(callback_hash)
+def reconcile_paydunya_status(token):
+    token = str(token or "").strip()
     payment = find_paydunya_payment_by_token(token)
     if payment.status == PaymentTransaction.Status.SUCCEEDED and payment.fulfilled_at:
         return payment, "duplicate", 200
 
-    token = _token_from_checkout(payment)
+    checkout_token = _token_from_checkout(payment)
+    if not hmac.compare_digest(checkout_token, token):
+        raise InvalidPayDunyaNotification("Token PayDunya incohérent.")
+
     confirmed = _confirmed_invoice(token)
     status_value = str(confirmed.get("status") or "").strip().lower()
     if status_value == "pending":
@@ -331,3 +333,9 @@ def complete_paydunya_checkout(notification_payload):
         expected_provider="PAYDUNYA",
         checkout_session_id=_token_fingerprint(token),
     )
+
+
+def complete_paydunya_checkout(notification_payload):
+    callback_hash, token = _callback_identity(notification_payload)
+    _verify_hash(callback_hash)
+    return reconcile_paydunya_status(token)

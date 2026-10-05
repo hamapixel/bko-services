@@ -183,6 +183,40 @@ class PayDunyaPaymentTests(TestCase):
             ProviderSubscription.objects.filter(provider=self.provider).exists()
         )
 
+    def test_cancel_redirect_reconciles_cancelled_status_without_subscription(self):
+        _, payment, token = self._start_checkout("paydunya-cancel-01")
+        with patch("apps.payments.paydunya._paydunya_request") as mocked:
+            mocked.return_value = self._confirmed(payment, token, status="cancelled")
+            response = APIClient().get(
+                "/api/v1/payments/cancels/paydunya/",
+                {"token": token},
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(str(payment.pk), response["Location"])
+        self.assertIn("paiement=erreur", response["Location"])
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, PaymentTransaction.Status.CANCELLED)
+        self.assertFalse(
+            ProviderSubscription.objects.filter(provider=self.provider).exists()
+        )
+
+    def test_cancel_redirect_keeps_pending_if_paydunya_still_pending(self):
+        _, payment, token = self._start_checkout("paydunya-cancel-pending-01")
+        with patch("apps.payments.paydunya._paydunya_request") as mocked:
+            mocked.return_value = self._confirmed(payment, token, status="pending")
+            response = APIClient().get(
+                "/api/v1/payments/cancels/paydunya/",
+                {"token": token},
+            )
+
+        self.assertEqual(response.status_code, 302)
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, PaymentTransaction.Status.PENDING)
+        self.assertFalse(
+            ProviderSubscription.objects.filter(provider=self.provider).exists()
+        )
+
     def test_verified_completed_callback_activates_subscription(self):
         _, payment, token = self._start_checkout("paydunya-success-01")
         with patch("apps.payments.paydunya._paydunya_request") as mocked:

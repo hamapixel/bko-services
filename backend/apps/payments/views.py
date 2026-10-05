@@ -18,6 +18,7 @@ from .paydunya import (
     complete_paydunya_checkout,
     find_paydunya_payment_by_token,
     paydunya_is_configured,
+    reconcile_paydunya_status,
     start_paydunya_payment,
 )
 from .permissions import CanManagePayments
@@ -258,6 +259,35 @@ class PayDunyaReturnView(APIView):
             + "/prestataire/abonnement?transaction="
             + str(payment.pk)
             + "&paiement=retour"
+        )
+
+
+class PayDunyaCancelView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        origin = settings.PAYMENT_RETURN_ORIGIN
+        token = request.query_params.get("token", "")
+        try:
+            payment = find_paydunya_payment_by_token(token)
+        except InvalidPayDunyaNotification:
+            return HttpResponseRedirect(
+                origin + "/prestataire/abonnement?paiement=erreur"
+            )
+
+        try:
+            payment, _, _ = reconcile_paydunya_status(token)
+        except Exception:
+            # The browser redirect is never authoritative. If provider
+            # verification is unavailable, keep the transaction pending.
+            pass
+
+        return HttpResponseRedirect(
+            origin
+            + "/prestataire/abonnement?transaction="
+            + str(payment.pk)
+            + "&paiement=erreur"
         )
 
 
