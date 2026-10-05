@@ -1,6 +1,7 @@
 import json
 
 from django.conf import settings
+from django.http import HttpResponseRedirect
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from rest_framework import status
@@ -11,19 +12,19 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
-from .cinetpay import (
-    InvalidCinetPayToken,
-    cinetpay_is_configured,
-    complete_cinetpay_checkout,
-    start_cinetpay_payment,
-    verify_cinetpay_token,
-)
 from .models import PaymentTransaction
 from .orange_money import (
     InvalidOrangeMoneyNotification,
     complete_orange_money_checkout,
     orange_money_is_configured,
     start_orange_money_payment,
+)
+from .paydunya import (
+    InvalidPayDunyaNotification,
+    complete_paydunya_checkout,
+    find_paydunya_payment_by_token,
+    paydunya_is_configured,
+    start_paydunya_payment,
 )
 from .permissions import CanManagePayments
 from .serializers import (
@@ -67,9 +68,9 @@ def _payment_methods():
             "available": wave_is_configured(),
         },
         {
-            "provider": "CINETPAY",
-            "label": "CinetPay",
-            "available": cinetpay_is_configured(),
+            "provider": "PAYDUNYA",
+            "label": "PayDunya (Orange/Moov)",
+            "available": paydunya_is_configured(),
         },
     ]
 
@@ -153,10 +154,10 @@ class PaymentMethodsView(APIView):
             {
                 "checkout": _checkout_method(),
                 "methods": methods,
-                "cinetpay": next(
+                "paydunya": next(
                     item["available"]
                     for item in methods
-                    if item["provider"] == "CINETPAY"
+                    if item["provider"] == "PAYDUNYA"
                 ),
                 "wave": next(
                     item["available"]
@@ -202,12 +203,12 @@ class PaymentCheckoutView(APIView):
                 )
             return Response(PaymentTransactionSerializer(payment).data)
 
-        if provider == "CINETPAY":
+        if provider == "PAYDUNYA":
             try:
-                payment = start_cinetpay_payment(request.user, **validated)
+                payment = start_paydunya_payment(request.user, **validated)
             except PaymentConfigurationError:
                 return Response(
-                    {"detail": "Paiement CinetPay indisponible."},
+                    {"detail": "Paiement PayDunya indisponible."},
                     status=status.HTTP_503_SERVICE_UNAVAILABLE,
                 )
             return Response(PaymentTransactionSerializer(payment).data)
@@ -234,29 +235,55 @@ class PaymentCheckoutView(APIView):
 
 
 @method_decorator(csrf_exempt, name="dispatch")
-class CinetPayWebhookView(APIView):
+class PayDunyaWebhookView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
 
     def post(self, request):
-        if not cinetpay_is_configured():
-            return Response({"detail": "Webhook CinetPay indisponible."}, status=503)
-
-        payload = {key: request.data.get(key, "") for key in request.data.keys()}
+        if not paydunya_is_configured():
+            return Response(
+                {"detail": "Webhook PayDunya indisponible."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         try:
-            verify_cinetpay_token(payload, request.headers.get("x-token", ""))
+            payment, result, response_status = complete_paydunya_checkout(request.data)
         except PaymentConfigurationError:
-            return Response({"detail": "Webhook CinetPay indisponible."}, status=503)
-        except InvalidCinetPayToken:
-            return Response({"detail": "Token CinetPay invalide."}, status=401)
-
-        payment, result, response_status = complete_cinetpay_checkout(payload)
+            return Response(
+                {"detail": "Webhook PayDunya indisponible."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        except InvalidPayDunyaNotification:
+            return Response(
+                {"detail": "Notification PayDunya invalide."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
         return Response(
             {
                 "result": result,
                 "transaction": PaymentTransactionSerializer(payment).data,
             },
             status=response_status,
+        )
+
+
+class PayDunyaReturnView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        origin = settings.PAYMENT_RETURN_ORIGIN
+        token = request.query_params.get("token", "")
+        try:
+            payment = find_paydunya_payment_by_token(token)
+        except InvalidPayDunyaNotification:
+            return HttpResponseRedirect(
+                origin + "/prestataire/abonnement?paiement=erreur"
+            )
+        return HttpResponseRedirect(
+            origin
+            + "/prestataire/abonnement?transaction="
+            + str(payment.pk)
+            + "&paiement=retour"
         )
 
 

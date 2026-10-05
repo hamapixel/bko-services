@@ -194,12 +194,13 @@ OTP_MIN_REQUEST_INTERVAL_SECONDS = 60
 PAYMENT_PROVIDER = os.getenv("PAYMENT_PROVIDER", "GENERIC").strip() or "GENERIC"
 PAYMENT_WEBHOOK_SECRET = os.getenv("PAYMENT_WEBHOOK_SECRET", "")
 
-# CinetPay Checkout API. Keep all real credentials in Coolify/VPS secrets only.
-CINETPAY_API_KEY = os.getenv("CINETPAY_API_KEY", "")
-CINETPAY_SITE_ID = os.getenv("CINETPAY_SITE_ID", "")
-CINETPAY_SECRET_KEY = os.getenv("CINETPAY_SECRET_KEY", "")
-CINETPAY_CHANNELS = os.getenv("CINETPAY_CHANNELS", "MOBILE_MONEY").strip() or "MOBILE_MONEY"
-CINETPAY_HTTP_TIMEOUT_SECONDS = int(os.getenv("CINETPAY_HTTP_TIMEOUT_SECONDS", "8"))
+# PayDunya hosted checkout. Keep all real credentials in Coolify/VPS secrets only.
+PAYDUNYA_MASTER_KEY = os.getenv("PAYDUNYA_MASTER_KEY", "")
+PAYDUNYA_PRIVATE_KEY = os.getenv("PAYDUNYA_PRIVATE_KEY", "")
+PAYDUNYA_TOKEN = os.getenv("PAYDUNYA_TOKEN", "")
+PAYDUNYA_MODE = os.getenv("PAYDUNYA_MODE", "sandbox").strip().lower() or "sandbox"
+PAYDUNYA_CHANNELS = os.getenv("PAYDUNYA_CHANNELS", "orange-money-mali,moov-ml").strip()
+PAYDUNYA_HTTP_TIMEOUT_SECONDS = int(os.getenv("PAYDUNYA_HTTP_TIMEOUT_SECONDS", "8"))
 
 # Wave remains available as an optional direct connector.
 WAVE_API_KEY = os.getenv("WAVE_API_KEY", "")
