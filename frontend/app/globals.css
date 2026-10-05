@@ -2150,27 +2150,225 @@ textarea:disabled {
 }
 
 .provider-plan-card {
+  position: relative;
   display: grid;
-  gap: 16px;
+  gap: 17px;
   align-content: start;
-  border: 1px solid #dfe7f0;
-  border-radius: 18px;
-  padding: 20px;
-  background: #fbfcfe;
+  overflow: hidden;
+  border: 1px solid #dbe5ef;
+  border-radius: 24px;
+  padding: 22px;
+  background:
+    radial-gradient(circle at 100% 0%, #edf5fc 0, transparent 34%),
+    linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  box-shadow: 0 16px 40px #1731510d;
+  transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+}
+
+.provider-plan-card::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 4px;
+  background: #d8e5f1;
+  content: "";
+}
+
+.provider-plan-card.provider-plan-featured::before,
+.provider-plan-card.is-current::before {
+  background: linear-gradient(90deg, #f27932, #ffb176);
+}
+
+.provider-plan-card.provider-plan-pro::before {
+  background: linear-gradient(90deg, #15385f, #4f79a3);
+}
+
+.provider-plan-card.is-current {
+  border-color: #f0b182;
+  box-shadow: 0 20px 48px #f2793218;
+}
+
+.provider-plan-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.provider-plan-card h3 {
+  margin-top: 7px;
+  font-size: 22px;
+  letter-spacing: -.025em;
+}
+
+.provider-plan-badge {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border: 1px solid #d8e4ef;
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: #f5f9fd;
+  color: #315a7f;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.provider-plan-featured .provider-plan-badge,
+.provider-plan-card.is-current .provider-plan-badge {
+  border-color: #f3c49f;
+  background: #fff2e7;
+  color: #a84e19;
+}
+
+.provider-plan-pro .provider-plan-badge {
+  border-color: #cddbe8;
+  background: #edf4fa;
+  color: #173d63;
 }
 
 .provider-plan-card p {
   color: #66778c;
-  line-height: 1.5;
+  line-height: 1.55;
+}
+
+.provider-plan-subtitle {
+  min-height: 66px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.provider-plan-price-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid #e8eef4;
+  border-bottom: 1px solid #e8eef4;
+  padding: 15px 0;
+}
+
+.provider-plan-price-row small {
+  color: #8392a4;
+  font-size: 10px;
+  font-weight: 800;
 }
 
 .provider-plan-price {
   color: var(--blue);
-  font-size: 24px;
+  font-size: 27px;
+  letter-spacing: -.03em;
+}
+
+.provider-payment-hint {
+  margin: -2px 0 0 !important;
+  color: #60778e !important;
+  font-size: 11px;
+  font-weight: 750;
+  text-align: center;
 }
 
 .provider-payment-section {
   margin-top: 20px;
+}
+
+.provider-payment-options {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, .8fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.provider-payment-method-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #dfe8f1;
+  border-radius: 22px;
+  padding: 20px;
+  background: #fff;
+  box-shadow: 0 14px 34px #1731510b;
+}
+
+.provider-payment-method-card.is-primary {
+  border-color: #cfe0ee;
+  background:
+    radial-gradient(circle at 96% 6%, #eaf4fb 0, transparent 35%),
+    #fff;
+}
+
+.provider-payment-brand {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.provider-paydunya-logo-wrap {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  border: 1px solid #e1e9f1;
+  border-radius: 12px;
+  padding: 6px 10px;
+  background: #fff;
+}
+
+.provider-paydunya-logo {
+  width: auto;
+  height: 27px;
+  object-fit: contain;
+}
+
+.provider-wave-mark {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 13px;
+  background: #15385f;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 950;
+}
+
+.provider-payment-method-card h3 {
+  margin: 0;
+  color: #15385f;
+  font-size: 18px;
+}
+
+.provider-payment-method-card p {
+  margin: 0;
+  color: #64778b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.provider-payment-security {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.provider-payment-security span {
+  display: inline-flex;
+  min-height: 29px;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: #edf7f2;
+  color: #2f6a52;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.provider-payment-trust {
+  margin-top: 0;
 }
 
 .provider-payment-warning {
@@ -7251,4 +7449,49 @@ textarea:disabled {
 @media (max-width: 480px) {
   .home-service-search-row { display: grid; }
   .home-service-search-row button { width: 100%; }
+}
+
+
+/* Premium subscription cards and payment layout. */
+.provider-subscription-hero {
+  background:
+    radial-gradient(circle at 98% 0%, #f7e9df 0, transparent 32%),
+    linear-gradient(135deg, #ffffff 0%, #f7fbff 100%);
+}
+
+@media (hover: hover) {
+  .provider-plan-card:hover {
+    border-color: #c9d9e8;
+    box-shadow: 0 22px 48px #17315116;
+    transform: translateY(-3px);
+  }
+}
+
+@media (max-width: 760px) {
+  .provider-plan-grid,
+  .provider-payment-options {
+    grid-template-columns: 1fr;
+  }
+
+  .provider-plan-card {
+    border-radius: 20px;
+    padding: 19px;
+  }
+
+  .provider-plan-subtitle {
+    min-height: 0;
+  }
+
+  .provider-plan-card-head {
+    align-items: center;
+  }
+
+  .provider-plan-badge {
+    font-size: 9px;
+  }
+
+  .provider-payment-method-card {
+    border-radius: 19px;
+    padding: 18px;
+  }
 }

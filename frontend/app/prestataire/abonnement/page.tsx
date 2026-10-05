@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 import { useBkoAlert } from "@/components/bko-alert";
@@ -86,6 +87,54 @@ function directPaymentMethods(payload: PaymentMethods): PaymentMethod[] {
 function methodStatusLabel(method: PaymentMethod | undefined) {
   if (!method) return "Bientôt disponible";
   return method.available ? "Disponible" : "Bientôt disponible";
+}
+
+function planPresentation(plan: SubscriptionPlan) {
+  const name = plan.name.trim().toLowerCase();
+
+  if (plan.price_xof === 0) {
+    return {
+      badge: "Découverte",
+      subtitle: "Testez BKO Services gratuitement avant de choisir votre formule.",
+      tone: "trial",
+    };
+  }
+  if (name === "essentiel") {
+    return {
+      badge: "Démarrage",
+      subtitle: "Une formule simple pour recevoir vos demandes normales et développer votre activité.",
+      tone: "essential",
+    };
+  }
+  if (name === "plus") {
+    return {
+      badge: "Recommandé",
+      subtitle: "Pour les prestataires actifs qui veulent gérer davantage d’opportunités, y compris les urgences.",
+      tone: "featured",
+    };
+  }
+  if (name === "pro") {
+    return {
+      badge: "Premium",
+      subtitle: "Pensé pour les professionnels très actifs et les équipes qui gèrent plusieurs interventions.",
+      tone: "pro",
+    };
+  }
+  return {
+    badge: "BKO Services",
+    subtitle: plan.description || "Un abonnement adapté à votre activité.",
+    tone: "standard",
+  };
+}
+
+function paymentButtonLabel(
+  plan: SubscriptionPlan,
+  changeKind: PlanChangeKind,
+) {
+  if (changeKind === "renew") return `Renouveler ${plan.name} avec PayDunya`;
+  if (changeKind === "upgrade") return `Passer au plan ${plan.name}`;
+  if (changeKind === "downgrade") return `Programmer le plan ${plan.name}`;
+  return `Choisir ${plan.name} avec PayDunya`;
 }
 
 export default function ProviderSubscriptionPage() {
@@ -438,11 +487,12 @@ export default function ProviderSubscriptionPage() {
       <section className="provider-page-head">
         <div>
           <p className="page-kicker">Abonnement</p>
-          <h1>Plans et paiements</h1>
+          <h1>Choisissez le plan qui accompagne votre croissance</h1>
           <p>
-            Votre droit à recevoir de nouvelles offres dépend d’un abonnement
-            effectif. Vous pouvez renouveler ou changer de plan sans perdre
-            votre compte, vos avis ni vos interventions déjà attribuées.
+            Développez votre activité avec BKO Services grâce à un abonnement
+            adapté à votre rythme. Recevez les opportunités prévues par votre
+            formule, gérez vos interventions sereinement et conservez votre
+            compte, vos avis et votre historique lors d’un changement de plan.
           </p>
         </div>
         <button className="button-secondary" type="button" onClick={refreshStatus}>
@@ -456,14 +506,14 @@ export default function ProviderSubscriptionPage() {
 
       {!loading && (
         <>
-          <section className="provider-current-subscription">
+          <section className="provider-current-subscription provider-subscription-hero">
             <div>
-              <p className="page-kicker">Plan actuel</p>
+              <p className="page-kicker">Votre abonnement actuel</p>
               {subscription ? (
                 <>
                   <h2>{subscription.plan.name}</h2>
                   <span className={`status-badge ${subscription.status === "ACTIVE" ? "success" : "danger"}`}>
-                    {subscription.status}
+                    {subscription.status === "ACTIVE" ? "Abonnement actif" : subscription.status}
                   </span>
                   <p>
                     Du {formatDate(subscription.starts_at)} au{" "}
@@ -541,18 +591,39 @@ export default function ProviderSubscriptionPage() {
                 const trialBusyKey = `trial:${plan.id}`;
                 const paydunyaBusyKey = `payment:${plan.id}:PAYDUNYA`;
                 const waveBusyKey = `payment:${plan.id}:WAVE`;
+                const presentation = planPresentation(plan);
+                const isCurrentPlan = Boolean(
+                  subscription?.status === "ACTIVE"
+                  && subscription.plan.id === plan.id,
+                );
 
                 return (
-                  <article className="provider-plan-card" key={plan.id}>
-                    <div>
-                      <span className="request-meta">{plan.duration_days} jours</span>
-                      <h3>{plan.name}</h3>
-                      <p>{plan.description || "Plan BKO Services."}</p>
+                  <article
+                    className={[
+                      "provider-plan-card",
+                      `provider-plan-${presentation.tone}`,
+                      isCurrentPlan ? "is-current" : "",
+                    ].filter(Boolean).join(" ")}
+                    key={plan.id}
+                  >
+                    <div className="provider-plan-card-head">
+                      <div>
+                        <span className="request-meta">{plan.duration_days} jours</span>
+                        <h3>{plan.name}</h3>
+                      </div>
+                      <span className="provider-plan-badge">
+                        {isCurrentPlan ? "Plan actuel" : presentation.badge}
+                      </span>
                     </div>
 
-                    <strong className="provider-plan-price">
-                      {formatXof(plan.price_xof)}
-                    </strong>
+                    <p className="provider-plan-subtitle">{presentation.subtitle}</p>
+
+                    <div className="provider-plan-price-row">
+                      <strong className="provider-plan-price">
+                        {formatXof(plan.price_xof)}
+                      </strong>
+                      <small>{plan.price_xof === 0 ? "Sans paiement" : "pour 30 jours"}</small>
+                    </div>
 
                     <div className="subscription-entitlements">
                       <span>{plan.can_receive_requests ? "✓" : "×"} Demandes normales</span>
@@ -594,9 +665,12 @@ export default function ProviderSubscriptionPage() {
                           {busyAction === paydunyaBusyKey
                             ? "Préparation PayDunya…"
                             : paydunya?.available
-                              ? "Payer avec PayDunya (Orange Money Mali)"
+                              ? paymentButtonLabel(plan, changeKind)
                               : "PayDunya — bientôt disponible"}
                         </button>
+                        <p className="provider-payment-hint">
+                          Paiement sécurisé via PayDunya · Orange Money Mali
+                        </p>
                         <button
                           className="button-secondary button-wide"
                           disabled={busyAction !== null || !wave?.available}
@@ -641,22 +715,66 @@ export default function ProviderSubscriptionPage() {
           <section className="content-section provider-payment-section">
             <div className="section-heading">
               <div>
-                <p className="page-kicker">Moyens de paiement</p>
-                <h2>PayDunya et Wave</h2>
+                <p className="page-kicker">Paiement</p>
+                <h2>Moyens de paiement sécurisés</h2>
               </div>
             </div>
 
-            <div className="provider-payment-warning">
+            <div className="provider-payment-options">
+              <article className="provider-payment-method-card is-primary">
+                <div className="provider-payment-brand">
+                  <div className="provider-paydunya-logo-wrap">
+                    <Image
+                      alt="PayDunya"
+                      className="provider-paydunya-logo"
+                      height={36}
+                      src="https://paydunya.com/images/logo_blue.png"
+                      unoptimized
+                      width={132}
+                    />
+                  </div>
+                  <span className={`status-badge ${paydunya?.available ? "success" : "warning"}`}>
+                    {methodStatusLabel(paydunya)}
+                  </span>
+                </div>
+                <h3>Orange Money Mali avec PayDunya</h3>
+                <p>
+                  Réglez votre abonnement depuis un parcours de paiement sécurisé.
+                  BKO Services attend toujours la confirmation serveur PayDunya avant
+                  d’activer ou de modifier votre abonnement.
+                </p>
+                <div className="provider-payment-security">
+                  <span>✓ Confirmation serveur</span>
+                  <span>✓ Montant vérifié</span>
+                  <span>✓ Référence contrôlée</span>
+                </div>
+              </article>
+
+              <article className="provider-payment-method-card">
+                <div className="provider-payment-brand">
+                  <strong className="provider-wave-mark">W</strong>
+                  <span className={`status-badge ${wave?.available ? "success" : "warning"}`}>
+                    {methodStatusLabel(wave)}
+                  </span>
+                </div>
+                <h3>Wave direct</h3>
+                <p>
+                  Le connecteur Wave est prévu séparément. Il deviendra disponible
+                  ici dès que les identifiants marchands Wave seront configurés.
+                </p>
+              </article>
+            </div>
+
+            <div className="provider-payment-warning provider-payment-trust">
               <strong>
                 {anyPaymentAvailable
-                  ? "Paiements mobiles sécurisés"
+                  ? "Paiement protégé par validation serveur"
                   : "Activation marchande en cours"}
               </strong>
               <p>
-                PayDunya (Orange Money Mali) : {methodStatusLabel(paydunya)}
-                {" · "}Wave direct : {methodStatusLabel(wave)}.
-                {" "}BKO Services n’active jamais un abonnement sur le simple retour du navigateur :
-                seule la confirmation serveur du fournisseur peut valider le paiement.
+                Un simple retour du navigateur ne valide jamais un paiement.
+                Seule une confirmation authentifiée du fournisseur peut activer
+                l’abonnement.
               </p>
             </div>
           </section>
@@ -671,8 +789,11 @@ export default function ProviderSubscriptionPage() {
 
             {payments.length === 0 ? (
               <div className="empty-state compact">
-                <strong>Aucune transaction</strong>
-                <p>Les transactions que vous préparez apparaîtront ici.</p>
+                <strong>Aucune transaction pour le moment</strong>
+                <p>
+                  Votre historique de paiements apparaîtra ici dès votre première
+                  opération.
+                </p>
               </div>
             ) : (
               <div className="provider-payment-list">

@@ -8,6 +8,15 @@ const isDevelopment = process.env.NODE_ENV !== "production";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "paydunya.com",
+        pathname: "/images/**",
+      },
+    ],
+  },
   devIndicators: false,
   // Django/DRF routes use trailing slashes. Keep them intact before the API
   // rewrite and always proxy API paths to Django with a trailing slash.
