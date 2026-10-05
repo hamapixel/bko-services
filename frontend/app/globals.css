@@ -7518,6 +7518,13 @@ textarea:disabled {
   height: auto;
 }
 
+.provider-paydunya-wordmark {
+  color: #15385f;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: -.02em;
+}
+
 @media (max-width: 760px) {
   .provider-page-head {
     gap: 14px;

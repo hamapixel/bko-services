@@ -724,10 +724,15 @@ export default function ProviderSubscriptionPage() {
                 <div className="provider-payment-brand">
                   <div className="provider-paydunya-logo-wrap">
                     <img
-                      alt="PayDunya"
+                      alt=""
+                      aria-hidden="true"
                       className="provider-paydunya-logo"
-                      src="https://paydunya.com/refont/images/logo/blue_logo.png"
+                      onError={(event) => {
+                        event.currentTarget.style.display = "none";
+                      }}
+                      src="https://developers.paydunya.com/images/bouton-senegal-01-01.png"
                     />
+                    <strong className="provider-paydunya-wordmark">PayDunya</strong>
                   </div>
                   <span className={`status-badge ${paydunya?.available ? "success" : "warning"}`}>
                     {methodStatusLabel(paydunya)}

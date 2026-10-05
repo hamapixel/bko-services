@@ -53,7 +53,7 @@ def _payment_methods():
     return [
         {
             "provider": "PAYDUNYA",
-            "label": "PayDunya (Orange/Moov)",
+            "label": "PayDunya (Orange Money Mali)",
             "available": paydunya_is_configured(),
         },
         {
