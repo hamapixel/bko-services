@@ -25,7 +25,7 @@ from .services import (
 )
 
 _ALLOWED_MODES = {"sandbox", "live"}
-_ALLOWED_MALI_CHANNELS = {"orange-money-mali", "moov-ml"}
+_ALLOWED_MALI_CHANNELS = {"orange-money-mali"}
 
 
 class PayDunyaUnavailable(APIException):
@@ -63,7 +63,7 @@ def _channels():
         for item in str(settings.PAYDUNYA_CHANNELS or "").split(",")
         if item.strip()
     ]
-    return values or ["orange-money-mali", "moov-ml"]
+    return values or ["orange-money-mali"]
 
 
 def paydunya_is_configured():

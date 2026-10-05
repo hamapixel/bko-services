@@ -72,7 +72,7 @@ function directPaymentMethods(payload: PaymentMethods): PaymentMethod[] {
   return [
     {
       provider: "PAYDUNYA",
-      label: "PayDunya (Orange/Moov)",
+      label: "PayDunya (Orange Money Mali)",
       available: Boolean(payload.paydunya),
     },
     {
@@ -594,7 +594,7 @@ export default function ProviderSubscriptionPage() {
                           {busyAction === paydunyaBusyKey
                             ? "Préparation PayDunya…"
                             : paydunya?.available
-                              ? "Payer avec PayDunya (Orange/Moov)"
+                              ? "Payer avec PayDunya (Orange Money Mali)"
                               : "PayDunya — bientôt disponible"}
                         </button>
                         <button
@@ -653,7 +653,7 @@ export default function ProviderSubscriptionPage() {
                   : "Activation marchande en cours"}
               </strong>
               <p>
-                PayDunya (Orange Money/Moov Money) : {methodStatusLabel(paydunya)}
+                PayDunya (Orange Money Mali) : {methodStatusLabel(paydunya)}
                 {" · "}Wave direct : {methodStatusLabel(wave)}.
                 {" "}BKO Services n’active jamais un abonnement sur le simple retour du navigateur :
                 seule la confirmation serveur du fournisseur peut valider le paiement.

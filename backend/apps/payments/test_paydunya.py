@@ -20,7 +20,7 @@ PAYDUNYA_SETTINGS = {
     "PAYDUNYA_PRIVATE_KEY": "private-key-test",
     "PAYDUNYA_TOKEN": "token-test",
     "PAYDUNYA_MODE": "sandbox",
-    "PAYDUNYA_CHANNELS": "orange-money-mali,moov-ml",
+    "PAYDUNYA_CHANNELS": "orange-money-mali",
     "PAYDUNYA_HTTP_TIMEOUT_SECONDS": 2,
 }
 
