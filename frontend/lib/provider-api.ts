@@ -93,7 +93,7 @@ export type SubscriptionPlan = {
 };
 
 export type SubscriptionHistory = {
-  action: "ACTIVATED" | "RENEWED" | "CANCELLED" | "EXPIRED";
+  action: "ACTIVATED" | "RENEWED" | "PLAN_CANCEL" | "CANCELLED" | "EXPIRED";
   plan_code: string;
   plan_name: string;
   starts_at: string;
@@ -111,6 +111,7 @@ export type ProviderSubscription = {
   pending_plan: SubscriptionPlan | null;
   pending_starts_at: string | null;
   pending_ends_at: string | null;
+  pending_change_cancellable: boolean;
   cancelled_at: string | null;
   free_trial_used_at: string | null;
   history: SubscriptionHistory[];

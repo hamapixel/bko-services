@@ -402,7 +402,7 @@ export default function ProviderSubscriptionPage() {
       changeKind === "renew"
         ? `Votre plan ${plan.name} sera renouvelé pour ${plan.duration_days} jours supplémentaires après la période déjà acquise.`
         : changeKind === "upgrade"
-          ? `Le plan ${plan.name} sera appliqué immédiatement après confirmation du paiement. Les ${plan.duration_days} jours payés seront ajoutés après votre période déjà acquise.`
+          ? `Le plan ${plan.name} sera appliqué immédiatement après confirmation du paiement. La valeur restante de votre plan actuel sera convertie en crédit de durée sur ${plan.name}, puis les ${plan.duration_days} jours payés seront ajoutés.`
           : changeKind === "downgrade"
             ? `Votre plan actuel reste actif jusqu’au ${currentEnd}. Le plan ${plan.name} prendra ensuite automatiquement le relais pour ${plan.duration_days} jours.`
             : `Le plan ${plan.name} sera activé pour ${plan.duration_days} jours après confirmation du paiement.`;
@@ -551,16 +551,24 @@ export default function ProviderSubscriptionPage() {
                           Votre plan actuel reste actif jusqu’au {formatDate(subscription.pending_starts_at)}.
                           {" "}Le plan {subscription.pending_plan.name} prendra ensuite le relais jusqu’au {formatDate(subscription.pending_ends_at)}.
                         </p>
-                        <button
-                          className="button-secondary"
-                          disabled={busyAction !== null}
-                          type="button"
-                          onClick={() => void cancelScheduledChange()}
-                        >
-                          {busyAction === "cancel-pending-plan"
-                            ? "Annulation…"
-                            : "Annuler ce changement programmé"}
-                        </button>
+                        {subscription.pending_change_cancellable ? (
+                          <button
+                            className="button-secondary"
+                            disabled={busyAction !== null}
+                            type="button"
+                            onClick={() => void cancelScheduledChange()}
+                          >
+                            {busyAction === "cancel-pending-plan"
+                              ? "Annulation…"
+                              : "Annuler ce changement programmé"}
+                          </button>
+                        ) : (
+                          <p>
+                            Ce prochain plan a déjà été payé. Pour le modifier,
+                            un remboursement ou un avoir doit être traité par
+                            l’administration BKO Services.
+                          </p>
+                        )}
                       </div>
                     )}
                 </>

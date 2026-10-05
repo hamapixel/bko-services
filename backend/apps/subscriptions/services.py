@@ -209,6 +209,7 @@ def _materialize_pending_if_due(subscription, *, now):
     subscription.pending_plan = None
     subscription.pending_starts_at = None
     subscription.pending_ends_at = None
+    subscription.pending_payment_reference = ""
     subscription.save(
         update_fields=[
             "plan",
@@ -217,6 +218,7 @@ def _materialize_pending_if_due(subscription, *, now):
             "pending_plan",
             "pending_starts_at",
             "pending_ends_at",
+            "pending_payment_reference",
             "updated_at",
         ]
     )
@@ -283,6 +285,7 @@ def _apply_plan_period(
     actor,
     note,
     now,
+    payment_reference="",
 ):
     _expire_if_needed(subscription, actor=actor, now=now)
     subscription.refresh_from_db()
@@ -314,6 +317,7 @@ def _apply_plan_period(
         subscription.pending_plan = None
         subscription.pending_starts_at = None
         subscription.pending_ends_at = None
+        subscription.pending_payment_reference = ""
         subscription.activated_by = actor
         subscription.cancelled_at = None
         subscription.save(
@@ -325,6 +329,7 @@ def _apply_plan_period(
                 "pending_plan",
                 "pending_starts_at",
                 "pending_ends_at",
+                "pending_payment_reference",
                 "activated_by",
                 "cancelled_at",
                 "updated_at",
@@ -366,12 +371,32 @@ def _apply_plan_period(
         or plan.price_xof > subscription.plan.price_xof
     )
     if immediate_upgrade:
+        if (
+            payment_reference
+            and subscription.plan.price_xof > 0
+            and plan.price_xof > 0
+        ):
+            remaining_seconds = max(
+                0,
+                int((subscription.ends_at - now).total_seconds()),
+            )
+            credit_seconds = (
+                remaining_seconds
+                * subscription.plan.price_xof
+                // plan.price_xof
+            )
+            target_end = now + timedelta(
+                days=duration_days,
+                seconds=credit_seconds,
+            )
+
         subscription.plan = plan
         subscription.starts_at = now
         subscription.ends_at = target_end
         subscription.pending_plan = None
         subscription.pending_starts_at = None
         subscription.pending_ends_at = None
+        subscription.pending_payment_reference = ""
         subscription.activated_by = actor
         subscription.cancelled_at = None
         subscription.save(
@@ -382,6 +407,7 @@ def _apply_plan_period(
                 "pending_plan",
                 "pending_starts_at",
                 "pending_ends_at",
+                "pending_payment_reference",
                 "activated_by",
                 "cancelled_at",
                 "updated_at",
@@ -401,11 +427,13 @@ def _apply_plan_period(
     subscription.pending_plan = plan
     subscription.pending_starts_at = base
     subscription.pending_ends_at = target_end
+    subscription.pending_payment_reference = payment_reference
     subscription.save(
         update_fields=[
             "pending_plan",
             "pending_starts_at",
             "pending_ends_at",
+            "pending_payment_reference",
             "updated_at",
         ]
     )
@@ -463,6 +491,7 @@ def activate_subscription(provider_id, actor, *, plan_id, note=""):
         subscription.pending_plan = None
         subscription.pending_starts_at = None
         subscription.pending_ends_at = None
+        subscription.pending_payment_reference = ""
         subscription.activated_by = actor
         subscription.cancelled_at = None
         if plan.price_xof == 0:
@@ -476,6 +505,7 @@ def activate_subscription(provider_id, actor, *, plan_id, note=""):
                 "pending_plan",
                 "pending_starts_at",
                 "pending_ends_at",
+                "pending_payment_reference",
                 "activated_by",
                 "cancelled_at",
                 "free_trial_used_at",
@@ -571,6 +601,7 @@ def cancel_subscription(subscription_id, actor, *, note):
     subscription.pending_plan = None
     subscription.pending_starts_at = None
     subscription.pending_ends_at = None
+    subscription.pending_payment_reference = ""
     subscription.save(
         update_fields=[
             "status",
@@ -578,6 +609,7 @@ def cancel_subscription(subscription_id, actor, *, note):
             "pending_plan",
             "pending_starts_at",
             "pending_ends_at",
+            "pending_payment_reference",
             "updated_at",
         ]
     )
@@ -626,6 +658,17 @@ def cancel_own_pending_plan_change(user):
             {"detail": "Aucun changement de plan futur n'est programmé."}
         )
 
+    if subscription.pending_payment_reference:
+        raise ValidationError(
+            {
+                "detail": (
+                    "Ce changement de plan a déjà été payé. "
+                    "Une annulation nécessite un remboursement ou un avoir "
+                    "géré par l'administration BKO Services."
+                )
+            }
+        )
+
     pending_plan = subscription.pending_plan
     pending_starts_at = subscription.pending_starts_at
     pending_ends_at = subscription.pending_ends_at
@@ -633,11 +676,13 @@ def cancel_own_pending_plan_change(user):
     subscription.pending_plan = None
     subscription.pending_starts_at = None
     subscription.pending_ends_at = None
+    subscription.pending_payment_reference = ""
     subscription.save(
         update_fields=[
             "pending_plan",
             "pending_starts_at",
             "pending_ends_at",
+            "pending_payment_reference",
             "updated_at",
         ]
     )
@@ -708,6 +753,7 @@ def apply_paid_subscription(
             actor=None,
             note=f"Paiement confirmé {payment_reference}",
             now=now,
+            payment_reference=payment_reference,
         )
 
     _schedule_waiting_request_retry(provider.pk)

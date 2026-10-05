@@ -75,6 +75,7 @@ class ProviderSubscription(models.Model):
     )
     pending_starts_at = models.DateTimeField(blank=True, null=True)
     pending_ends_at = models.DateTimeField(blank=True, null=True)
+    pending_payment_reference = models.CharField(max_length=64, blank=True)
     status = models.CharField(
         max_length=12,
         choices=Status.choices,
@@ -111,6 +112,13 @@ class ProviderSubscription(models.Model):
                     )
                 ),
                 name="subscriptions_pending_plan_complete",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(pending_plan__isnull=False)
+                    | models.Q(pending_payment_reference="")
+                ),
+                name="subscriptions_pending_payment_requires_plan",
             ),
         ]
 
