@@ -13,12 +13,6 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from .models import PaymentTransaction
-from .orange_money import (
-    InvalidOrangeMoneyNotification,
-    complete_orange_money_checkout,
-    orange_money_is_configured,
-    start_orange_money_payment,
-)
 from .paydunya import (
     InvalidPayDunyaNotification,
     complete_paydunya_checkout,
@@ -58,19 +52,14 @@ def reject_extra_fields(data, allowed):
 def _payment_methods():
     return [
         {
-            "provider": "ORANGE_MONEY",
-            "label": "Orange Money",
-            "available": orange_money_is_configured(),
+            "provider": "PAYDUNYA",
+            "label": "PayDunya (Orange/Moov)",
+            "available": paydunya_is_configured(),
         },
         {
             "provider": "WAVE",
             "label": "Wave",
             "available": wave_is_configured(),
-        },
-        {
-            "provider": "PAYDUNYA",
-            "label": "PayDunya (Orange/Moov)",
-            "available": paydunya_is_configured(),
         },
     ]
 
@@ -164,11 +153,6 @@ class PaymentMethodsView(APIView):
                     for item in methods
                     if item["provider"] == "WAVE"
                 ),
-                "orange_money": next(
-                    item["available"]
-                    for item in methods
-                    if item["provider"] == "ORANGE_MONEY"
-                ),
             }
         )
 
@@ -192,16 +176,6 @@ class PaymentCheckoutView(APIView):
         provider = str(
             validated.pop("payment_method", None) or settings.PAYMENT_PROVIDER
         ).upper()
-
-        if provider == "ORANGE_MONEY":
-            try:
-                payment = start_orange_money_payment(request.user, **validated)
-            except PaymentConfigurationError:
-                return Response(
-                    {"detail": "Paiement Orange Money indisponible."},
-                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
-                )
-            return Response(PaymentTransactionSerializer(payment).data)
 
         if provider == "PAYDUNYA":
             try:
@@ -284,43 +258,6 @@ class PayDunyaReturnView(APIView):
             + "/prestataire/abonnement?transaction="
             + str(payment.pk)
             + "&paiement=retour"
-        )
-
-
-@method_decorator(csrf_exempt, name="dispatch")
-class OrangeMoneyWebhookView(APIView):
-    authentication_classes = []
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        if not orange_money_is_configured():
-            return Response(
-                {"detail": "Webhook Orange Money indisponible."},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
-        if not isinstance(request.data, dict):
-            raise ParseError("Payload Orange Money invalide.")
-
-        payload = {key: request.data.get(key, "") for key in request.data.keys()}
-        try:
-            payment, result, response_status = complete_orange_money_checkout(payload)
-        except PaymentConfigurationError:
-            return Response(
-                {"detail": "Webhook Orange Money indisponible."},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
-        except InvalidOrangeMoneyNotification:
-            return Response(
-                {"detail": "Notification Orange Money invalide."},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
-
-        return Response(
-            {
-                "result": result,
-                "transaction": PaymentTransactionSerializer(payment).data,
-            },
-            status=response_status,
         )
 
 

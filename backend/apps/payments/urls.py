@@ -4,7 +4,6 @@ from .views import (
     AdminPaymentDetailView,
     AdminPaymentListView,
     AdminRetryFulfillmentView,
-    OrangeMoneyWebhookView,
     PayDunyaReturnView,
     PayDunyaWebhookView,
     PaymentCheckoutView,
@@ -22,11 +21,6 @@ urlpatterns = [
     path("wave/checkout/", WaveCheckoutView.as_view(), name="wave-checkout"),
     path("webhooks/paydunya/", PayDunyaWebhookView.as_view(), name="paydunya-webhook"),
     path("returns/paydunya/", PayDunyaReturnView.as_view(), name="paydunya-return"),
-    path(
-        "webhooks/orange-money/",
-        OrangeMoneyWebhookView.as_view(),
-        name="orange-money-webhook",
-    ),
     path("webhooks/wave/", WaveWebhookView.as_view(), name="wave-webhook"),
     path("transactions/", PaymentListCreateView.as_view(), name="payments"),
     path(

@@ -21,7 +21,7 @@ function paymentTone(status: PaymentTransaction["status"]) {
   return "warning";
 }
 
-type PaymentMethodProvider = "ORANGE_MONEY" | "PAYDUNYA" | "WAVE";
+type PaymentMethodProvider = "PAYDUNYA" | "WAVE";
 
 type PaymentMethod = {
   provider: PaymentMethodProvider;
@@ -34,7 +34,6 @@ type PaymentMethods = {
   methods?: PaymentMethod[];
   paydunya?: boolean;
   wave: boolean;
-  orange_money: boolean;
 };
 
 type PlanChangeKind = "new" | "renew" | "upgrade" | "downgrade";
@@ -65,18 +64,12 @@ function hasFutureScheduledChange(subscription: ProviderSubscription | null) {
 function directPaymentMethods(payload: PaymentMethods): PaymentMethod[] {
   const fromApi = (payload.methods ?? []).filter(
     (method) =>
-      method.provider === "ORANGE_MONEY"
-      || method.provider === "PAYDUNYA"
+      method.provider === "PAYDUNYA"
       || method.provider === "WAVE",
   );
   if (fromApi.length > 0) return fromApi;
 
   return [
-    {
-      provider: "ORANGE_MONEY",
-      label: "Orange Money",
-      available: Boolean(payload.orange_money),
-    },
     {
       provider: "PAYDUNYA",
       label: "PayDunya (Orange/Moov)",
@@ -113,15 +106,12 @@ export default function ProviderSubscriptionPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  const orangeMoney = paymentMethods.find(
-    (method) => method.provider === "ORANGE_MONEY",
-  );
   const paydunya = paymentMethods.find(
     (method) => method.provider === "PAYDUNYA",
   );
   const wave = paymentMethods.find((method) => method.provider === "WAVE");
   const anyPaymentAvailable = Boolean(
-    orangeMoney?.available || paydunya?.available || wave?.available,
+    paydunya?.available || wave?.available,
   );
 
   async function refreshPayments() {
@@ -549,7 +539,6 @@ export default function ProviderSubscriptionPage() {
                 const trialBlockedByExistingSubscription = isTrial && subscription !== null;
                 const changeKind = planChangeKind(subscription, plan);
                 const trialBusyKey = `trial:${plan.id}`;
-                const orangeBusyKey = `payment:${plan.id}:ORANGE_MONEY`;
                 const paydunyaBusyKey = `payment:${plan.id}:PAYDUNYA`;
                 const waveBusyKey = `payment:${plan.id}:WAVE`;
 
@@ -596,18 +585,6 @@ export default function ProviderSubscriptionPage() {
                       </button>
                     ) : (
                       <div style={{ display: "grid", gap: 10 }}>
-                        <button
-                          className="button-primary button-wide"
-                          disabled={busyAction !== null || !orangeMoney?.available}
-                          type="button"
-                          onClick={() => orangeMoney && void startCheckout(plan, orangeMoney)}
-                        >
-                          {busyAction === orangeBusyKey
-                            ? "Préparation Orange Money…"
-                            : orangeMoney?.available
-                              ? "Payer avec Orange Money"
-                              : "Orange Money — bientôt disponible"}
-                        </button>
                         <button
                           className="button-secondary button-wide"
                           disabled={busyAction !== null || !paydunya?.available}
@@ -665,7 +642,7 @@ export default function ProviderSubscriptionPage() {
             <div className="section-heading">
               <div>
                 <p className="page-kicker">Moyens de paiement</p>
-                <h2>Orange Money, PayDunya et Wave</h2>
+                <h2>PayDunya et Wave</h2>
               </div>
             </div>
 
@@ -676,8 +653,7 @@ export default function ProviderSubscriptionPage() {
                   : "Activation marchande en cours"}
               </strong>
               <p>
-                Orange Money direct : {methodStatusLabel(orangeMoney)}
-                {" · "}PayDunya (Orange/Moov) : {methodStatusLabel(paydunya)}
+                PayDunya (Orange Money/Moov Money) : {methodStatusLabel(paydunya)}
                 {" · "}Wave direct : {methodStatusLabel(wave)}.
                 {" "}BKO Services n’active jamais un abonnement sur le simple retour du navigateur :
                 seule la confirmation serveur du fournisseur peut valider le paiement.
