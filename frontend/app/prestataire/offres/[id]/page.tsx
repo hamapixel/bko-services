@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { useBkoAlert } from "@/components/bko-alert";
 import { ApiReadError } from "@/lib/client-api";
 import {
   apiGet,
@@ -23,6 +24,7 @@ type AcceptResponse = {
 export default function ProviderOfferDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const alerts = useBkoAlert();
   const [offer, setOffer] = useState<ProviderOffer | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -70,13 +72,13 @@ export default function ProviderOfferDetailPage() {
   }, [params.id]);
 
   async function acceptOffer() {
-    if (
-      !window.confirm(
-        "Accepter cette mission ? L’attribution sera décidée atomiquement par le serveur.",
-      )
-    ) {
-      return;
-    }
+    const confirmed = await alerts.confirmAction({
+      title: "Accepter cette mission ?",
+      message:
+        "Le serveur revérifiera votre disponibilité, votre abonnement et l’état exact de l’offre. Une seule acceptation peut gagner.",
+      confirmLabel: "Accepter la mission",
+    });
+    if (!confirmed) return;
 
     setBusy(true);
     setError("");
@@ -86,14 +88,19 @@ export default function ProviderOfferDetailPage() {
         "POST",
         {},
       );
+      alerts.success({
+        title: "Mission attribuée",
+        message: "Le serveur a confirmé que cette intervention vous est attribuée.",
+      });
       router.replace(`/prestataire/interventions/${accepted.request_id}`);
       router.refresh();
     } catch (caught) {
-      setError(
+      const message =
         caught instanceof Error
           ? caught.message
-          : "Cette offre ne peut plus être acceptée.",
-      );
+          : "Cette offre ne peut plus être acceptée.";
+      setError(message);
+      alerts.error({ title: "Acceptation refusée", message });
     } finally {
       setBusy(false);
     }

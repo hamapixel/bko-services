@@ -11,7 +11,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import ProviderProfile
-from .serializers import ApplicationSerializer, AvailabilitySerializer, OwnProviderSerializer, PublicProviderSerializer
+from .serializers import (
+    ApplicationSerializer,
+    AvailabilitySerializer,
+    OwnProviderSerializer,
+    PublicProviderSerializer,
+    TravelCommunesSerializer,
+)
 from apps.requests.matching import schedule_waiting_request_retry
 
 
@@ -95,6 +101,29 @@ class AvailabilityView(APIView):
         if became_available:
             schedule_waiting_request_retry(profile.pk)
         return Response({"is_available": profile.is_available})
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class TravelCommunesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def patch(self, request):
+        reject_extra_fields(request.data, set(TravelCommunesSerializer().fields))
+        serializer = TravelCommunesSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            profile = ProviderProfile.objects.select_for_update().get(user=request.user)
+        except ProviderProfile.DoesNotExist as exc:
+            raise Http404 from exc
+        user = get_user_model().objects.get(pk=request.user.pk)
+        if profile.status != profile.Status.VERIFIED or user.role != user.Role.PROVIDER or not user.is_active:
+            raise PermissionDenied("Seul un prestataire vérifié peut modifier ses communes de déplacement.")
+
+        profile.travel_communes.set(serializer.validated_data["travel_communes"])
+        if profile.is_available:
+            schedule_waiting_request_retry(profile.pk)
+        return Response(OwnProviderSerializer(profile).data)
 
 
 class PublicProviderListView(ListAPIView):

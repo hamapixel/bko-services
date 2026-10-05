@@ -23,7 +23,7 @@ class ProviderProfileAdmin(admin.ModelAdmin):
     list_filter = ("status", "identity_checked")
     search_fields = ("display_name", "legal_name", "user__phone")
     list_select_related = ("user",)
-    autocomplete_fields = ("trades", "service_areas")
+    autocomplete_fields = ("trades", "service_areas", "travel_communes")
     readonly_fields = ("user", "status", "is_available", "verified_at", "verified_by", "created_at", "updated_at")
     inlines = (ReviewInline,)
     actions = ("approve_selected", "reject_selected", "suspend_selected", "reopen_selected")
@@ -37,6 +37,8 @@ class ProviderProfileAdmin(admin.ModelAdmin):
     def get_readonly_fields(self, request, obj=None):
         fields = self.readonly_fields
         if obj and obj.status == ProviderProfile.Status.VERIFIED:
+            # Identity data stays locked after verification. Travel communes are
+            # an operational preference and remain editable.
             fields += ("legal_name", "display_name", "description", "trades", "service_areas", "identity_checked")
         return fields
 

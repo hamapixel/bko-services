@@ -639,19 +639,19 @@ class PaymentTests(TestCase):
         self.assertEqual(response.status_code, 503)
         self.assertEqual(PaymentTransaction.objects.count(), 0)
 
-    @override_settings(PAYMENT_PROVIDER="ORANGE_MONEY")
-    def test_orange_mode_never_accepts_generic_payment_or_webhook(self):
+    @override_settings(PAYMENT_PROVIDER="PAYDUNYA")
+    def test_external_provider_mode_never_accepts_generic_payment_or_webhook(self):
         api = APIClient()
         api.force_login(self.provider.user)
         creation = api.post(
             "/api/v1/payments/transactions/",
-            {"plan_id": str(self.plan.pk), "idempotency_key": "orange-disabled-01"},
+            {"plan_id": str(self.plan.pk), "idempotency_key": "paydunya-disabled-01"},
             format="json",
         )
         self.assertEqual(creation.status_code, 400)
         self.assertEqual(PaymentTransaction.objects.count(), 0)
 
-        # Even a correctly signed legacy payload cannot activate an Orange plan.
+        # Even a correctly signed generic payload cannot activate an external-provider plan.
         with override_settings(PAYMENT_PROVIDER="TEST"):
             self.create_payment(key="legacy-test-payment")
         payment = PaymentTransaction.objects.get()

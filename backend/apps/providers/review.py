@@ -28,7 +28,11 @@ def review_provider(profile_id, reviewer, decision):
 
     now = timezone.now()
     if decision == ProviderReview.Decision.APPROVED:
-        if profile.status != ProviderProfile.Status.PENDING or user.role != user.Role.CLIENT or not user.is_active:
+        if (
+            profile.status != ProviderProfile.Status.PENDING
+            or user.role not in {user.Role.CLIENT, user.Role.PROVIDER}
+            or not user.is_active
+        ):
             raise ValidationError("Cette candidature ne peut pas être approuvée.")
         if user.phone_verified_at is None or not profile.identity_checked:
             raise ValidationError("Vérifiez le téléphone et confirmez le contrôle d'identité hors ligne.")
@@ -42,25 +46,30 @@ def review_provider(profile_id, reviewer, decision):
         profile.verified_at = now
         profile.verified_by = reviewer
         profile.is_available = False
-        user.role = user.Role.PROVIDER
-        user.save(update_fields=["role"])
+        if user.role != user.Role.PROVIDER:
+            user.role = user.Role.PROVIDER
+            user.save(update_fields=["role"])
     elif decision == ProviderReview.Decision.REJECTED:
-        if profile.status != ProviderProfile.Status.PENDING or user.role != user.Role.CLIENT:
+        if (
+            profile.status != ProviderProfile.Status.PENDING
+            or user.role not in {user.Role.CLIENT, user.Role.PROVIDER}
+        ):
             raise ValidationError("Seule une candidature en attente peut être refusée.")
         profile.status = ProviderProfile.Status.REJECTED
         profile.identity_checked = False
+        profile.is_available = False
     elif decision == ProviderReview.Decision.SUSPENDED:
         if profile.status != ProviderProfile.Status.VERIFIED or user.role != user.Role.PROVIDER:
             raise ValidationError("Seul un prestataire vérifié peut être suspendu.")
         profile.status = ProviderProfile.Status.SUSPENDED
         profile.is_available = False
-        user.role = user.Role.CLIENT
-        user.save(update_fields=["role"])
     elif decision == ProviderReview.Decision.REOPENED:
         if profile.status not in (ProviderProfile.Status.REJECTED, ProviderProfile.Status.SUSPENDED):
             raise ValidationError("Seul un dossier refusé ou suspendu peut être rouvert.")
-        if user.role != user.Role.CLIENT:
-            raise ValidationError("Le rôle du compte doit d'abord être corrigé.")
+        if user.role not in {user.Role.CLIENT, user.Role.PROVIDER}:
+            raise ValidationError("Le rôle du compte n'est pas compatible avec cette réouverture.")
+        if profile.status == ProviderProfile.Status.SUSPENDED and user.role != user.Role.PROVIDER:
+            raise ValidationError("Un prestataire suspendu doit conserver son rôle prestataire.")
         profile.status = ProviderProfile.Status.PENDING
         profile.is_available = False
         profile.identity_checked = False

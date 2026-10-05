@@ -38,6 +38,9 @@ export default function AdminDashboardPage() {
                 Prestataires à contrôler
               </Link>
             )}
+            <Link className="role-secondary-action" href="/admin/catalogue">
+              Catégories & métiers
+            </Link>
             <Link className="role-secondary-action" href="/admin/profil">
               Mon profil
             </Link>
@@ -69,6 +72,21 @@ export default function AdminDashboardPage() {
               </div>
             </Link>
           ))}
+      </section>
+
+      <section className="detail-card admin-section-gap">
+        <p className="page-kicker">Catalogue de services</p>
+        <h2>Gérer les catégories et les métiers</h2>
+        <p>
+          Ajoutez directement de nouveaux services comme Maquillage, Terrassement,
+          Carrelage ou Soudure. Vous pouvez aussi modifier leur ordre et les
+          activer ou désactiver sans supprimer leur historique.
+        </p>
+        <div style={{ marginTop: 16 }}>
+          <Link className="role-primary-action" href="/admin/catalogue">
+            Ouvrir Catégories & métiers
+          </Link>
+        </div>
       </section>
 
       <section className="admin-security-callout admin-security-premium">

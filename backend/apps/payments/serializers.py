@@ -11,6 +11,13 @@ class PaymentCreateSerializer(serializers.Serializer):
     )
 
 
+class PaymentCheckoutSerializer(PaymentCreateSerializer):
+    payment_method = serializers.ChoiceField(
+        choices=("PAYDUNYA", "WAVE"),
+        required=False,
+    )
+
+
 class PaymentTransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = PaymentTransaction

@@ -16,7 +16,7 @@ from apps.requests.models import ServiceOffer, ServiceRequest
 from apps.requests.services import create_service_request
 
 from .models import ProviderSubscription, SubscriptionHistory, SubscriptionPlan
-from .services import provider_has_entitlement
+from .services import apply_paid_subscription, provider_has_entitlement
 
 
 class SubscriptionTests(TestCase):
@@ -145,7 +145,7 @@ class SubscriptionTests(TestCase):
         response = admin.post(
             "/api/v1/subscriptions/admin/plans/",
             {
-                "code": "mensuel-essentiel", "name": "Mensuel Essentiel",
+                "code": "mensuel-test", "name": "Mensuel Essentiel",
                 "price_xof": 0, "duration_days": 30, "is_active": False,
                 "max_active_jobs": 1,
                 "can_receive_requests": True, "can_receive_urgent_requests": False,
@@ -167,7 +167,7 @@ class SubscriptionTests(TestCase):
         public_codes = [item["code"] for item in APIClient().get(
             "/api/v1/subscriptions/plans/"
         ).json()["results"]]
-        self.assertIn("mensuel-essentiel", public_codes)
+        self.assertIn("mensuel-test", public_codes)
 
     def test_provider_sees_only_own_subscription(self):
         self.create_subscription(self.provider)
@@ -275,6 +275,82 @@ class SubscriptionTests(TestCase):
         history = subscription.history.get()
         self.assertEqual(history.action, SubscriptionHistory.Action.RENEWED)
         self.assertEqual(history.plan_code, "urgent")
+
+    def test_paid_upgrade_converts_remaining_value_into_new_plan_credit(self):
+        subscription = self.create_subscription(self.provider, self.normal_plan)
+        old_end = subscription.ends_at
+
+        updated = apply_paid_subscription(
+            self.provider.pk,
+            plan_id=self.urgent_plan.pk,
+            duration_days=30,
+            payment_reference="BKO-PAID-UPGRADE",
+        )
+        updated.refresh_from_db()
+
+        remaining_seconds = max(
+            0,
+            int((old_end - updated.starts_at).total_seconds()),
+        )
+        expected_credit_seconds = (
+            remaining_seconds
+            * self.normal_plan.price_xof
+            // self.urgent_plan.price_xof
+        )
+        expected_end = updated.starts_at + timedelta(
+            days=30,
+            seconds=expected_credit_seconds,
+        )
+
+        self.assertEqual(updated.plan, self.urgent_plan)
+        self.assertEqual(updated.ends_at, expected_end)
+        self.assertLess(updated.ends_at, old_end + timedelta(days=30))
+        self.assertGreater(
+            updated.ends_at,
+            updated.starts_at + timedelta(days=30),
+        )
+        self.assertEqual(updated.pending_payment_reference, "")
+
+    def test_paid_downgrade_cannot_be_cancelled_without_refund_flow(self):
+        updated = self.create_subscription(self.provider, self.urgent_plan)
+        updated = apply_paid_subscription(
+            self.provider.pk,
+            plan_id=self.normal_plan.pk,
+            duration_days=30,
+            payment_reference="BKO-PAID-DOWNGRADE",
+        )
+        updated.refresh_from_db()
+
+        self.assertEqual(updated.plan, self.urgent_plan)
+        self.assertEqual(updated.pending_plan, self.normal_plan)
+        self.assertEqual(
+            updated.pending_payment_reference,
+            "BKO-PAID-DOWNGRADE",
+        )
+
+        api = APIClient()
+        api.force_login(self.provider.user)
+        status_response = api.get("/api/v1/subscriptions/me/")
+        self.assertEqual(status_response.status_code, 200)
+        self.assertFalse(
+            status_response.json()["subscription"][
+                "pending_change_cancellable"
+            ]
+        )
+
+        cancel_response = api.post(
+            "/api/v1/subscriptions/me/pending-change/cancel/",
+            {},
+            format="json",
+        )
+        self.assertEqual(cancel_response.status_code, 400)
+
+        updated.refresh_from_db()
+        self.assertEqual(updated.pending_plan, self.normal_plan)
+        self.assertEqual(
+            updated.pending_payment_reference,
+            "BKO-PAID-DOWNGRADE",
+        )
 
     def test_free_trial_is_once_only_and_paid_plan_restores_offers(self):
         trial = SubscriptionPlan.objects.create(

@@ -24,6 +24,13 @@ export type ProviderAreaDetail = {
   commune_name: string;
 };
 
+export type ProviderTravelCommuneDetail = {
+  id: string;
+  name: string;
+  city_name: string;
+  region_name: string;
+};
+
 export type ProviderProfile = {
   id: string;
   legal_name: string;
@@ -31,8 +38,10 @@ export type ProviderProfile = {
   description: string;
   trades: string[];
   service_areas: string[];
+  travel_communes: string[];
   trade_details: ProviderTradeDetail[];
   service_area_details: ProviderAreaDetail[];
+  travel_commune_details: ProviderTravelCommuneDetail[];
   status: "PENDING" | "VERIFIED" | "REJECTED" | "SUSPENDED";
   is_available: boolean;
   verified_at: string | null;
@@ -48,6 +57,7 @@ export type ProviderOffer = {
   commune_name: string;
   priority: "NORMAL" | "URGENT";
   outside_declared_quartiers: boolean;
+  match_scope: "QUARTIER" | "COMMUNE" | "DEPLACEMENT" | "INCONNU";
   status: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED" | "CANCELLED";
   created_at: string;
 };
@@ -83,7 +93,7 @@ export type SubscriptionPlan = {
 };
 
 export type SubscriptionHistory = {
-  action: "ACTIVATED" | "RENEWED" | "CANCELLED" | "EXPIRED";
+  action: "ACTIVATED" | "RENEWED" | "PLAN_CANCEL" | "CANCELLED" | "EXPIRED";
   plan_code: string;
   plan_name: string;
   starts_at: string;
@@ -98,6 +108,10 @@ export type ProviderSubscription = {
   status: "ACTIVE" | "CANCELLED" | "EXPIRED";
   starts_at: string;
   ends_at: string;
+  pending_plan: SubscriptionPlan | null;
+  pending_starts_at: string | null;
+  pending_ends_at: string | null;
+  pending_change_cancellable: boolean;
   cancelled_at: string | null;
   free_trial_used_at: string | null;
   history: SubscriptionHistory[];

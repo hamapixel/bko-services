@@ -66,6 +66,16 @@ class ProviderSubscription(models.Model):
         on_delete=models.PROTECT,
         related_name="subscriptions",
     )
+    pending_plan = models.ForeignKey(
+        SubscriptionPlan,
+        on_delete=models.PROTECT,
+        related_name="pending_subscriptions",
+        blank=True,
+        null=True,
+    )
+    pending_starts_at = models.DateTimeField(blank=True, null=True)
+    pending_ends_at = models.DateTimeField(blank=True, null=True)
+    pending_payment_reference = models.CharField(max_length=64, blank=True)
     status = models.CharField(
         max_length=12,
         choices=Status.choices,
@@ -87,6 +97,30 @@ class ProviderSubscription(models.Model):
 
     class Meta:
         ordering = ["-updated_at", "-id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        pending_plan__isnull=True,
+                        pending_starts_at__isnull=True,
+                        pending_ends_at__isnull=True,
+                    )
+                    | models.Q(
+                        pending_plan__isnull=False,
+                        pending_starts_at__isnull=False,
+                        pending_ends_at__isnull=False,
+                    )
+                ),
+                name="subscriptions_pending_plan_complete",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(pending_plan__isnull=False)
+                    | models.Q(pending_payment_reference="")
+                ),
+                name="subscriptions_pending_payment_requires_plan",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.provider_id} — {self.plan.code}"
@@ -96,6 +130,7 @@ class SubscriptionHistory(models.Model):
     class Action(models.TextChoices):
         ACTIVATED = "ACTIVATED", "Activation"
         RENEWED = "RENEWED", "Renouvellement"
+        PLAN_CANCEL = "PLAN_CANCEL", "Changement de plan annulé"
         CANCELLED = "CANCELLED", "Annulation"
         EXPIRED = "EXPIRED", "Expiration"
 

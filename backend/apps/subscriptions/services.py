@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from django.db import transaction
-from django.db.models import Count, F, Q
+from django.db.models import Case, Count, F, IntegerField, Q, When
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
@@ -42,28 +42,75 @@ def can_manage_subscriptions(user):
     )
 
 
-def effective_subscription_status(subscription, at=None):
+def _period_contains(starts_at, ends_at, at):
+    return starts_at is not None and ends_at is not None and starts_at <= at < ends_at
+
+
+def effective_subscription_period(subscription, at=None):
     at = at or timezone.now()
     if (
         subscription.status == ProviderSubscription.Status.ACTIVE
-        and subscription.ends_at <= at
+        and subscription.pending_plan_id
+        and subscription.pending_starts_at is not None
+        and subscription.pending_ends_at is not None
+        and at >= subscription.pending_starts_at
     ):
+        return (
+            subscription.pending_plan,
+            subscription.pending_starts_at,
+            subscription.pending_ends_at,
+        )
+    return subscription.plan, subscription.starts_at, subscription.ends_at
+
+
+def effective_subscription_status(subscription, at=None):
+    at = at or timezone.now()
+    if subscription.status != ProviderSubscription.Status.ACTIVE:
+        return subscription.status
+
+    if _period_contains(subscription.starts_at, subscription.ends_at, at):
+        return ProviderSubscription.Status.ACTIVE
+    if (
+        subscription.pending_plan_id
+        and _period_contains(
+            subscription.pending_starts_at,
+            subscription.pending_ends_at,
+            at,
+        )
+    ):
+        return ProviderSubscription.Status.ACTIVE
+
+    latest_end = subscription.pending_ends_at or subscription.ends_at
+    if latest_end <= at:
         return ProviderSubscription.Status.EXPIRED
     return subscription.status
 
 
 def subscription_is_effective(subscription, *, urgent=False, at=None):
     at = at or timezone.now()
+    if subscription.status != ProviderSubscription.Status.ACTIVE:
+        return False
+
     if (
-        subscription.status != ProviderSubscription.Status.ACTIVE
-        or subscription.starts_at > at
-        or subscription.ends_at <= at
-        or not subscription.plan.can_receive_requests
+        subscription.pending_plan_id
+        and _period_contains(
+            subscription.pending_starts_at,
+            subscription.pending_ends_at,
+            at,
+        )
     ):
+        plan = subscription.pending_plan
+    elif _period_contains(subscription.starts_at, subscription.ends_at, at):
+        plan = subscription.plan
+    else:
         return False
-    if urgent and not subscription.plan.can_receive_urgent_requests:
+
+    if not plan.can_receive_requests:
         return False
-    limit = subscription.plan.max_active_jobs
+    if urgent and not plan.can_receive_urgent_requests:
+        return False
+
+    limit = plan.max_active_jobs
     if limit is not None and ServiceRequest.objects.filter(
         assigned_provider_id=subscription.provider_id,
         status__in=ACTIVE_INTERVENTION_STATUSES,
@@ -80,39 +127,107 @@ def provider_has_entitlement(provider_id, *, urgent=False, at=None):
 
 def eligible_provider_ids_queryset(*, urgent=False, at=None):
     at = at or timezone.now()
-    queryset = ProviderSubscription.objects.filter(
-        status=ProviderSubscription.Status.ACTIVE,
+
+    current_window = Q(
         starts_at__lte=at,
         ends_at__gt=at,
         plan__can_receive_requests=True,
     )
+    pending_window = Q(
+        pending_plan__isnull=False,
+        pending_starts_at__lte=at,
+        pending_ends_at__gt=at,
+        pending_plan__can_receive_requests=True,
+    )
     if urgent:
-        queryset = queryset.filter(plan__can_receive_urgent_requests=True)
+        current_window &= Q(plan__can_receive_urgent_requests=True)
+        pending_window &= Q(pending_plan__can_receive_urgent_requests=True)
+
+    queryset = ProviderSubscription.objects.filter(
+        status=ProviderSubscription.Status.ACTIVE,
+    ).filter(current_window | pending_window)
+
     queryset = queryset.annotate(
         active_jobs=Count(
             "provider__assigned_requests",
             filter=Q(provider__assigned_requests__status__in=ACTIVE_INTERVENTION_STATUSES),
             distinct=True,
-        )
-    ).filter(Q(plan__max_active_jobs__isnull=True) | Q(active_jobs__lt=F("plan__max_active_jobs")))
+        ),
+        effective_max_active_jobs=Case(
+            When(
+                pending_plan__isnull=False,
+                pending_starts_at__lte=at,
+                pending_ends_at__gt=at,
+                then=F("pending_plan__max_active_jobs"),
+            ),
+            default=F("plan__max_active_jobs"),
+            output_field=IntegerField(),
+        ),
+    ).filter(
+        Q(effective_max_active_jobs__isnull=True)
+        | Q(active_jobs__lt=F("effective_max_active_jobs"))
+    )
     return queryset.values("provider_id")
 
 
-def _record_history(subscription, *, actor, action, note=""):
+def _record_history(
+    subscription,
+    *,
+    actor,
+    action,
+    note="",
+    plan=None,
+    starts_at=None,
+    ends_at=None,
+):
+    history_plan = plan or subscription.plan
     SubscriptionHistory.objects.create(
         subscription=subscription,
         actor=actor,
         action=action,
-        plan_code=subscription.plan.code,
-        plan_name=subscription.plan.name,
-        starts_at=subscription.starts_at,
-        ends_at=subscription.ends_at,
+        plan_code=history_plan.code,
+        plan_name=history_plan.name,
+        starts_at=starts_at or subscription.starts_at,
+        ends_at=ends_at or subscription.ends_at,
         note=note.strip(),
     )
 
 
+def _materialize_pending_if_due(subscription, *, now):
+    if (
+        subscription.status != ProviderSubscription.Status.ACTIVE
+        or not subscription.pending_plan_id
+        or subscription.pending_starts_at is None
+        or subscription.pending_ends_at is None
+        or subscription.pending_starts_at > now
+    ):
+        return False
+
+    subscription.plan = subscription.pending_plan
+    subscription.starts_at = subscription.pending_starts_at
+    subscription.ends_at = subscription.pending_ends_at
+    subscription.pending_plan = None
+    subscription.pending_starts_at = None
+    subscription.pending_ends_at = None
+    subscription.pending_payment_reference = ""
+    subscription.save(
+        update_fields=[
+            "plan",
+            "starts_at",
+            "ends_at",
+            "pending_plan",
+            "pending_starts_at",
+            "pending_ends_at",
+            "pending_payment_reference",
+            "updated_at",
+        ]
+    )
+    return True
+
+
 def _expire_if_needed(subscription, *, actor=None, now=None):
     now = now or timezone.now()
+    _materialize_pending_if_due(subscription, now=now)
     if (
         subscription.status == ProviderSubscription.Status.ACTIVE
         and subscription.ends_at <= now
@@ -162,6 +277,181 @@ def _validate_provider_for_subscription(provider):
         )
 
 
+def _apply_plan_period(
+    subscription,
+    *,
+    plan,
+    duration_days,
+    actor,
+    note,
+    now,
+    payment_reference="",
+):
+    _expire_if_needed(subscription, actor=actor, now=now)
+    subscription.refresh_from_db()
+
+    if (
+        subscription.pending_plan_id
+        and subscription.pending_starts_at is not None
+        and subscription.pending_starts_at > now
+    ):
+        raise ValidationError(
+            {
+                "detail": (
+                    "Un changement de plan est déjà programmé. "
+                    "Attendez son démarrage avant d'en choisir un autre."
+                )
+            }
+        )
+
+    active_now = (
+        subscription.status == ProviderSubscription.Status.ACTIVE
+        and _period_contains(subscription.starts_at, subscription.ends_at, now)
+    )
+
+    if not active_now:
+        subscription.plan = plan
+        subscription.status = ProviderSubscription.Status.ACTIVE
+        subscription.starts_at = now
+        subscription.ends_at = now + timedelta(days=duration_days)
+        subscription.pending_plan = None
+        subscription.pending_starts_at = None
+        subscription.pending_ends_at = None
+        subscription.pending_payment_reference = ""
+        subscription.activated_by = actor
+        subscription.cancelled_at = None
+        subscription.save(
+            update_fields=[
+                "plan",
+                "status",
+                "starts_at",
+                "ends_at",
+                "pending_plan",
+                "pending_starts_at",
+                "pending_ends_at",
+                "pending_payment_reference",
+                "activated_by",
+                "cancelled_at",
+                "updated_at",
+            ]
+        )
+        _record_history(
+            subscription,
+            actor=actor,
+            action=SubscriptionHistory.Action.ACTIVATED,
+            note=note,
+        )
+        return subscription
+
+    base = subscription.ends_at
+    target_end = base + timedelta(days=duration_days)
+
+    if plan.pk == subscription.plan_id:
+        subscription.ends_at = target_end
+        subscription.activated_by = actor
+        subscription.cancelled_at = None
+        subscription.save(
+            update_fields=[
+                "ends_at",
+                "activated_by",
+                "cancelled_at",
+                "updated_at",
+            ]
+        )
+        _record_history(
+            subscription,
+            actor=actor,
+            action=SubscriptionHistory.Action.RENEWED,
+            note=note,
+        )
+        return subscription
+
+    immediate_upgrade = (
+        subscription.plan.price_xof == 0
+        or plan.price_xof > subscription.plan.price_xof
+    )
+    if immediate_upgrade:
+        if (
+            payment_reference
+            and subscription.plan.price_xof > 0
+            and plan.price_xof > 0
+        ):
+            remaining_seconds = max(
+                0,
+                int((subscription.ends_at - now).total_seconds()),
+            )
+            credit_seconds = (
+                remaining_seconds
+                * subscription.plan.price_xof
+                // plan.price_xof
+            )
+            target_end = now + timedelta(
+                days=duration_days,
+                seconds=credit_seconds,
+            )
+
+        subscription.plan = plan
+        subscription.starts_at = now
+        subscription.ends_at = target_end
+        subscription.pending_plan = None
+        subscription.pending_starts_at = None
+        subscription.pending_ends_at = None
+        subscription.pending_payment_reference = ""
+        subscription.activated_by = actor
+        subscription.cancelled_at = None
+        subscription.save(
+            update_fields=[
+                "plan",
+                "starts_at",
+                "ends_at",
+                "pending_plan",
+                "pending_starts_at",
+                "pending_ends_at",
+                "pending_payment_reference",
+                "activated_by",
+                "cancelled_at",
+                "updated_at",
+            ]
+        )
+        _record_history(
+            subscription,
+            actor=actor,
+            action=SubscriptionHistory.Action.RENEWED,
+            note=note,
+            plan=plan,
+            starts_at=now,
+            ends_at=target_end,
+        )
+        return subscription
+
+    subscription.pending_plan = plan
+    subscription.pending_starts_at = base
+    subscription.pending_ends_at = target_end
+    subscription.pending_payment_reference = payment_reference
+    subscription.save(
+        update_fields=[
+            "pending_plan",
+            "pending_starts_at",
+            "pending_ends_at",
+            "pending_payment_reference",
+            "updated_at",
+        ]
+    )
+    scheduled_note = "Changement de plan programmé à la fin de la période en cours."
+    if note.strip():
+        scheduled_note += f" {note.strip()}"
+    _record_history(
+        subscription,
+        actor=actor,
+        action=SubscriptionHistory.Action.RENEWED,
+        note=scheduled_note,
+        plan=plan,
+        starts_at=base,
+        ends_at=target_end,
+    )
+    return subscription
+
+
 @transaction.atomic
 def activate_subscription(provider_id, actor, *, plan_id, note=""):
     if not can_manage_subscriptions(actor):
@@ -173,7 +463,8 @@ def activate_subscription(provider_id, actor, *, plan_id, note=""):
     plan = _locked_plan(plan_id)
 
     subscription = (
-        ProviderSubscription.objects.select_for_update()
+        ProviderSubscription.objects.select_for_update(of=("self",))
+        .select_related("plan", "pending_plan")
         .filter(provider=provider)
         .first()
     )
@@ -186,7 +477,8 @@ def activate_subscription(provider_id, actor, *, plan_id, note=""):
         subscription.refresh_from_db()
         if (
             subscription.status == ProviderSubscription.Status.ACTIVE
-            and subscription.ends_at > now
+            and effective_subscription_status(subscription, at=now)
+            == ProviderSubscription.Status.ACTIVE
         ):
             raise ValidationError(
                 {"detail": "Ce prestataire possède déjà un abonnement actif."}
@@ -196,6 +488,10 @@ def activate_subscription(provider_id, actor, *, plan_id, note=""):
         subscription.status = ProviderSubscription.Status.ACTIVE
         subscription.starts_at = now
         subscription.ends_at = now + timedelta(days=plan.duration_days)
+        subscription.pending_plan = None
+        subscription.pending_starts_at = None
+        subscription.pending_ends_at = None
+        subscription.pending_payment_reference = ""
         subscription.activated_by = actor
         subscription.cancelled_at = None
         if plan.price_xof == 0:
@@ -206,6 +502,10 @@ def activate_subscription(provider_id, actor, *, plan_id, note=""):
                 "status",
                 "starts_at",
                 "ends_at",
+                "pending_plan",
+                "pending_starts_at",
+                "pending_ends_at",
+                "pending_payment_reference",
                 "activated_by",
                 "cancelled_at",
                 "free_trial_used_at",
@@ -240,8 +540,8 @@ def renew_subscription(subscription_id, actor, *, plan_id=None, note=""):
 
     try:
         subscription = (
-            ProviderSubscription.objects.select_for_update()
-            .select_related("plan", "provider__user")
+            ProviderSubscription.objects.select_for_update(of=("self",))
+            .select_related("plan", "pending_plan", "provider__user")
             .get(pk=subscription_id)
         )
     except ProviderSubscription.DoesNotExist as exc:
@@ -263,38 +563,13 @@ def renew_subscription(subscription_id, actor, *, plan_id=None, note=""):
             {"detail": "L'essai gratuit ne peut pas être renouvelé. Choisissez un abonnement payant."}
         )
 
-    if (
-        subscription.status == ProviderSubscription.Status.ACTIVE
-        and subscription.ends_at > now
-    ):
-        new_starts_at = subscription.starts_at
-        base = subscription.ends_at
-    else:
-        new_starts_at = now
-        base = now
-
-    subscription.plan = plan
-    subscription.status = ProviderSubscription.Status.ACTIVE
-    subscription.starts_at = new_starts_at
-    subscription.ends_at = base + timedelta(days=plan.duration_days)
-    subscription.activated_by = actor
-    subscription.cancelled_at = None
-    subscription.save(
-        update_fields=[
-            "plan",
-            "status",
-            "starts_at",
-            "ends_at",
-            "activated_by",
-            "cancelled_at",
-            "updated_at",
-        ]
-    )
-    _record_history(
+    _apply_plan_period(
         subscription,
+        plan=plan,
+        duration_days=plan.duration_days,
         actor=actor,
-        action=SubscriptionHistory.Action.RENEWED,
         note=note,
+        now=now,
     )
     _schedule_waiting_request_retry(subscription.provider_id)
     return subscription
@@ -307,8 +582,8 @@ def cancel_subscription(subscription_id, actor, *, note):
 
     try:
         subscription = (
-            ProviderSubscription.objects.select_for_update()
-            .select_related("plan")
+            ProviderSubscription.objects.select_for_update(of=("self",))
+            .select_related("plan", "pending_plan")
             .get(pk=subscription_id)
         )
     except ProviderSubscription.DoesNotExist as exc:
@@ -323,8 +598,20 @@ def cancel_subscription(subscription_id, actor, *, note):
 
     subscription.status = ProviderSubscription.Status.CANCELLED
     subscription.cancelled_at = now
+    subscription.pending_plan = None
+    subscription.pending_starts_at = None
+    subscription.pending_ends_at = None
+    subscription.pending_payment_reference = ""
     subscription.save(
-        update_fields=["status", "cancelled_at", "updated_at"]
+        update_fields=[
+            "status",
+            "cancelled_at",
+            "pending_plan",
+            "pending_starts_at",
+            "pending_ends_at",
+            "pending_payment_reference",
+            "updated_at",
+        ]
     )
     _record_history(
         subscription,
@@ -334,6 +621,85 @@ def cancel_subscription(subscription_id, actor, *, note):
     )
     return subscription
 
+
+@transaction.atomic
+def cancel_own_pending_plan_change(user):
+    if (
+        not user
+        or not user.is_authenticated
+        or not user.is_active
+        or user.role != user.Role.PROVIDER
+    ):
+        raise PermissionDenied("Espace réservé aux prestataires actifs.")
+
+    try:
+        subscription = (
+            ProviderSubscription.objects.select_for_update(of=("self",))
+            .select_related("plan", "pending_plan", "provider__user")
+            .get(provider__user=user)
+        )
+    except ProviderSubscription.DoesNotExist as exc:
+        raise NotFound("Abonnement introuvable.") from exc
+
+    now = timezone.now()
+    _expire_if_needed(subscription, actor=user, now=now)
+    subscription.refresh_from_db()
+
+    if subscription.status != ProviderSubscription.Status.ACTIVE:
+        raise ValidationError({"detail": "Cet abonnement n'est pas actif."})
+
+    if (
+        not subscription.pending_plan_id
+        or subscription.pending_starts_at is None
+        or subscription.pending_ends_at is None
+        or subscription.pending_starts_at <= now
+    ):
+        raise ValidationError(
+            {"detail": "Aucun changement de plan futur n'est programmé."}
+        )
+
+    if subscription.pending_payment_reference:
+        raise ValidationError(
+            {
+                "detail": (
+                    "Ce changement de plan a déjà été payé. "
+                    "Une annulation nécessite un remboursement ou un avoir "
+                    "géré par l'administration BKO Services."
+                )
+            }
+        )
+
+    pending_plan = subscription.pending_plan
+    pending_starts_at = subscription.pending_starts_at
+    pending_ends_at = subscription.pending_ends_at
+
+    subscription.pending_plan = None
+    subscription.pending_starts_at = None
+    subscription.pending_ends_at = None
+    subscription.pending_payment_reference = ""
+    subscription.save(
+        update_fields=[
+            "pending_plan",
+            "pending_starts_at",
+            "pending_ends_at",
+            "pending_payment_reference",
+            "updated_at",
+        ]
+    )
+
+    _record_history(
+        subscription,
+        actor=user,
+        action=SubscriptionHistory.Action.PLAN_CANCEL,
+        note=(
+            f"Changement programmé vers {pending_plan.name} annulé "
+            "par le prestataire."
+        ),
+        plan=pending_plan,
+        starts_at=pending_starts_at,
+        ends_at=pending_ends_at,
+    )
+    return subscription
 
 
 @transaction.atomic
@@ -358,63 +724,37 @@ def apply_paid_subscription(
         raise NotFound("Plan payé introuvable.") from exc
 
     subscription = (
-        ProviderSubscription.objects.select_for_update()
+        ProviderSubscription.objects.select_for_update(of=("self",))
+        .select_related("plan", "pending_plan")
         .filter(provider=provider)
         .first()
     )
-
-    if subscription is not None:
-        _expire_if_needed(subscription, actor=None, now=now)
-        subscription.refresh_from_db()
-
-    if (
-        subscription is not None
-        and subscription.status == ProviderSubscription.Status.ACTIVE
-        and subscription.ends_at > now
-    ):
-        starts_at = subscription.starts_at
-        base = subscription.ends_at
-        action = SubscriptionHistory.Action.RENEWED
-    else:
-        starts_at = now
-        base = now
-        action = SubscriptionHistory.Action.ACTIVATED
-
-    ends_at = base + timedelta(days=duration_days)
 
     if subscription is None:
         subscription = ProviderSubscription.objects.create(
             provider=provider,
             plan=plan,
             status=ProviderSubscription.Status.ACTIVE,
-            starts_at=starts_at,
-            ends_at=ends_at,
+            starts_at=now,
+            ends_at=now + timedelta(days=duration_days),
             activated_by=None,
         )
+        _record_history(
+            subscription,
+            actor=None,
+            action=SubscriptionHistory.Action.ACTIVATED,
+            note=f"Paiement confirmé {payment_reference}",
+        )
     else:
-        subscription.plan = plan
-        subscription.status = ProviderSubscription.Status.ACTIVE
-        subscription.starts_at = starts_at
-        subscription.ends_at = ends_at
-        subscription.activated_by = None
-        subscription.cancelled_at = None
-        subscription.save(
-            update_fields=[
-                "plan",
-                "status",
-                "starts_at",
-                "ends_at",
-                "activated_by",
-                "cancelled_at",
-                "updated_at",
-            ]
+        _apply_plan_period(
+            subscription,
+            plan=plan,
+            duration_days=duration_days,
+            actor=None,
+            note=f"Paiement confirmé {payment_reference}",
+            now=now,
+            payment_reference=payment_reference,
         )
 
-    _record_history(
-        subscription,
-        actor=None,
-        action=action,
-        note=f"Paiement confirmé {payment_reference}",
-    )
     _schedule_waiting_request_retry(provider.pk)
     return subscription

@@ -103,7 +103,7 @@ class ProviderTests(TestCase):
         profile.refresh_from_db()
         self.user.refresh_from_db()
         self.assertFalse(profile.is_available)
-        self.assertEqual(self.user.role, self.user.Role.CLIENT)
+        self.assertEqual(self.user.role, self.user.Role.PROVIDER)
         self.assertEqual(APIClient().get("/api/v1/providers/").json()["count"], 0)
         self.assertEqual(self.request("patch", "/api/v1/providers/availability/", {"is_available": True}).status_code, 403)
         self.assertEqual(list(profile.reviews.values_list("decision", flat=True)), ["SUSPENDED", "APPROVED"])

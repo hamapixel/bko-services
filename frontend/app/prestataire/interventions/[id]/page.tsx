@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import { useBkoAlert } from "@/components/bko-alert";
 import {
   apiGet,
   apiMutation,
@@ -17,6 +18,7 @@ import {
 
 export default function ProviderInterventionDetailPage() {
   const params = useParams<{ id: string }>();
+  const bkoAlert = useBkoAlert();
   const [intervention, setIntervention] = useState<ProviderIntervention | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -55,12 +57,16 @@ export default function ProviderInterventionDetailPage() {
   );
 
   async function advance() {
-    if (!intervention || !nextStatus) return;
+    if (!intervention || !nextStatus || busy) return;
 
     const label = PROVIDER_ACTION_LABELS[nextStatus] ?? "Continuer";
-    if (!window.confirm(`${label} ? Cette étape sera enregistrée par le serveur.`)) {
-      return;
-    }
+    const confirmed = await bkoAlert.confirmAction({
+      title: label,
+      message: "Cette étape sera enregistrée par le serveur et ne pourra être validée que si la transition est autorisée.",
+      confirmLabel: label,
+      cancelLabel: "Annuler",
+    });
+    if (!confirmed) return;
 
     setBusy(true);
     setError("");
@@ -73,13 +79,22 @@ export default function ProviderInterventionDetailPage() {
         { status: nextStatus },
       );
       setIntervention(updated);
-      setMessage(`Étape enregistrée : ${STATUS_LABELS[updated.status]}.`);
+      const successMessage = `Étape enregistrée : ${STATUS_LABELS[updated.status]}.`;
+      setMessage(successMessage);
+      bkoAlert.success({
+        title: "Étape enregistrée",
+        message: successMessage,
+      });
     } catch (caught) {
-      setError(
+      const detail =
         caught instanceof Error
           ? caught.message
-          : "Impossible de faire avancer l’intervention.",
-      );
+          : "Impossible de faire avancer l’intervention.";
+      setError(detail);
+      bkoAlert.error({
+        title: "Action refusée",
+        message: detail,
+      });
     } finally {
       setBusy(false);
     }

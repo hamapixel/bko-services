@@ -87,3 +87,45 @@ jobs:
         run: npx tsc --noEmit
       - name: Build
         run: npm run build
+
+  docker:
+    name: Docker production stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - name: Validate Compose configuration
+        run: >-
+          docker compose --env-file .env.docker.example
+          -f compose.prod.yml -f compose.local.yml config
+      - name: Build and start BKO stack
+        run: >-
+          docker compose --env-file .env.docker.example
+          -f compose.prod.yml -f compose.local.yml up -d --build
+      - name: Wait for healthy containers
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            backend_id="$(docker compose --env-file .env.docker.example -f compose.prod.yml -f compose.local.yml ps -q backend)"
+            frontend_id="$(docker compose --env-file .env.docker.example -f compose.prod.yml -f compose.local.yml ps -q frontend)"
+            backend_status="$(docker inspect --format='{{.State.Health.Status}}' "$backend_id" 2>/dev/null || true)"
+            frontend_status="$(docker inspect --format='{{.State.Health.Status}}' "$frontend_id" 2>/dev/null || true)"
+            echo "attempt=$attempt backend=$backend_status frontend=$frontend_status"
+            if [ "$backend_status" = "healthy" ] && [ "$frontend_status" = "healthy" ]; then
+              exit 0
+            fi
+            sleep 3
+          done
+          docker compose --env-file .env.docker.example -f compose.prod.yml -f compose.local.yml ps
+          docker compose --env-file .env.docker.example -f compose.prod.yml -f compose.local.yml logs --no-color backend frontend db
+          exit 1
+      - name: Smoke test HTTP endpoints
+        run: |
+          curl --fail --silent --show-error http://127.0.0.1:8001/health/
+          curl --fail --silent --show-error --output /dev/null http://127.0.0.1:3001/
+      - name: Stop isolated BKO stack
+        if: always()
+        run: >-
+          docker compose --env-file .env.docker.example
+          -f compose.prod.yml -f compose.local.yml down -v --remove-orphans
